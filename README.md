@@ -75,6 +75,54 @@ Publish in this order so `create-project-arch` references a released `project-ar
 npm login
 ```
 
+### Update npm access tokens
+
+For local publishing, refresh auth in your user npm config:
+
+```bash
+npm logout
+npm login
+```
+
+For CI publishing, rotate `NPM_TOKEN` and update the secret in your CI provider:
+
+```bash
+npm token list
+npm token revoke <token-id>
+npm token create --read-only=false
+```
+
+Then set the new token in CI as `NPM_TOKEN` and ensure `.npmrc` uses:
+
+```ini
+//registry.npmjs.org/:_authToken=${NPM_TOKEN}
+```
+
+Check this and restart terminal
+
+```bash
+code ~/.npmrc
+```
+
+Set `NPM_TOKEN` locally (current shell):
+
+```bash
+export NPM_TOKEN="<new-token>"
+```
+
+Persist `NPM_TOKEN` for future shells (zsh):
+
+```bash
+echo 'export NPM_TOKEN="<new-token>"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Set `NPM_TOKEN` in GitHub Actions (replace `<owner>`, `<repo>`):
+
+```bash
+gh secret set NPM_TOKEN --repo <owner>/<repo>
+```
+
 ### Pre-publish checks
 
 ```bash
@@ -87,8 +135,8 @@ pnpm test
 ### Bump versions
 
 ```bash
-pnpm --filter project-arch version <new-version>
-pnpm --filter create-project-arch version <new-version>
+pnpm --filter project-arch exec npm version <new-version> --no-git-tag-version
+pnpm --filter create-project-arch exec npm version <new-version> --no-git-tag-version
 ```
 
 ### Check versions
