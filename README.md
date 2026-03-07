@@ -61,3 +61,62 @@ Runs the Vitest test suites across the workspace.
 pnpm --filter project-arch typecheck
 pnpm --filter create-project-arch typecheck
 ```
+
+## Publish To npm
+
+Publish in this order so `create-project-arch` references a released `project-arch` version:
+
+1. `project-arch`
+2. `create-project-arch`
+
+### One-time setup
+
+```bash
+npm login
+```
+
+### Pre-publish checks
+
+```bash
+pnpm install
+pnpm build
+pnpm lint
+pnpm test
+```
+
+### Bump versions
+
+```bash
+pnpm --filter project-arch version <new-version>
+pnpm --filter create-project-arch version <new-version>
+```
+
+### Check versions
+
+Check local workspace package versions:
+
+```bash
+pnpm --filter project-arch exec node -p "require('./package.json').version"
+pnpm --filter create-project-arch exec node -p "require('./package.json').version"
+```
+
+Check currently published npm versions:
+
+```bash
+npm view project-arch version
+npm view create-project-arch version
+```
+
+### Dry run (recommended)
+
+```bash
+pnpm --filter project-arch publish --access public --dry-run --no-git-checks
+pnpm --filter create-project-arch publish --access public --dry-run --no-git-checks
+```
+
+### Publish
+
+```bash
+pnpm --filter project-arch publish --access public --no-git-checks
+pnpm --filter create-project-arch publish --access public --no-git-checks
+```
