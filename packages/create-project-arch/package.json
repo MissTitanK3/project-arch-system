@@ -1,0 +1,30 @@
+{
+  "name": "create-project-arch",
+  "version": "1.0.0",
+  "description": "Scaffold a project-arch monorepo",
+  "bin": {
+    "create-project-arch": "dist/cli.js"
+  },
+  "main": "dist/cli.js",
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "fs-extra": "^11.3.0",
+    "project-arch": "workspace:^1.0.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.13.8",
+    "typescript": "^5.8.2"
+  }
+}

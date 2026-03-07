@@ -1,0 +1,26 @@
+export const commandMetadata = {
+  "tasks.create": {
+    description: "Create a planned task",
+    inputs: ["phase", "milestone", "title"],
+  },
+  "tasks.discover": {
+    description: "Create a discovered task",
+    inputs: ["phase", "milestone", "from", "title"],
+  },
+  "phases.create": {
+    description: "Create a phase",
+    inputs: ["id"],
+  },
+  "milestones.create": {
+    description: "Create a milestone",
+    inputs: ["phase", "milestone"],
+  },
+  "decisions.create": {
+    description: "Create a decision",
+    inputs: ["scope", "phase", "milestone", "slug", "title"],
+  },
+  "graph.traceTask": {
+    description: "Trace a task in the architecture graph",
+    inputs: ["task"],
+  },
+} as const;

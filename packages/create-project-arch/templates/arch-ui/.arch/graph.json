@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "nodes": {
+    "domains": 0,
+    "decisions": 0,
+    "milestones": 0,
+    "tasks": 0,
+    "modules": 0
+  },
+  "edges": {
+    "task_to_decision": 0,
+    "task_to_module": 0,
+    "decision_to_domain": 0,
+    "milestone_to_task": 0
+  }
+}
+
