@@ -117,12 +117,6 @@ echo 'export NPM_TOKEN="<new-token>"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-Set `NPM_TOKEN` in GitHub Actions (replace `<owner>`, `<repo>`):
-
-```bash
-gh secret set NPM_TOKEN --repo <owner>/<repo>
-```
-
 ### Pre-publish checks
 
 ```bash

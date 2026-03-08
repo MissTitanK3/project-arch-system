@@ -40,14 +40,20 @@ export function ArchNode({ data, selected }: NodeProps<ArchNodeData>) {
   const metadataPreviewCount = detailLevel === 0 ? 1 : detailLevel === 1 ? 2 : 4;
 
   return (
-    <div className={`w-[280px] rounded-xl border border-slate-600 px-2.5 py-2 text-slate-100 shadow ${toneClass}`}>
+    <div
+      className={`w-[280px] rounded-xl border border-slate-600 px-2.5 py-2 text-slate-100 shadow ${toneClass}`}
+    >
       <NodeToolbar isVisible={selected} position={Position.Top}>
         <div className="flex items-center gap-2 rounded-md border border-slate-600 bg-slate-950 px-2 py-1">
           <Badge variant="secondary">{data.kind}</Badge>
           <span className="text-xs text-slate-400">drag, connect</span>
         </div>
       </NodeToolbar>
-      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border !border-slate-900 !bg-slate-200" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!h-2 !w-2 !border !border-slate-900 !bg-slate-200"
+      />
       <div className="mb-1 text-[13px] font-semibold" style={titleStyle}>
         {data.label}
       </div>
@@ -69,7 +75,11 @@ export function ArchNode({ data, selected }: NodeProps<ArchNodeData>) {
             .join(" · ")}
         </div>
       ) : null}
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border !border-slate-900 !bg-slate-200" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!h-2 !w-2 !border !border-slate-900 !bg-slate-200"
+      />
     </div>
   );
 }

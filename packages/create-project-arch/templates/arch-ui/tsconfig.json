@@ -8,14 +8,6 @@
     ],
     "strictNullChecks": true
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.d.ts",
-    "next-env.d.ts",
-    "next.config.js"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.d.ts", "next-env.d.ts", "next.config.js"],
+  "exclude": ["node_modules"]
 }

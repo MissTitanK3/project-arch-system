@@ -57,13 +57,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    leftCollapsed,
-    resetLayout,
-    rightCollapsed,
-    setLeftCollapsed,
-    setRightCollapsed,
-  ]);
+  }, [leftCollapsed, resetLayout, rightCollapsed, setLeftCollapsed, setRightCollapsed]);
 
   const shellStyle = useMemo(() => {
     const leftResizer = leftCollapsed ? 0 : resizerWidth;

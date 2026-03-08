@@ -32,7 +32,8 @@ export function Topbar({ projectName }: { projectName: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { selection } = useInspector();
-  const { splitPane, setSplitPane, rightCollapsed, setRightCollapsed, resetLayout } = useWorkspace();
+  const { splitPane, setSplitPane, rightCollapsed, setRightCollapsed, resetLayout } =
+    useWorkspace();
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -79,11 +80,7 @@ export function Topbar({ projectName }: { projectName: string }) {
 
   const breadcrumbs = useMemo(() => {
     const pathLabel =
-      pathname === "/work"
-          ? "Work Graph"
-          : pathname === "/health"
-            ? "Health"
-            : "Workspace";
+      pathname === "/work" ? "Work Graph" : pathname === "/health" ? "Health" : "Workspace";
     const view = searchParams.get("view");
     const secondary =
       view === "docs"
@@ -92,11 +89,11 @@ export function Topbar({ projectName }: { projectName: string }) {
           ? "Decisions"
           : view === "architecture"
             ? "Architecture"
-          : view === "project"
-            ? "Project"
-          : view === "tasks"
-            ? "Tasks"
-            : "Map";
+            : view === "project"
+              ? "Project"
+              : view === "tasks"
+                ? "Tasks"
+                : "Map";
 
     const parts = [pathLabel];
     if (pathname === "/work") parts.push(secondary);

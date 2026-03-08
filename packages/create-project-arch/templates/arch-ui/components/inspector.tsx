@@ -119,7 +119,9 @@ function isTaskLikeType(type: string): type is "task" | "milestone" | "phase" {
   return type === "task" || type === "milestone" || type === "phase";
 }
 
-function isFileBackedType(type: string): type is "task" | "milestone" | "phase" | "domain" | "file" {
+function isFileBackedType(
+  type: string,
+): type is "task" | "milestone" | "phase" | "domain" | "file" {
   return (
     type === "task" ||
     type === "milestone" ||
@@ -190,7 +192,11 @@ function humanizeValue(label: string, value: string): string {
   return value;
 }
 
-function parseTaskId(taskId: string): { phaseId?: string; milestoneId?: string; taskNumber?: string } {
+function parseTaskId(taskId: string): {
+  phaseId?: string;
+  milestoneId?: string;
+  taskNumber?: string;
+} {
   const [phaseId, milestoneId, taskNumber] = taskId.split("/");
   return {
     phaseId: phaseId || undefined,
@@ -393,23 +399,21 @@ function MetadataDetails({
       className="rounded-lg border border-slate-700/70 bg-slate-900/30 p-2 [&_summary::-webkit-details-marker]:hidden"
       open={defaultOpen}
     >
-      <summary className="cursor-pointer list-none text-sm font-medium text-slate-200">{title}</summary>
+      <summary className="cursor-pointer list-none text-sm font-medium text-slate-200">
+        {title}
+      </summary>
       <div className="mt-2 grid gap-2">{children}</div>
     </details>
   );
 }
 
-function MetadataValue({
-  label,
-  value,
-}: {
-  label: string;
-  value: FrontmatterValue;
-}) {
+function MetadataValue({ label, value }: { label: string; value: FrontmatterValue }) {
   if (value === null) {
     return (
       <div className="grid gap-1">
-        <p className="m-0 text-xs uppercase tracking-[0.06em] text-slate-400">{humanizeLabel(label)}</p>
+        <p className="m-0 text-xs uppercase tracking-[0.06em] text-slate-400">
+          {humanizeLabel(label)}
+        </p>
         <p className="m-0 text-sm text-slate-500">None</p>
       </div>
     );
@@ -419,7 +423,9 @@ function MetadataValue({
     if (value.length === 0) {
       return (
         <div className="grid gap-1">
-          <p className="m-0 text-xs uppercase tracking-[0.06em] text-slate-400">{humanizeLabel(label)}</p>
+          <p className="m-0 text-xs uppercase tracking-[0.06em] text-slate-400">
+            {humanizeLabel(label)}
+          </p>
           <p className="m-0 text-sm text-slate-500">None</p>
         </div>
       );
@@ -428,7 +434,9 @@ function MetadataValue({
     const listLike = normalizeKey(label).includes("criteria");
     return (
       <div className="grid gap-1.5">
-        <p className="m-0 text-xs uppercase tracking-[0.06em] text-slate-400">{humanizeLabel(label)}</p>
+        <p className="m-0 text-xs uppercase tracking-[0.06em] text-slate-400">
+          {humanizeLabel(label)}
+        </p>
         {listLike ? (
           <ol className="m-0 grid list-decimal gap-1 pl-5 text-sm text-slate-200">
             {value.map((item) => (
@@ -485,7 +493,11 @@ export function InspectorPanel() {
       keys
         .filter((key) => sourceEntries.has(key))
         .map((key) => [key, sourceEntries.get(key) ?? null] as const)
-        .filter(([, value]) => showEmptyFileMetadata || !(value === null || (Array.isArray(value) && value.length === 0)));
+        .filter(
+          ([, value]) =>
+            showEmptyFileMetadata ||
+            !(value === null || (Array.isArray(value) && value.length === 0)),
+        );
 
     return {
       identity: pick(keyOrder.identity),
@@ -651,9 +663,15 @@ export function InspectorPanel() {
     <aside className="h-full min-h-0 overflow-y-auto overflow-x-visible border-l border-slate-800 bg-slate-950/85 p-4">
       <div className="grid gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{humanizeLabel(hasFileDocument ? "file" : selection.type)}</Badge>
-          {typeof fileLaneValue === "string" ? <Badge variant="secondary">{humanizeValue("lane", fileLaneValue)}</Badge> : null}
-          {typeof fileStatusValue === "string" ? <Badge variant="secondary">{humanizeValue("status", fileStatusValue)}</Badge> : null}
+          <Badge variant="secondary">
+            {humanizeLabel(hasFileDocument ? "file" : selection.type)}
+          </Badge>
+          {typeof fileLaneValue === "string" ? (
+            <Badge variant="secondary">{humanizeValue("lane", fileLaneValue)}</Badge>
+          ) : null}
+          {typeof fileStatusValue === "string" ? (
+            <Badge variant="secondary">{humanizeValue("status", fileStatusValue)}</Badge>
+          ) : null}
           {selectedLevelFile?.path ? (
             <Button
               variant="outline"
@@ -687,7 +705,9 @@ export function InspectorPanel() {
         {graphWarnings.length > 0 ? (
           <Section title="Graph Diagnostics">
             {graphWarnings.slice(0, 8).map((issue, index) => (
-              <Code key={`${issue.ruleId}:${index}`}>[{issue.ruleId}] {issue.message}</Code>
+              <Code key={`${issue.ruleId}:${index}`}>
+                [{issue.ruleId}] {issue.message}
+              </Code>
             ))}
           </Section>
         ) : null}
@@ -774,7 +794,11 @@ export function InspectorPanel() {
                   {fileMetadataGroups.references.length > 0 ? (
                     <MetadataDetails title="References">
                       {fileMetadataGroups.references.map(([label, value]) => (
-                        <MetadataValue key={`file-references:${label}`} label={label} value={value} />
+                        <MetadataValue
+                          key={`file-references:${label}`}
+                          label={label}
+                          value={value}
+                        />
                       ))}
                     </MetadataDetails>
                   ) : null}
@@ -806,7 +830,11 @@ export function InspectorPanel() {
               <div className="grid gap-1.5">
                 <p className="text-slate-400">Task Metadata</p>
                 {rawTaskMetadata.map((item) => (
-                  <Field key={`${item.label}:${item.value}`} label={item.label} value={item.value} />
+                  <Field
+                    key={`${item.label}:${item.value}`}
+                    label={item.label}
+                    value={item.value}
+                  />
                 ))}
               </div>
             ) : null}
@@ -836,7 +864,9 @@ export function InspectorPanel() {
               {trace?.files?.map((file) => (
                 <Code key={file}>{file}</Code>
               ))}
-              {!trace?.decisionRefs?.length && !trace?.moduleRefs?.length && !trace?.files?.length ? (
+              {!trace?.decisionRefs?.length &&
+              !trace?.moduleRefs?.length &&
+              !trace?.files?.length ? (
                 <p className="text-slate-400">No trace links found.</p>
               ) : null}
             </div>
@@ -854,7 +884,11 @@ export function InspectorPanel() {
                 <div className="grid gap-2">
                   <p className="text-slate-400">Entity Data</p>
                   {entityDetails.summary.map((item) => (
-                    <Field key={`${item.label}:${item.value}`} label={item.label} value={item.value} />
+                    <Field
+                      key={`${item.label}:${item.value}`}
+                      label={item.label}
+                      value={item.value}
+                    />
                   ))}
                   <RelatedList label="Tasks" values={entityDetails.relatedTasks} />
                   <RelatedList label="Milestones" values={entityDetails.relatedMilestones} />

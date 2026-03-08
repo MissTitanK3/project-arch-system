@@ -81,12 +81,17 @@ function sortTree(nodes: TreeNode[]): TreeNode[] {
   }));
 }
 
-function buildDocNodes(scope: DomainDocsData["docs"][number]["scope"], docs: DomainDocsData["docs"]): TreeNode[] {
+function buildDocNodes(
+  scope: DomainDocsData["docs"][number]["scope"],
+  docs: DomainDocsData["docs"],
+): TreeNode[] {
   const scopedDocs = docs.filter((doc) => doc.scope === scope);
   const roots: TreeNode[] = [];
 
   for (const doc of scopedDocs) {
-    const relativePath = doc.path.startsWith(`${scope}/`) ? doc.path.slice(scope.length + 1) : doc.path;
+    const relativePath = doc.path.startsWith(`${scope}/`)
+      ? doc.path.slice(scope.length + 1)
+      : doc.path;
     const parts = relativePath.split("/").filter(Boolean);
     if (parts.length === 0) continue;
 
@@ -162,7 +167,8 @@ export function Sidebar() {
   }, []);
 
   const activeView = useMemo<WorkspaceView>(() => {
-    if (pathname === "/work" && searchParams.get("view") === "architecture") return "architecture-map";
+    if (pathname === "/work" && searchParams.get("view") === "architecture")
+      return "architecture-map";
     if (pathname === "/work" && searchParams.get("view") === "project") return "project-map";
     if (pathname === "/work") return "tasks-roadmap";
     const view = searchParams.get("view");
@@ -290,9 +296,7 @@ export function Sidebar() {
           ) : (
             <span className="h-4 w-4" />
           )}
-          <span className="text-slate-300">
-            {iconForNode(node, expandedKeys.has(node.key))}
-          </span>
+          <span className="text-slate-300">{iconForNode(node, expandedKeys.has(node.key))}</span>
           <button
             type="button"
             className="min-w-0 flex-1 truncate text-left text-[12px] text-slate-200"
@@ -405,8 +409,14 @@ export function Sidebar() {
 
       <NavigationMenu>
         <section className="mb-4">
-          <p className="mb-2 text-[11px] uppercase tracking-[0.1em] text-slate-400">Unified Explorer</p>
-          {tree.length > 0 ? renderTree(tree) : <p className="text-sm text-slate-400">Loading explorer...</p>}
+          <p className="mb-2 text-[11px] uppercase tracking-[0.1em] text-slate-400">
+            Unified Explorer
+          </p>
+          {tree.length > 0 ? (
+            renderTree(tree)
+          ) : (
+            <p className="text-sm text-slate-400">Loading explorer...</p>
+          )}
         </section>
         <section className="mb-4">
           <p className="mb-2 text-[11px] uppercase tracking-[0.1em] text-slate-400">Node Filters</p>

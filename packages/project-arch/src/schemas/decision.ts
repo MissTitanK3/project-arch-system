@@ -17,6 +17,11 @@ const scopeSchema = z.discriminatedUnion("kind", [
 
 export const decisionStatusSchema = z.enum(["proposed", "accepted", "rejected", "superseded"]);
 
+export const implementationStatusSchema = z.object({
+  implemented: z.boolean().optional(),
+  checklist: z.array(z.string()).optional(),
+});
+
 export const decisionSchema = z.object({
   schemaVersion: z.literal("1.0"),
   type: z.literal("decision"),
@@ -39,6 +44,14 @@ export const decisionSchema = z.object({
     publicDocs: z.array(z.string()),
   }),
   supersedes: z.array(z.string()).optional(),
+  implementationStatus: implementationStatusSchema.optional(),
+  impact: z
+    .object({
+      scope: z.array(z.string()).optional(),
+      effort: z.string().optional(),
+      risk: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type DecisionFrontmatter = z.infer<typeof decisionSchema>;

@@ -31,11 +31,7 @@ export function WorkTable({ tasks, onSelectTask }: WorkTableProps) {
       </TableHeader>
       <TableBody>
         {tasks.map((task) => (
-          <TableRow
-            className="cursor-pointer"
-            key={task.id}
-            onClick={() => onSelectTask(task)}
-          >
+          <TableRow className="cursor-pointer" key={task.id} onClick={() => onSelectTask(task)}>
             <TableCell>
               <Code>{task.id}</Code>
             </TableCell>

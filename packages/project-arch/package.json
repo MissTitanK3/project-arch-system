@@ -1,8 +1,31 @@
 {
   "name": "project-arch",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": false,
-  "description": "Deterministic repository-native architecture CLI",
+  "description": "Architecture-centric project management CLI and SDK for managing phases, milestones, tasks, and architectural decisions",
+  "keywords": [
+    "project-management",
+    "architecture",
+    "cli",
+    "adr",
+    "architecture-decision-records",
+    "task-management",
+    "milestones",
+    "phases",
+    "monorepo",
+    "typescript"
+  ],
+  "homepage": "https://github.com/project-arch/project-arch-system#readme",
+  "bugs": {
+    "url": "https://github.com/project-arch/project-arch-system/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/project-arch/project-arch-system.git",
+    "directory": "packages/project-arch"
+  },
+  "license": "MIT",
+  "author": "Project Arch Contributors",
   "main": "dist/sdk/index.js",
   "types": "dist/sdk/index.d.ts",
   "exports": {
@@ -16,7 +39,10 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "bin": {
     "pa": "dist/cli.js"
@@ -39,6 +65,7 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.13.8",
+    "@vitest/coverage-v8": "^4.0.18",
     "typescript": "^5.8.2"
   }
 }

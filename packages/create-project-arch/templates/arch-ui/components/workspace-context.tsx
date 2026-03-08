@@ -84,7 +84,8 @@ function defaultFilters(): WorkspaceFilters {
 
 function resolveActiveGraphView(pathname: string, searchParams: URLSearchParams): GraphViewMode {
   if (pathname === "/work" && searchParams.get("view") === "project") return "project";
-  if (pathname === "/work" && searchParams.get("view") === "architecture") return "architecture-map";
+  if (pathname === "/work" && searchParams.get("view") === "architecture")
+    return "architecture-map";
   if (pathname === "/work") return "tasks";
   return "architecture-map";
 }

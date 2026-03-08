@@ -53,4 +53,3 @@ export async function GET(request: NextRequest) {
     results: results.slice(0, 30),
   });
 }
-

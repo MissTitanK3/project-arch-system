@@ -88,7 +88,10 @@ function scopeIndexDir(scope: DecisionScope, cwd = process.cwd()): string {
   return milestoneDecisionIndexDir(scope.phaseId, scope.milestoneId, cwd);
 }
 
-export async function createDecision(options: NewDecisionOptions, cwd = process.cwd()): Promise<string> {
+export async function createDecision(
+  options: NewDecisionOptions,
+  cwd = process.cwd(),
+): Promise<string> {
   await assertInitialized(cwd);
   const scope = parseScopeFromOptions(options);
   const slug = normalizeSlug(options.slug ?? "decision");
@@ -140,7 +143,11 @@ export async function linkDecision(
   await rebuildArchitectureGraph(cwd);
 }
 
-export async function setDecisionStatus(decisionId: string, status: string, cwd = process.cwd()): Promise<string> {
+export async function setDecisionStatus(
+  decisionId: string,
+  status: string,
+  cwd = process.cwd(),
+): Promise<string> {
   await assertInitialized(cwd);
   const existing = await loadDecision(decisionId, cwd);
   const parsed = decisionSchema.parse(existing.frontmatter);
@@ -175,7 +182,9 @@ export async function supersedeDecision(
   await rebuildArchitectureGraph(cwd);
 }
 
-export async function listDecisions(cwd = process.cwd()): Promise<Array<{ id: string; status: string }>> {
+export async function listDecisions(
+  cwd = process.cwd(),
+): Promise<Array<{ id: string; status: string }>> {
   await assertInitialized(cwd);
   const index = await loadDecisionIndex(projectDecisionIndexDir(cwd));
   const result: Array<{ id: string; status: string }> = [];

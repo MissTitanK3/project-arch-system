@@ -103,7 +103,10 @@ function estimateNodeWidth(node: GraphDataset["nodes"][number]): number {
     const normalized = Array.isArray(value) ? value.join(", ") : String(value);
     return `${key}: ${normalized}`;
   });
-  const metadataWidth = metadataStrings.reduce((max, value) => Math.max(max, value.length * 6.8), 0);
+  const metadataWidth = metadataStrings.reduce(
+    (max, value) => Math.max(max, value.length * 6.8),
+    0,
+  );
   const estimated = base + Math.max(titleWidth, subtitleWidth, metadataWidth) * 0.58;
   return Math.max(240, Math.min(estimated, 760));
 }
@@ -136,7 +139,8 @@ export function buildGraphFromDataset(
     columnX.set(column, cursorX);
     const currentWidth = columnMaxWidth.get(column) ?? 260;
     const nextColumn = columns[index + 1];
-    const nextWidth = nextColumn === undefined ? currentWidth : (columnMaxWidth.get(nextColumn) ?? 260);
+    const nextWidth =
+      nextColumn === undefined ? currentWidth : (columnMaxWidth.get(nextColumn) ?? 260);
     const adaptiveGap = Math.max(
       MIN_HORIZONTAL_GAP,
       Math.round(Math.max(currentWidth, nextWidth) * 0.24),

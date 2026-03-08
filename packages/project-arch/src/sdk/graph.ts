@@ -5,22 +5,25 @@ import { pathExists, readJson } from "../fs";
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
 
-export async function graphBuild(): Promise<OperationResult<{ path: string }>> {
+export async function graphBuild(cwd?: string): Promise<OperationResult<{ path: string }>> {
   return wrap(async () => {
-    await buildGraph();
+    await buildGraph(cwd);
     return { path: ".arch/graph.json" };
   });
 }
 
 export async function graphTraceTask(input: {
   task: string;
+  cwd?: string;
 }): Promise<OperationResult<Record<string, unknown>>> {
-  return wrap(async () => traceTask(input.task));
+  return wrap(async () => traceTask(input.task, input.cwd));
 }
 
-export async function graphRead(): Promise<OperationResult<Record<string, unknown>>> {
+export async function graphRead(
+  cwd = process.cwd(),
+): Promise<OperationResult<Record<string, unknown>>> {
   return wrap(async () => {
-    const graphPath = path.join(process.cwd(), ".arch", "graph.json");
+    const graphPath = path.join(cwd, ".arch", "graph.json");
     if (!(await pathExists(graphPath))) {
       throw new Error(".arch/graph.json not found");
     }

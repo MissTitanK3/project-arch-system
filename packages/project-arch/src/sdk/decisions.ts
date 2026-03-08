@@ -54,9 +54,9 @@ export async function decisionSupersede(input: {
   });
 }
 
-export async function decisionList(input?: { cwd?: string }): Promise<
-  OperationResult<Array<{ id: string; status: string }>>
-> {
+export async function decisionList(input?: {
+  cwd?: string;
+}): Promise<OperationResult<Array<{ id: string; status: string }>>> {
   return wrap(async () => listDecisions(input?.cwd));
 }
 

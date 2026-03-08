@@ -114,14 +114,10 @@ async function filterGitIgnoredPaths(root: string, paths: string[]): Promise<Set
       if (chunk.length === 0) continue;
 
       try {
-        const { stdout } = (await execFile(
-          "git",
-          ["check-ignore", ...chunk],
-          {
-            cwd: root,
-            encoding: "utf8",
-          } as Parameters<typeof execFile>[2],
-        )) as { stdout: string };
+        const { stdout } = (await execFile("git", ["check-ignore", ...chunk], {
+          cwd: root,
+          encoding: "utf8",
+        } as Parameters<typeof execFile>[2])) as { stdout: string };
         stdout
           .split("\n")
           .map((line: string) => line.trim())

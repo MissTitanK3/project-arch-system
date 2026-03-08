@@ -1,0 +1,18 @@
+# Exclude LICENSE files (legal documents, not markdown docs)
+**/LICENSE
+LICENSE
+
+# Exclude CHANGELOG files (duplicate headings are standard practice by version)
+**/CHANGELOG.md
+CHANGELOG.md
+
+# Exclude node_modules
+node_modules/
+
+# Exclude build outputs
+dist/
+build/
+coverage/
+
+# Exclude templates (may have incomplete/placeholder content)
+**/templates/**

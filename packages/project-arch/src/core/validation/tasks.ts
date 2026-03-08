@@ -1,7 +1,7 @@
 import path from "path";
 import fg from "fast-glob";
 import { readMarkdownWithFrontmatter } from "../../utils/fs";
-import { idInLaneRange } from "../ids/task";
+import { idInLaneRange, formatLaneRange, getLaneRangesTable } from "../ids/task";
 import { taskSchema, TaskFrontmatter, TaskLane } from "../../schemas/task";
 
 export interface TaskRecord {
@@ -42,7 +42,14 @@ export async function collectTaskRecords(cwd = process.cwd()): Promise<TaskRecor
     }
 
     if (!idInLaneRange(frontmatter.id, lane)) {
-      throw new Error(`Task ID ${frontmatter.id} out of lane range '${lane}' in ${filePath}`);
+      const laneRange = formatLaneRange(lane);
+      const allRanges = getLaneRangesTable();
+      throw new Error(
+        `Task ID ${frontmatter.id} is out of range for lane '${lane}'.\n` +
+          `  Valid range for ${lane}: ${laneRange}\n\n` +
+          `${allRanges}\n\n` +
+          `  File: ${filePath}`,
+      );
     }
 
     if (frontmatter.lane !== lane) {

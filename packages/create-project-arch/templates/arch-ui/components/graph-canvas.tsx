@@ -85,17 +85,16 @@ export function GraphCanvas({
   );
   const storageKey = `arch:graph:view:${viewMode}:v1`;
 
-  const initialGraph = useMemo(
-    () => buildGraphFromDataset(data, viewMode),
-    [data, viewMode],
-  );
+  const initialGraph = useMemo(() => buildGraphFromDataset(data, viewMode), [data, viewMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<ArchNodeData>(initialGraph.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
 
   useEffect(() => {
     setNodes((currentNodes) => {
-      const currentPositions = new Map(currentNodes.map((node) => [node.id, node.position] as const));
+      const currentPositions = new Map(
+        currentNodes.map((node) => [node.id, node.position] as const),
+      );
       return initialGraph.nodes.map((node) => {
         const remembered = rememberedPositions.current.get(node.id);
         const current = currentPositions.get(node.id);
@@ -174,10 +173,7 @@ export function GraphCanvas({
           if (hiddenNodeIds.has(node.id)) return false;
           if (!viewKinds[viewMode].includes(node.data.kind)) return false;
           const typeLabel = (node.data.canonicalType ?? "").toLowerCase();
-          if (
-            typeLabel.includes("arch_folder") &&
-            !enabledFilters.includes("domains")
-          ) {
+          if (typeLabel.includes("arch_folder") && !enabledFilters.includes("domains")) {
             return false;
           }
           if (
@@ -192,10 +188,7 @@ export function GraphCanvas({
           if (typeLabel.includes("roadmap_") && !enabledFilters.includes("tasks")) {
             return false;
           }
-          if (
-            typeLabel.includes("project_folder") &&
-            !enabledFilters.includes("modules")
-          ) {
+          if (typeLabel.includes("project_folder") && !enabledFilters.includes("modules")) {
             return false;
           }
           if (
@@ -345,71 +338,92 @@ export function GraphCanvas({
       if (!inScope) return false;
       return matchesSearch(node);
     });
-  }, [edges, enabledFilters, hideCompletedTasks, hiddenNodeIds, neighborhoodIds, nodes, pinnedNodeIds, searchQuery, selectedNodeId, showExternalDependencies, viewMode]);
-  const visibleEdges = useMemo(
-    () => {
-      const allowedEdgeTypes = new Set(enabledEdgeFilters);
-      const allowedAuthorities = new Set(enabledAuthorityFilters);
-      const baseEdges = edges.filter(
-        (edge) =>
-          !hiddenNodeIds.has(edge.source) &&
-          !hiddenNodeIds.has(edge.target) &&
-          allowedEdgeTypes.has((edge.data?.edgeType as GraphEdgeFilter | undefined) ?? "dependency") &&
-          allowedAuthorities.has(
-            (edge.data?.authority as GraphEdgeAuthority | undefined) ?? "authoritative",
-          ),
-      );
-      const precedence = new Map<string, number>([
-        ["authoritative", 3],
-        ["manual", 2],
-        ["inferred", 1],
-      ]);
-      const dedupedByRelation = new Map<string, Edge>();
-      baseEdges.forEach((edge) => {
-        const key = `${edge.source}|${edge.target}|${edge.data?.edgeType ?? "dependency"}`;
-        const incomingScore = precedence.get(edge.data?.authority ?? "authoritative") ?? 0;
-        const existing = dedupedByRelation.get(key);
-        if (!existing) {
-          dedupedByRelation.set(key, edge);
-          return;
-        }
-        const existingScore = precedence.get(existing.data?.authority ?? "authoritative") ?? 0;
-        if (incomingScore > existingScore) {
-          dedupedByRelation.set(key, edge);
-        }
-      });
-      const resolvedEdges = [...dedupedByRelation.values()];
-      if (!selectedNodeId) {
-        if (viewMode === "project" && searchQuery.trim().length === 0) {
-          const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
-          return resolvedEdges.filter(
-            (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
-          );
-        }
-        if (viewMode === "architecture-map" && searchQuery.trim().length === 0) {
-          const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
-          return resolvedEdges.filter(
-            (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
-          );
-        }
-        if (viewMode === "tasks" && searchQuery.trim().length === 0) {
-          const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
-          return resolvedEdges.filter(
-            (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
-          );
-        }
-        if (pinnedNodeIds.size === 0) return [];
+  }, [
+    edges,
+    enabledFilters,
+    hideCompletedTasks,
+    hiddenNodeIds,
+    neighborhoodIds,
+    nodes,
+    pinnedNodeIds,
+    searchQuery,
+    selectedNodeId,
+    showExternalDependencies,
+    viewMode,
+  ]);
+  const visibleEdges = useMemo(() => {
+    const allowedEdgeTypes = new Set(enabledEdgeFilters);
+    const allowedAuthorities = new Set(enabledAuthorityFilters);
+    const baseEdges = edges.filter(
+      (edge) =>
+        !hiddenNodeIds.has(edge.source) &&
+        !hiddenNodeIds.has(edge.target) &&
+        allowedEdgeTypes.has(
+          (edge.data?.edgeType as GraphEdgeFilter | undefined) ?? "dependency",
+        ) &&
+        allowedAuthorities.has(
+          (edge.data?.authority as GraphEdgeAuthority | undefined) ?? "authoritative",
+        ),
+    );
+    const precedence = new Map<string, number>([
+      ["authoritative", 3],
+      ["manual", 2],
+      ["inferred", 1],
+    ]);
+    const dedupedByRelation = new Map<string, Edge>();
+    baseEdges.forEach((edge) => {
+      const key = `${edge.source}|${edge.target}|${edge.data?.edgeType ?? "dependency"}`;
+      const incomingScore = precedence.get(edge.data?.authority ?? "authoritative") ?? 0;
+      const existing = dedupedByRelation.get(key);
+      if (!existing) {
+        dedupedByRelation.set(key, edge);
+        return;
+      }
+      const existingScore = precedence.get(existing.data?.authority ?? "authoritative") ?? 0;
+      if (incomingScore > existingScore) {
+        dedupedByRelation.set(key, edge);
+      }
+    });
+    const resolvedEdges = [...dedupedByRelation.values()];
+    if (!selectedNodeId) {
+      if (viewMode === "project" && searchQuery.trim().length === 0) {
+        const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
         return resolvedEdges.filter(
-          (edge) => pinnedNodeIds.has(edge.source) && pinnedNodeIds.has(edge.target),
+          (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
         );
       }
-      const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
+      if (viewMode === "architecture-map" && searchQuery.trim().length === 0) {
+        const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
+        return resolvedEdges.filter(
+          (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
+        );
+      }
+      if (viewMode === "tasks" && searchQuery.trim().length === 0) {
+        const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
+        return resolvedEdges.filter(
+          (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
+        );
+      }
+      if (pinnedNodeIds.size === 0) return [];
       return resolvedEdges.filter(
-        (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
+        (edge) => pinnedNodeIds.has(edge.source) && pinnedNodeIds.has(edge.target),
       );
-    },
-    [edges, enabledAuthorityFilters, enabledEdgeFilters, hiddenNodeIds, pinnedNodeIds, searchQuery, selectedNodeId, viewMode, visibleNodes],
-  );
+    }
+    const visibleNodeIdSet = new Set(visibleNodes.map((node) => node.id));
+    return resolvedEdges.filter(
+      (edge) => visibleNodeIdSet.has(edge.source) && visibleNodeIdSet.has(edge.target),
+    );
+  }, [
+    edges,
+    enabledAuthorityFilters,
+    enabledEdgeFilters,
+    hiddenNodeIds,
+    pinnedNodeIds,
+    searchQuery,
+    selectedNodeId,
+    viewMode,
+    visibleNodes,
+  ]);
   const renderedEdges = useMemo(
     () =>
       visibleEdges.map((edge) => ({
@@ -526,7 +540,9 @@ export function GraphCanvas({
 
   function selectNodeForInspector(node: Node<ArchNodeData>) {
     const parsed = parseNodeId(node.id);
-    const hasVisibleLinks = visibleEdges.some((edge) => edge.source === node.id || edge.target === node.id);
+    const hasVisibleLinks = visibleEdges.some(
+      (edge) => edge.source === node.id || edge.target === node.id,
+    );
     const metadata = [...node.data.metadata];
     if (viewMode === "architecture-map" && !hasVisibleLinks) {
       metadata.push({

@@ -21,6 +21,12 @@ export const taskSchema = z.object({
   publicDocs: z.array(z.string()),
   decisions: z.array(z.string()),
   completionCriteria: z.array(z.string()),
+  scope: z.string().optional(),
+  acceptanceChecks: z.array(z.string()).optional(),
+  evidence: z.array(z.string()).optional(),
+  traceLinks: z.array(z.string()).optional(),
+  dependsOn: z.array(z.string()).optional(),
+  blocks: z.array(z.string()).optional(),
 });
 
 export type TaskFrontmatter = z.infer<typeof taskSchema>;

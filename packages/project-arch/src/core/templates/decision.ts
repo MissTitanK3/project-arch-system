@@ -27,9 +27,40 @@ export function defaultDecisionFrontmatter(params: {
       codeTargets: [],
       publicDocs: [],
     },
+    implementationStatus: {
+      implemented: false,
+      checklist: [],
+    },
+    impact: {
+      scope: [],
+      effort: "",
+      risk: "",
+    },
   };
 }
 
 export function defaultDecisionBody(): string {
-  return "\n";
+  return [
+    "## Context",
+    "",
+    "...",
+    "",
+    "## Decision Details",
+    "",
+    "...",
+    "",
+    "## Implementation Plan",
+    "",
+    "Steps required to implement this decision:",
+    "",
+    "- [ ] ...",
+    "- [ ] ...",
+    "",
+    "## Verification",
+    "",
+    "How to verify this decision has been implemented:",
+    "",
+    "- ...",
+    "",
+  ].join("\n");
 }

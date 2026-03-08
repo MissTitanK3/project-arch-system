@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 import { runCli } from "./cli/index";
+import { addHintToError } from "./cli/help/hints";
 
 runCli(process.argv).catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(message);
+  if (error instanceof Error) {
+    console.error(addHintToError(error));
+  } else {
+    console.error(String(error));
+  }
   process.exit(1);
 });

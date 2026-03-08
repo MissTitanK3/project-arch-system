@@ -229,10 +229,7 @@ export const GRAPH_VALIDATION_RULES = [
   },
 ] as const;
 
-function pushIssue(
-  output: GraphValidationResult,
-  issue: GraphValidationIssue,
-) {
+function pushIssue(output: GraphValidationResult, issue: GraphValidationIssue) {
   if (issue.severity === "error") output.errors.push(issue);
   else output.warnings.push(issue);
 }

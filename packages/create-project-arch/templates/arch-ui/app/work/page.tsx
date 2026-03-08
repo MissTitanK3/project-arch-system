@@ -44,14 +44,18 @@ export default function WorkPage() {
         setPhases(phaseResult.value);
       } else {
         setPhases([]);
-        errors.push(`Phases unavailable: ${phaseResult.reason instanceof Error ? phaseResult.reason.message : "Unknown error"}`);
+        errors.push(
+          `Phases unavailable: ${phaseResult.reason instanceof Error ? phaseResult.reason.message : "Unknown error"}`,
+        );
       }
 
       if (taskResult.status === "fulfilled") {
         setTasks(taskResult.value.tasks);
       } else {
         setTasks([]);
-        errors.push(`Tasks unavailable: ${taskResult.reason instanceof Error ? taskResult.reason.message : "Unknown error"}`);
+        errors.push(
+          `Tasks unavailable: ${taskResult.reason instanceof Error ? taskResult.reason.message : "Unknown error"}`,
+        );
       }
 
       if (graphResult.status === "fulfilled") {
@@ -59,7 +63,9 @@ export default function WorkPage() {
         setGraphValidation(graphResult.value.validation);
         if (!graphResult.value.validation.valid) {
           errors.push(
-            ...graphResult.value.validation.errors.map((issue) => `Graph schema error: ${issue.message}`),
+            ...graphResult.value.validation.errors.map(
+              (issue) => `Graph schema error: ${issue.message}`,
+            ),
           );
         }
       } else {
@@ -81,7 +87,8 @@ export default function WorkPage() {
   }, []);
 
   const viewParam = searchParams.get("view");
-  const view = viewParam === "project" ? "project" : viewParam === "architecture" ? "architecture" : "tasks";
+  const view =
+    viewParam === "project" ? "project" : viewParam === "architecture" ? "architecture" : "tasks";
 
   const milestones = useMemo(() => {
     const milestoneSet = new Set<string>();
@@ -115,9 +122,11 @@ export default function WorkPage() {
   );
   const activeAuthorityFilters = useMemo(
     () =>
-      (Object.entries(filters.authorityTypes) as Array<
-        [keyof typeof filters.authorityTypes, boolean]
-      >)
+      (
+        Object.entries(filters.authorityTypes) as Array<
+          [keyof typeof filters.authorityTypes, boolean]
+        >
+      )
         .filter(([, enabled]) => enabled)
         .map(([filter]) => filter),
     [filters.authorityTypes],
@@ -140,19 +149,27 @@ export default function WorkPage() {
           <Tabs>
             <TabsList>
               <TabsTrigger
-                className={view === "architecture" ? "border border-blue-700 bg-slate-800 text-slate-100" : ""}
+                className={
+                  view === "architecture"
+                    ? "border border-blue-700 bg-slate-800 text-slate-100"
+                    : ""
+                }
                 onClick={() => router.push("/work?view=architecture")}
               >
                 Architecture
               </TabsTrigger>
               <TabsTrigger
-                className={view === "tasks" ? "border border-blue-700 bg-slate-800 text-slate-100" : ""}
+                className={
+                  view === "tasks" ? "border border-blue-700 bg-slate-800 text-slate-100" : ""
+                }
                 onClick={() => router.push("/work?view=tasks")}
               >
                 Tasks
               </TabsTrigger>
               <TabsTrigger
-                className={view === "project" ? "border border-blue-700 bg-slate-800 text-slate-100" : ""}
+                className={
+                  view === "project" ? "border border-blue-700 bg-slate-800 text-slate-100" : ""
+                }
                 onClick={() => router.push("/work?view=project")}
               >
                 Project
@@ -166,13 +183,17 @@ export default function WorkPage() {
         <div className="rounded-xl border border-red-700 bg-red-950/60 p-3 text-sm text-red-200">
           <p className="font-medium">Graph activation blocked by schema validation errors.</p>
           {graphValidation.errors.map((issue, index) => (
-            <p key={`${issue.ruleId}:${index}`}>[{issue.ruleId}] {issue.message}</p>
+            <p key={`${issue.ruleId}:${index}`}>
+              [{issue.ruleId}] {issue.message}
+            </p>
           ))}
         </div>
       ) : graphData ? (
         <GraphCanvas
           data={graphData}
-          viewMode={view === "project" ? "project" : view === "architecture" ? "architecture-map" : "tasks"}
+          viewMode={
+            view === "project" ? "project" : view === "architecture" ? "architecture-map" : "tasks"
+          }
           enabledFilters={activeFilters}
           enabledEdgeFilters={activeEdgeFilters}
           enabledAuthorityFilters={activeAuthorityFilters}
@@ -182,7 +203,14 @@ export default function WorkPage() {
           hideCompletedTasks={filters.hideCompletedTasks}
           onNodeSelect={(node) =>
             setSelection({
-              type: node.type as "domain" | "decision" | "phase" | "milestone" | "task" | "file" | "health",
+              type: node.type as
+                | "domain"
+                | "decision"
+                | "phase"
+                | "milestone"
+                | "task"
+                | "file"
+                | "health",
               title: node.title,
               id: node.id,
               metadata: node.metadata,
@@ -199,66 +227,68 @@ export default function WorkPage() {
         <div className="rounded-xl border border-amber-700 bg-amber-950/60 p-3 text-sm text-amber-200">
           <p className="font-medium">Graph warnings</p>
           {graphValidation.warnings.map((issue, index) => (
-            <p key={`${issue.ruleId}:${index}`}>[{issue.ruleId}] {issue.message}</p>
+            <p key={`${issue.ruleId}:${index}`}>
+              [{issue.ruleId}] {issue.message}
+            </p>
           ))}
         </div>
       ) : null}
 
       {view !== "architecture" ? (
-      <Card>
-        <CardHeader>
-          <CardTitle>Roadmap Work</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2">
-          <div className="flex flex-wrap gap-2">
-            <Select value={phase} onChange={(event) => setPhase(event.target.value)}>
-              <option value="all">All phases</option>
-              {phases.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.id} {item.active ? "(active)" : ""}
-                </option>
-              ))}
-            </Select>
-            <Input
-              placeholder="Search task..."
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Roadmap Work</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Select value={phase} onChange={(event) => setPhase(event.target.value)}>
+                <option value="all">All phases</option>
+                {phases.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.id} {item.active ? "(active)" : ""}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                placeholder="Search task..."
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </div>
 
-          <div className="grid gap-1 text-slate-400">
-            {milestones.map((milestone) => (
-              <span key={milestone}>{milestone}</span>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            <div className="grid gap-1 text-slate-400">
+              {milestones.map((milestone) => (
+                <span key={milestone}>{milestone}</span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : null}
 
       {view !== "architecture" ? (
-      <Card>
-        <CardHeader>
-          <CardTitle>Tasks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WorkTable
-            tasks={filteredTasks}
-            onSelectTask={(task) =>
-              setSelection({
-                type: "task",
-                title: task.title,
-                id: task.id,
-                metadata: [
-                  { label: "Phase", value: task.milestone.split("/")[0] ?? "unknown" },
-                  { label: "Milestone", value: task.milestone },
-                  { label: "Status", value: task.lane },
-                  { label: "Domain", value: task.domain ?? "foundation" },
-                ],
-              })
-            }
-          />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WorkTable
+              tasks={filteredTasks}
+              onSelectTask={(task) =>
+                setSelection({
+                  type: "task",
+                  title: task.title,
+                  id: task.id,
+                  metadata: [
+                    { label: "Phase", value: task.milestone.split("/")[0] ?? "unknown" },
+                    { label: "Milestone", value: task.milestone },
+                    { label: "Status", value: task.lane },
+                    { label: "Domain", value: task.domain ?? "foundation" },
+                  ],
+                })
+              }
+            />
+          </CardContent>
+        </Card>
       ) : null}
     </div>
   );

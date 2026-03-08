@@ -132,7 +132,12 @@ async function resolveFilesForNode(root: string, type: NodeType, id: string): Pr
     const [phase] = id.split("/");
     if (!phase || !isSafeSegment(phase)) return [];
     const phaseDir = path.join(root, "roadmap", "phases", phase);
-    return collectFiles(phaseDir, root, new Set(["milestones", "tasks", "node_modules", ".git"]), 2);
+    return collectFiles(
+      phaseDir,
+      root,
+      new Set(["milestones", "tasks", "node_modules", ".git"]),
+      2,
+    );
   }
 
   const [phase, milestone] = id.split("/");

@@ -9,12 +9,13 @@ export const runtime = "nodejs";
 export async function GET() {
   const root = getProjectRoot();
   process.env.PROJECT_ROOT = root;
-  const [checkResult, architectureMap] = await Promise.all([check.checkRun(), readArchitectureMap(root)]);
+  const [checkResult, architectureMap] = await Promise.all([
+    check.checkRun(),
+    readArchitectureMap(root),
+  ]);
   const { validation } = await buildValidatedGraphDataset(root, architectureMap);
 
-  const graphErrors = validation.errors.map(
-    (issue) => `[graph:${issue.ruleId}] ${issue.message}`,
-  );
+  const graphErrors = validation.errors.map((issue) => `[graph:${issue.ruleId}] ${issue.message}`);
   const graphWarnings = validation.warnings.map(
     (issue) => `[graph:${issue.ruleId}] ${issue.message}`,
   );

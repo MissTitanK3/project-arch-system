@@ -282,29 +282,39 @@ export async function rebuildArchitectureGraph(cwd = process.cwd()): Promise<voi
   }
 
   for (const decisionFile of decisionFiles.sort()) {
-    const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(decisionFile);
-    const parsed = decisionSchema.parse(data);
-    knownDecisionIds.add(parsed.id);
-    decisionNodes.push({
-      id: parsed.id,
-      title: parsed.title,
-      status: parsed.status,
-      scope: parsed.scope.kind,
-    });
+    try {
+      const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(decisionFile);
+      const parsed = decisionSchema.parse(data);
+      knownDecisionIds.add(parsed.id);
+      decisionNodes.push({
+        id: parsed.id,
+        title: parsed.title,
+        status: parsed.status,
+        scope: parsed.scope.kind,
+      });
 
-    for (const linkedTask of parsed.links.tasks) {
-      const taskRef = normalizePath(linkedTask);
-      taskToDecisionEdges.push({ task: taskRef, decision: parsed.id });
-    }
+      for (const linkedTask of parsed.links.tasks) {
+        const taskRef = normalizePath(linkedTask);
+        taskToDecisionEdges.push({ task: taskRef, decision: parsed.id });
+      }
 
-    const decisionDomains = inferDomainsForDecision(
-      parsed.links.codeTargets,
-      parsed.links.tasks,
-      taskDomainByRef,
-      domains,
-    );
-    for (const domain of decisionDomains) {
-      decisionToDomainEdges.push({ decision: parsed.id, domain });
+      const decisionDomains = inferDomainsForDecision(
+        parsed.links.codeTargets,
+        parsed.links.tasks,
+        taskDomainByRef,
+        domains,
+      );
+      for (const domain of decisionDomains) {
+        decisionToDomainEdges.push({ decision: parsed.id, domain });
+      }
+    } catch (error) {
+      // Skip decisions with invalid schema but log the error
+      const relativePath = path.relative(cwd, decisionFile);
+      console.warn(`Warning: Skipping decision with invalid schema: ${relativePath}`);
+      if (error instanceof Error) {
+        console.warn(`  Error: ${error.message}`);
+      }
+      // Decision is skipped but graph building continues
     }
   }
 
