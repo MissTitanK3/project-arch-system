@@ -388,6 +388,7 @@ export async function rebuildArchitectureGraph(cwd = process.cwd()): Promise<voi
 
   await writeJsonDeterministic(path.join(archRoot, "graph.json"), {
     schemaVersion: "1.0",
+    lastSync: new Date().toISOString(),
     nodes: {
       domains: domains.length,
       decisions: decisionNodes.length,

@@ -23,16 +23,15 @@ npm login
 ### Step 2: Publish project-arch (Core Package)
 
 ```bash
-cd packages/project-arch
-
-# Final build
-pnpm build
+# Validate package
+pnpm --filter project-arch build
+pnpm --filter project-arch test
 
 # Dry run to verify
-npm publish --dry-run
+pnpm --filter project-arch publish --access public --dry-run --no-git-checks
 
 # Publish (when ready)
-npm publish --access public
+pnpm --filter project-arch publish --access public --no-git-checks
 
 # Verify publication
 npm view project-arch
@@ -41,16 +40,15 @@ npm view project-arch
 ### Step 3: Publish create-project-arch (Scaffolder)
 
 ```bash
-cd ../create-project-arch
-
-# Final build
-pnpm build
+# Validate package
+pnpm --filter create-project-arch build
+pnpm --filter create-project-arch test
 
 # Dry run to verify
-npm publish --dry-run
+pnpm --filter create-project-arch publish --access public --dry-run --no-git-checks
 
 # Publish (when ready)
-npm publish --access public
+pnpm --filter create-project-arch publish --access public --no-git-checks
 
 # Verify publication
 npm view create-project-arch
@@ -72,12 +70,12 @@ npx create-project-arch test-install --force
 
 ```bash
 # Tag the release
-git tag v1.1.0
-git push origin v1.1.0
+git tag v<new-version>
+git push origin v<new-version>
 
 # Create release on GitHub with:
-# - Version: v1.1.0
-# - Title: "v1.1.0 - NPM Publication Ready"
+# - Version: v<new-version>
+# - Title: "v<new-version> - NPM Publication Ready"
 # - Body: Copy from CHANGELOG.md
 ```
 
@@ -163,5 +161,5 @@ After publication:
 
 | Package             | Version | Size  | Files |
 | ------------------- | ------- | ----- | ----- |
-| project-arch        | 1.1.0   | 149KB | 296   |
-| create-project-arch | 1.1.0   | 58KB  | 92    |
+| project-arch        | 1.3.0   | TBD   | TBD   |
+| create-project-arch | 1.3.0   | TBD   | TBD   |

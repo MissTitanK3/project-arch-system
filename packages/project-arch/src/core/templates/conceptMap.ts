@@ -18,7 +18,7 @@ export interface ConceptMapping {
   relatedTasks: string[];
   relatedDecisions: string[];
   dependencies: string[];
-  status: "proposed" | "in-progress" | "implemented";
+  status: "proposed" | "in_progress" | "implemented";
 }
 
 export interface ConceptMap {

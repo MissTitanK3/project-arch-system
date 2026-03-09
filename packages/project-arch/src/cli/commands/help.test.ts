@@ -44,7 +44,8 @@ describe("cli/commands/help", () => {
 
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls.map((call: unknown[]) => call[0]).join("\n");
-      expect(output).toContain("Available help topics");
+      expect(output).toContain("Available Commands");
+      expect(output).toContain("Help Topics");
       expect(output).toContain("commands");
       expect(output).toContain("workflows");
       expect(output).toContain("lanes");
@@ -62,7 +63,8 @@ describe("cli/commands/help", () => {
 
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls.map((call: unknown[]) => call[0]).join("\n");
-      expect(output).toContain("Available help topics");
+      expect(output).toContain("Available Commands");
+      expect(output).toContain("Help Topics");
       expect(output).toContain("commands");
       expect(output).toContain("workflows");
     });
@@ -161,7 +163,8 @@ describe("cli/commands/help", () => {
       expect(consoleSpy).toHaveBeenCalled();
 
       const output = consoleSpy.mock.calls.map((call: unknown[]) => call[0]).join("\n");
-      expect(output).toContain("Available help topics");
+      expect(output).toContain("Available Commands");
+      expect(output).toContain("Help Topics");
       expect(process.exitCode).toBe(1);
 
       // Reset exit code for other tests

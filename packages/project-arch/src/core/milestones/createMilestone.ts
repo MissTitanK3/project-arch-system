@@ -10,9 +10,16 @@ import {
 import { currentDateISO } from "../../utils/date";
 import { milestoneDir, phaseDir, projectDocsRoot } from "../../utils/paths";
 import {
+  calculateDiscoveredRatioPercent,
+  formatPercent,
+  resolveDiscoveredLoadThresholdPercent,
+} from "../../core/governance/discoveredLoad";
+import {
   ensureDecisionIndex,
+  loadPhaseManifest,
   milestoneOverviewPath,
   rebuildArchitectureGraph,
+  savePhaseManifest,
 } from "../../graph/manifests";
 
 async function assertInitialized(cwd = process.cwd()): Promise<void> {
@@ -81,6 +88,136 @@ export async function listMilestones(cwd = process.cwd()): Promise<string[]> {
     const parts = item.split("/");
     return `${parts[2]}/${parts[4]}`;
   });
+}
+
+export async function activateMilestone(
+  phaseId: string,
+  milestoneId: string,
+  cwd = process.cwd(),
+): Promise<void> {
+  await assertInitialized(cwd);
+
+  const mDir = milestoneDir(phaseId, milestoneId, cwd);
+  if (!(await pathExists(mDir))) {
+    throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
+  }
+
+  const diagnostics: string[] = [];
+
+  const plannedTasks = await fg(
+    `roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/planned/*.md`,
+    {
+      cwd,
+      onlyFiles: true,
+    },
+  );
+  if (plannedTasks.length === 0) {
+    diagnostics.push(
+      "at least one planned task is required in roadmap/phases/<phase>/milestones/<milestone>/tasks/planned",
+    );
+  }
+
+  const targetsPath = path.join(mDir, "targets.md");
+  if (!(await pathExists(targetsPath))) {
+    diagnostics.push(
+      "targets file is required: roadmap/phases/<phase>/milestones/<milestone>/targets.md",
+    );
+  }
+
+  const overviewPath = milestoneOverviewPath(phaseId, milestoneId, cwd);
+  if (!(await pathExists(overviewPath))) {
+    diagnostics.push(
+      "overview file is required: roadmap/phases/<phase>/milestones/<milestone>/overview.md",
+    );
+  } else {
+    const overview = await fs.readFile(overviewPath, "utf8");
+    if (!hasSuccessCriteriaOrChecklist(overview)) {
+      diagnostics.push(
+        "success criteria/checklist is required in milestone overview (add a 'Success Criteria' section or markdown checklist items '- [ ] ...')",
+      );
+    }
+  }
+
+  if (diagnostics.length > 0) {
+    throw new Error(
+      [
+        `Milestone activation blocked for '${phaseId}/${milestoneId}' due to missing readiness prerequisites:`,
+        ...diagnostics.map((item) => `- ${item}`),
+      ].join("\n"),
+    );
+  }
+
+  const manifest = await loadPhaseManifest(cwd);
+  const phaseExists = manifest.phases.some((phase) => phase.id === phaseId);
+  if (!phaseExists) {
+    throw new Error(`Phase '${phaseId}' does not exist in roadmap/manifest.json`);
+  }
+
+  manifest.activePhase = phaseId;
+  manifest.activeMilestone = milestoneId;
+  await savePhaseManifest(manifest, cwd);
+  await rebuildArchitectureGraph(cwd);
+}
+
+export async function completeMilestone(
+  phaseId: string,
+  milestoneId: string,
+  cwd = process.cwd(),
+): Promise<void> {
+  await assertInitialized(cwd);
+
+  const mDir = milestoneDir(phaseId, milestoneId, cwd);
+  if (!(await pathExists(mDir))) {
+    throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
+  }
+
+  const plannedTasks = await fg(
+    `roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/planned/*.md`,
+    {
+      cwd,
+      onlyFiles: true,
+    },
+  );
+  const discoveredTasks = await fg(
+    `roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/discovered/*.md`,
+    {
+      cwd,
+      onlyFiles: true,
+    },
+  );
+
+  const discoveredRatio = calculateDiscoveredRatioPercent(
+    plannedTasks.length,
+    discoveredTasks.length,
+  );
+  const threshold = await resolveDiscoveredLoadThresholdPercent(cwd);
+
+  if (discoveredRatio > threshold) {
+    const checkpointPath = path.join(mDir, "replan-checkpoint.md");
+    if (!(await pathExists(checkpointPath))) {
+      throw new Error(
+        [
+          `Milestone completion blocked for '${phaseId}/${milestoneId}'.`,
+          `Discovered load ratio ${formatPercent(discoveredRatio)} exceeds threshold ${formatPercent(threshold)}.`,
+          `Add explicit replan checkpoint marker: roadmap/phases/${phaseId}/milestones/${milestoneId}/replan-checkpoint.md`,
+        ].join("\n"),
+      );
+    }
+  }
+
+  const manifest = await loadPhaseManifest(cwd);
+  if (manifest.activePhase === phaseId && manifest.activeMilestone === milestoneId) {
+    manifest.activeMilestone = null;
+    await savePhaseManifest(manifest, cwd);
+  }
+
+  await rebuildArchitectureGraph(cwd);
+}
+
+function hasSuccessCriteriaOrChecklist(content: string): boolean {
+  const hasChecklistItem = /^\s*-\s*\[(?: |x|X)\]\s+.+/m.test(content);
+  const hasSuccessCriteriaHeading = /(?:^|\n)#+\s*success criteria\b/i.test(content);
+  return hasChecklistItem || hasSuccessCriteriaHeading;
 }
 
 function milestoneOverviewTemplate(phaseId: string, milestoneId: string): string {

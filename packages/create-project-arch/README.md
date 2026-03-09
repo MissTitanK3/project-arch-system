@@ -80,7 +80,7 @@ When you run `create-project-arch`, it:
 
 ### Project Structure
 
-```
+```bash
 my-awesome-project/
 ├── apps/
 │   ├── arch/                    # Architecture UI (Next.js app)
@@ -107,11 +107,137 @@ my-awesome-project/
 │   │   └── phase-1/
 │   │       └── milestones/
 │   ├── decisions/
-│   └── docs/
+│   ├── docs/
+│   └── concept-map.json         # Concept-to-module traceability map
+├── architecture/
+│   ├── foundation/              # Milestone 1 prerequisite docs
+│   │   ├── prompt.md
+│   │   ├── project-overview.md
+│   │   ├── goals.md
+│   │   ├── user-journey.md
+│   │   └── scope.md
+│   ├── architecture/            # System architecture specs
+│   │   ├── SPEC_TEMPLATE.md
+│   │   └── example-system.md
+│   ├── decisions/               # Architecture decision records
+│       ├── DECISION_TEMPLATE.md
+│       └── example-decision.md
+│   └── reference/               # Reusable quality and closure references
+│       ├── GAP_CLOSURE_TEMPLATE.md
+│       └── example-gap-closure.md
+├── arch-domains/                # Domain boundaries and ownership
+│   ├── README.md
+│   ├── domains.json
+│   ├── DOMAIN_TEMPLATE.md
+│   ├── core.md
+│   ├── ui.md
+│   └── api.md
+├── scripts/
+│   └── validate.sh              # Local architecture validation hook
+├── .githooks/
+│   └── pre-commit               # Optional local pre-commit validation hook
 ├── package.json
 ├── turbo.json
 └── pnpm-workspace.yaml
 ```
+
+### Milestone 1 Prerequisites
+
+Scaffolded projects include these foundation docs by default under `architecture/foundation/`:
+
+- `prompt.md` (canonical source brief)
+- `project-overview.md`
+- `goals.md`
+- `user-journey.md`
+- `scope.md`
+
+Complete these files first before implementing milestone tasks.
+
+### Domain Spec Scaffold
+
+Scaffolded projects also include baseline domain specs under `arch-domains/`:
+
+- `domains.json` with starter domains (`core`, `ui`, `api`)
+- `DOMAIN_TEMPLATE.md` with required sections:
+  - Responsibilities
+  - Primary Data Ownership
+  - Interface Contracts
+  - Non-Goals
+  - Milestone Mapping
+- Starter specs: `core.md`, `ui.md`, and `api.md`
+
+### System Architecture Spec Scaffold
+
+Scaffolded projects include reusable architecture specs under `architecture/architecture/`:
+
+- `SPEC_TEMPLATE.md` with required sections:
+  - Purpose
+  - Scope (in-scope / out-of-scope)
+  - Key Definitions
+  - Design
+  - Data Model
+  - Owning Domain
+  - MVP Constraints
+- `example-system.md` showing a realistic completed reference
+
+### Concept-To-Module Traceability Scaffold
+
+Scaffolded projects include `arch-model/concept-map.json` with:
+
+- concept metadata (`id`, `name`, `description`)
+- owning domain assignment
+- module responsibilities
+- implementation surfaces (API/UI/component/code paths)
+- concept dependencies
+- domain-module mapping and implementation checklist placeholders
+
+### Decision Record Scaffold
+
+Scaffolded projects include architecture decision templates under `architecture/decisions/`:
+
+- `DECISION_TEMPLATE.md` with structured frontmatter (`id`, `title`, `slug`, `status`, timestamps, `relatedTasks`, `relatedDocs`, `supersedes`)
+- Required sections:
+  - Context
+  - Decision
+  - Rationale
+  - Alternatives Considered
+  - Affected Artifacts
+  - Implementation Status Checklist
+- `example-decision.md` demonstrating a completed decision record
+
+Use `pa decision new` for operational decision creation linked into roadmap decision indexes.
+
+### Milestone Gap-Closure Report Scaffold
+
+Scaffolded projects include closure report artifacts under `architecture/reference/`:
+
+- `GAP_CLOSURE_TEMPLATE.md` with sections for:
+  - Executive Summary
+  - Gap Categories And Resolutions
+  - Layer Synchronization Check
+  - Coverage Audit
+  - Remaining Gaps And Follow-On Items
+  - Template Improvement Feedback
+- `example-gap-closure.md` demonstrating a completed closure report
+
+Recommended workflow:
+
+1. Complete milestone tasks and decision updates.
+2. Run `pa check` and `pa report`.
+3. Record closure outcomes in milestone closure report.
+4. Track remaining gaps as follow-on tasks/decisions.
+
+### Local Validation Hook Scaffold
+
+Scaffolded projects include local validation automation assets:
+
+- `scripts/validate.sh` runs:
+  - `pnpm arch:check`
+  - `pnpm arch:report`
+- Optional local hook example:
+  - `.githooks/pre-commit`
+
+Use these hooks to keep architecture validation consistent in local workflows.
 
 ## Available Templates
 
@@ -318,7 +444,7 @@ node dist/cli.js test-output --force
 
 Templates are stored in `templates/` directory:
 
-```
+```bash
 templates/
 ├── arch-ui/
 │   ├── package.json
@@ -472,19 +598,19 @@ npm run dev
 
 To add project-arch to an existing project:
 
-1. Install project-arch:
+### 1. Install project-arch
 
 ```bash
 pnpm add project-arch -w
 ```
 
-2. Initialize architecture:
+### 2. Initialize architecture
 
 ```bash
 pnpm exec pa init
 ```
 
-3. (Optional) Copy template files manually from this repository
+### 3. (Optional) Copy template files manually from this repository
 
 ## API Reference (Programmatic Usage)
 

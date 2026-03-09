@@ -162,6 +162,193 @@ async function scaffoldArchitectureApps(targetDir: string): Promise<void> {
   await fs.appendFile(archUiPkgPath, "\n");
 }
 
+async function scaffoldFoundationDocs(targetDir: string): Promise<void> {
+  const templatesRoot = getTemplatesRoot();
+  const foundationTemplateRoot = path.join(templatesRoot, "foundation");
+  const foundationTargetRoot = path.join(targetDir, "architecture", "foundation");
+
+  if (!(await fs.pathExists(foundationTemplateRoot))) {
+    throw new Error(`Missing foundation templates at ${foundationTemplateRoot}`);
+  }
+
+  await fs.ensureDir(foundationTargetRoot);
+  const foundationEntries = await fs.readdir(foundationTemplateRoot);
+
+  for (const entry of foundationEntries) {
+    const sourcePath = path.join(foundationTemplateRoot, entry);
+    const targetPath = path.join(foundationTargetRoot, entry);
+
+    if (await fs.pathExists(targetPath)) {
+      continue;
+    }
+
+    await fs.copy(sourcePath, targetPath, { overwrite: false });
+  }
+}
+
+async function scaffoldDomainSpecs(targetDir: string): Promise<void> {
+  const templatesRoot = getTemplatesRoot();
+  const domainsTemplateRoot = path.join(templatesRoot, "domains");
+  const domainsTargetRoot = path.join(targetDir, "arch-domains");
+
+  if (!(await fs.pathExists(domainsTemplateRoot))) {
+    throw new Error(`Missing domain templates at ${domainsTemplateRoot}`);
+  }
+
+  await fs.ensureDir(domainsTargetRoot);
+  const domainEntries = await fs.readdir(domainsTemplateRoot);
+
+  for (const entry of domainEntries) {
+    const sourcePath = path.join(domainsTemplateRoot, entry);
+    const targetPath = path.join(domainsTargetRoot, entry);
+
+    if (entry === "DOMAIN_TEMPLATE.md" || entry === "README.md") {
+      await fs.copy(sourcePath, targetPath, { overwrite: true });
+      continue;
+    }
+
+    if (entry === "domains.json") {
+      if (await fs.pathExists(targetPath)) {
+        const existing = (await fs.readJSON(targetPath)) as { domains?: unknown };
+        if (Array.isArray(existing.domains) && existing.domains.length > 0) {
+          continue;
+        }
+      }
+
+      await fs.copy(sourcePath, targetPath, { overwrite: true });
+      continue;
+    }
+
+    if (await fs.pathExists(targetPath)) {
+      continue;
+    }
+
+    await fs.copy(sourcePath, targetPath, { overwrite: false });
+  }
+}
+
+async function scaffoldArchitectureSpecs(targetDir: string): Promise<void> {
+  const templatesRoot = getTemplatesRoot();
+  const architectureSpecsTemplateRoot = path.join(templatesRoot, "architecture-specs");
+  const architectureSpecsTargetRoot = path.join(targetDir, "architecture", "architecture");
+
+  if (!(await fs.pathExists(architectureSpecsTemplateRoot))) {
+    throw new Error(`Missing architecture spec templates at ${architectureSpecsTemplateRoot}`);
+  }
+
+  await fs.ensureDir(architectureSpecsTargetRoot);
+  const specEntries = await fs.readdir(architectureSpecsTemplateRoot);
+
+  for (const entry of specEntries) {
+    const sourcePath = path.join(architectureSpecsTemplateRoot, entry);
+    const targetPath = path.join(architectureSpecsTargetRoot, entry);
+
+    if (await fs.pathExists(targetPath)) {
+      continue;
+    }
+
+    await fs.copy(sourcePath, targetPath, { overwrite: false });
+  }
+}
+
+async function scaffoldConceptMap(targetDir: string): Promise<void> {
+  const templatesRoot = getTemplatesRoot();
+  const conceptMapTemplatePath = path.join(templatesRoot, "concept-map", "concept-map.json");
+  const conceptMapTargetPath = path.join(targetDir, "arch-model", "concept-map.json");
+
+  if (!(await fs.pathExists(conceptMapTemplatePath))) {
+    throw new Error(`Missing concept-map template at ${conceptMapTemplatePath}`);
+  }
+
+  await fs.ensureDir(path.dirname(conceptMapTargetPath));
+  if (await fs.pathExists(conceptMapTargetPath)) {
+    return;
+  }
+
+  await fs.copy(conceptMapTemplatePath, conceptMapTargetPath, { overwrite: false });
+}
+
+async function scaffoldDecisionRecords(targetDir: string): Promise<void> {
+  const templatesRoot = getTemplatesRoot();
+  const decisionsTemplateRoot = path.join(templatesRoot, "decisions");
+  const decisionsTargetRoot = path.join(targetDir, "architecture", "decisions");
+
+  if (!(await fs.pathExists(decisionsTemplateRoot))) {
+    throw new Error(`Missing decision templates at ${decisionsTemplateRoot}`);
+  }
+
+  await fs.ensureDir(decisionsTargetRoot);
+  const entries = await fs.readdir(decisionsTemplateRoot);
+
+  for (const entry of entries) {
+    const sourcePath = path.join(decisionsTemplateRoot, entry);
+    const targetPath = path.join(decisionsTargetRoot, entry);
+
+    if (await fs.pathExists(targetPath)) {
+      continue;
+    }
+
+    await fs.copy(sourcePath, targetPath, { overwrite: false });
+  }
+}
+
+async function scaffoldGapClosureTemplates(targetDir: string): Promise<void> {
+  const templatesRoot = getTemplatesRoot();
+  const gapClosureTemplateRoot = path.join(templatesRoot, "gap-closure");
+  const gapClosureTargetRoot = path.join(targetDir, "architecture", "reference");
+
+  if (!(await fs.pathExists(gapClosureTemplateRoot))) {
+    throw new Error(`Missing gap-closure templates at ${gapClosureTemplateRoot}`);
+  }
+
+  await fs.ensureDir(gapClosureTargetRoot);
+  const entries = await fs.readdir(gapClosureTemplateRoot);
+
+  for (const entry of entries) {
+    const sourcePath = path.join(gapClosureTemplateRoot, entry);
+    const targetPath = path.join(gapClosureTargetRoot, entry);
+
+    if (await fs.pathExists(targetPath)) {
+      continue;
+    }
+
+    await fs.copy(sourcePath, targetPath, { overwrite: false });
+  }
+}
+
+async function scaffoldValidationHooks(targetDir: string): Promise<void> {
+  const templatesRoot = getTemplatesRoot();
+  const validationTemplateRoot = path.join(templatesRoot, "validation-hooks");
+
+  if (!(await fs.pathExists(validationTemplateRoot))) {
+    throw new Error(`Missing validation hook templates at ${validationTemplateRoot}`);
+  }
+
+  const entries = await fs.readdir(validationTemplateRoot);
+  for (const entry of entries) {
+    const sourcePath = path.join(validationTemplateRoot, entry);
+    const targetPath = path.join(targetDir, entry);
+    await copyMissingEntries(sourcePath, targetPath);
+  }
+}
+
+async function copyMissingEntries(sourcePath: string, targetPath: string): Promise<void> {
+  const sourceStats = await fs.stat(sourcePath);
+
+  if (!sourceStats.isDirectory()) {
+    if (!(await fs.pathExists(targetPath))) {
+      await fs.copy(sourcePath, targetPath, { overwrite: false });
+    }
+    return;
+  }
+
+  await fs.ensureDir(targetPath);
+  const children = await fs.readdir(sourcePath);
+  for (const child of children) {
+    await copyMissingEntries(path.join(sourcePath, child), path.join(targetPath, child));
+  }
+}
+
 async function upsertArchModulesInMap(targetDir: string): Promise<void> {
   const modulesPath = path.join(targetDir, "arch-model", "modules.json");
   if (!(await fs.pathExists(modulesPath))) {
@@ -262,6 +449,13 @@ async function main(): Promise<void> {
       }
 
       await runPaInit(targetDir, options);
+      await scaffoldFoundationDocs(targetDir);
+      await scaffoldDomainSpecs(targetDir);
+      await scaffoldArchitectureSpecs(targetDir);
+      await scaffoldConceptMap(targetDir);
+      await scaffoldDecisionRecords(targetDir);
+      await scaffoldGapClosureTemplates(targetDir);
+      await scaffoldValidationHooks(targetDir);
       await scaffoldArchitectureApps(targetDir);
       await upsertArchModulesInMap(targetDir);
       await wireProjectArchUsage(targetDir);

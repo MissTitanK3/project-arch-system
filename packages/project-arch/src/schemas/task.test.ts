@@ -172,5 +172,32 @@ describe("schemas/task", () => {
       expect(taskSchema.parse({ ...validTask, status: "done" }).status).toBe("done");
       expect(taskSchema.parse({ ...validTask, status: "blocked" }).status).toBe("blocked");
     });
+
+    describe("legacy status format migration", () => {
+      it("should normalize legacy hyphenated status to canonical format", () => {
+        const legacyTask = { ...validTask, status: "in-progress" };
+        const parsed = taskSchema.parse(legacyTask);
+        expect(parsed.status).toBe("in_progress");
+      });
+
+      it("should accept mixed case legacy formats", () => {
+        const legacyTask = { ...validTask, status: "In-Progress" };
+        const parsed = taskSchema.parse(legacyTask);
+        expect(parsed.status).toBe("in_progress");
+      });
+
+      it("should preserve canonical format without modification", () => {
+        // Ensures backward compatibility with existing tasks
+        const canonicalTask = { ...validTask, status: "in_progress" };
+        const parsed = taskSchema.parse(canonicalTask);
+        expect(parsed.status).toBe("in_progress");
+      });
+
+      it("should still reject truly invalid legacy statuses", () => {
+        expect(() => taskSchema.parse({ ...validTask, status: "pending" })).toThrow();
+        expect(() => taskSchema.parse({ ...validTask, status: "wip" })).toThrow();
+        expect(() => taskSchema.parse({ ...validTask, status: "completed" })).toThrow();
+      });
+    });
   });
 });

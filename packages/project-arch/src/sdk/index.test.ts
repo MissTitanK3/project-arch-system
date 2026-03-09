@@ -11,6 +11,7 @@ describe("project-arch SDK", () => {
     expect(sdk.graph).toBeDefined();
     expect(sdk.check).toBeDefined();
     expect(sdk.report).toBeDefined();
+    expect(sdk.policy).toBeDefined();
     expect(sdk.docs).toBeDefined();
     expect(sdk.registry).toBeDefined();
     expect(sdk.commandMetadata).toBeDefined();

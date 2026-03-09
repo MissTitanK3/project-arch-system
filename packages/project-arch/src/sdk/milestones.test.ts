@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { milestoneCreate, milestoneList } from "./milestones";
+import { milestoneActivate, milestoneComplete, milestoneCreate, milestoneList } from "./milestones";
 import { phaseCreate } from "./phases";
+import { taskCreate, taskDiscover } from "./tasks";
 import { createTestProject, resultAssertions, type TestProjectContext } from "../test/helpers";
+import fs from "fs-extra";
+import path from "path";
 
 describe.sequential("SDK Milestones", () => {
   let context: TestProjectContext;
@@ -137,6 +140,119 @@ describe.sequential("SDK Milestones", () => {
       resultAssertions.assertSuccess(result);
       expect(result.data).toContain("phase-1/m1");
       expect(result.data).toContain("phase-2/m1");
+    });
+  });
+
+  describe("milestoneActivate", () => {
+    it("should fail activation when readiness prerequisites are missing", async () => {
+      await phaseCreate({ id: "phase-2", cwd: testDir });
+      await milestoneCreate({ phase: "phase-2", milestone: "m-activation-fail", cwd: testDir });
+
+      const result = await milestoneActivate({
+        phase: "phase-2",
+        milestone: "m-activation-fail",
+        cwd: testDir,
+      });
+
+      resultAssertions.assertError(result);
+    });
+
+    it("should activate milestone when prerequisites are present", async () => {
+      await phaseCreate({ id: "phase-2", cwd: testDir });
+      await milestoneCreate({ phase: "phase-2", milestone: "m-activation-ok", cwd: testDir });
+      await taskCreate({
+        phase: "phase-2",
+        milestone: "m-activation-ok",
+        title: "Ready task",
+        cwd: testDir,
+      });
+
+      const overviewPath = path.join(
+        testDir,
+        "roadmap",
+        "phases",
+        "phase-2",
+        "milestones",
+        "m-activation-ok",
+        "overview.md",
+      );
+      await fs.writeFile(overviewPath, "## Success Criteria\n\n- [ ] Ready\n", "utf8");
+
+      const result = await milestoneActivate({
+        phase: "phase-2",
+        milestone: "m-activation-ok",
+        cwd: testDir,
+      });
+
+      resultAssertions.assertSuccess(result);
+      expect(result.data.phase).toBe("phase-2");
+      expect(result.data.milestone).toBe("m-activation-ok");
+    });
+  });
+
+  describe("milestoneComplete", () => {
+    it("should fail completion when threshold is breached and checkpoint is missing", async () => {
+      await phaseCreate({ id: "phase-2", cwd: testDir });
+      await milestoneCreate({ phase: "phase-2", milestone: "m-complete-fail", cwd: testDir });
+      await taskCreate({
+        phase: "phase-2",
+        milestone: "m-complete-fail",
+        title: "Planned",
+        cwd: testDir,
+      });
+      await taskDiscover({
+        phase: "phase-2",
+        milestone: "m-complete-fail",
+        from: "001",
+        title: "Discovered",
+        cwd: testDir,
+      });
+
+      const result = await milestoneComplete({
+        phase: "phase-2",
+        milestone: "m-complete-fail",
+        cwd: testDir,
+      });
+      resultAssertions.assertError(result);
+    });
+
+    it("should complete when checkpoint is present", async () => {
+      await phaseCreate({ id: "phase-2", cwd: testDir });
+      await milestoneCreate({ phase: "phase-2", milestone: "m-complete-ok", cwd: testDir });
+      await taskCreate({
+        phase: "phase-2",
+        milestone: "m-complete-ok",
+        title: "Planned",
+        cwd: testDir,
+      });
+      await taskDiscover({
+        phase: "phase-2",
+        milestone: "m-complete-ok",
+        from: "001",
+        title: "Discovered",
+        cwd: testDir,
+      });
+
+      await fs.writeFile(
+        path.join(
+          testDir,
+          "roadmap",
+          "phases",
+          "phase-2",
+          "milestones",
+          "m-complete-ok",
+          "replan-checkpoint.md",
+        ),
+        "# Replan Checkpoint\n\nActions accepted.\n",
+        "utf8",
+      );
+
+      const result = await milestoneComplete({
+        phase: "phase-2",
+        milestone: "m-complete-ok",
+        cwd: testDir,
+      });
+      resultAssertions.assertSuccess(result);
     });
   });
 });

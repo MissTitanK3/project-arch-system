@@ -10,6 +10,7 @@ describe("schemas/phase", () => {
         { id: "phase-2", createdAt: "2026-03-07" },
       ],
       activePhase: "phase-2",
+      activeMilestone: null,
     };
 
     it("should accept valid phase manifest", () => {
@@ -30,6 +31,7 @@ describe("schemas/phase", () => {
         schemaVersion: "1.0" as const,
         phases: [],
         activePhase: null,
+        activeMilestone: null,
       };
       const result = phaseManifestSchema.parse(withEmptyPhases);
       expect(result.phases).toEqual([]);
@@ -40,6 +42,7 @@ describe("schemas/phase", () => {
         schemaVersion: "1.0" as const,
         phases: [{ id: "phase-1", createdAt: "2026-03-07" }],
         activePhase: "phase-1",
+        activeMilestone: null,
       };
       const result = phaseManifestSchema.parse(singlePhase);
       expect(result.phases).toHaveLength(1);
@@ -155,6 +158,41 @@ describe("schemas/phase", () => {
       });
     });
 
+    describe("activeMilestone field", () => {
+      it("should accept string activeMilestone", () => {
+        const withMilestone = { ...validManifest, activeMilestone: "milestone-1-foundation" };
+        const result = phaseManifestSchema.parse(withMilestone);
+        expect(typeof result.activeMilestone).toBe("string");
+        expect(result.activeMilestone).toBe("milestone-1-foundation");
+      });
+
+      it("should accept null activeMilestone", () => {
+        const withNull = { ...validManifest, activeMilestone: null };
+        const result = phaseManifestSchema.parse(withNull);
+        expect(result.activeMilestone).toBeNull();
+      });
+
+      it("should accept undefined activeMilestone and default to null", () => {
+        const missing = Object.fromEntries(
+          Object.entries(validManifest).filter(([key]) => key !== "activeMilestone"),
+        );
+        const result = phaseManifestSchema.parse(missing);
+        expect(result.activeMilestone).toBeNull();
+      });
+
+      it("should reject non-string, non-null activeMilestone", () => {
+        expect(() =>
+          phaseManifestSchema.parse({ ...validManifest, activeMilestone: 123 }),
+        ).toThrow();
+        expect(() =>
+          phaseManifestSchema.parse({ ...validManifest, activeMilestone: true }),
+        ).toThrow();
+        expect(() =>
+          phaseManifestSchema.parse({ ...validManifest, activeMilestone: [] }),
+        ).toThrow();
+      });
+    });
+
     describe("multiple phases", () => {
       it("should handle many phases", () => {
         const manyPhases = {
@@ -164,6 +202,7 @@ describe("schemas/phase", () => {
             createdAt: "2026-03-07",
           })),
           activePhase: "phase-10",
+          activeMilestone: null,
         };
 
         const result = phaseManifestSchema.parse(manyPhases);
@@ -181,6 +220,7 @@ describe("schemas/phase", () => {
             { id: "gamma", createdAt: "2026-03-03" },
           ],
           activePhase: null,
+          activeMilestone: null,
         };
 
         const result = phaseManifestSchema.parse(ordered);

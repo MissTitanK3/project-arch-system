@@ -23,4 +23,12 @@ export const commandMetadata = {
     description: "Trace a task in the architecture graph",
     inputs: ["task"],
   },
+  "policy.check": {
+    description: "Detect policy conflicts between tasks and architecture",
+    inputs: [],
+  },
+  "policy.explain": {
+    description: "Explain policy conflicts with remediation guidance",
+    inputs: [],
+  },
 } as const;

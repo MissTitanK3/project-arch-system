@@ -9,6 +9,7 @@ export const phaseManifestSchema = z.object({
     }),
   ),
   activePhase: z.string().nullable(),
+  activeMilestone: z.string().nullable().optional().default(null),
 });
 
 export type PhaseManifest = z.infer<typeof phaseManifestSchema>;

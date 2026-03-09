@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { taskStatusSchema, type TaskStatus } from "./statusNormalization";
 
 export const laneSchema = z.enum(["planned", "discovered", "backlog"]);
 export type TaskLane = z.infer<typeof laneSchema>;
 
-export const taskStatusSchema = z.enum(["todo", "in_progress", "done", "blocked"]);
-export type TaskStatus = z.infer<typeof taskStatusSchema>;
+// Re-export status schema and type from normalization module
+export { taskStatusSchema, type TaskStatus };
 
 export const taskSchema = z.object({
   schemaVersion: z.literal("1.0"),

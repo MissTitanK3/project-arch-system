@@ -6,11 +6,29 @@ import { loadDecisionIndex, loadMilestoneManifest, loadPhaseManifest } from "../
 import { milestoneDir, milestoneTaskLaneDir, phaseDir, projectDocsRoot } from "../../utils/paths";
 import { pathExists, readJson } from "../../utils/fs";
 import { runDriftChecks } from "../../graph/drift/runChecks";
+import { conceptMapSchema } from "../../schemas/conceptMap";
 
 export interface CheckResult {
   ok: boolean;
   errors: string[];
   warnings: string[];
+}
+
+interface GraphSummary {
+  schemaVersion: string;
+  nodes: {
+    tasks?: number;
+  };
+}
+
+interface GraphTaskNode {
+  id: string;
+  status: string;
+}
+
+interface MilestoneToTaskEdge {
+  milestone: string;
+  task: string;
 }
 
 export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckResult> {
@@ -21,6 +39,17 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
   const decisionRecords = await collectDecisionRecords(cwd);
   const declaredModules = await loadDeclaredModules(cwd);
   const declaredDomains = await loadDeclaredDomains(cwd);
+
+  const conceptMapPath = path.join(cwd, "arch-model", "concept-map.json");
+  if (await pathExists(conceptMapPath)) {
+    try {
+      const conceptMapRaw = await readJson<unknown>(conceptMapPath);
+      conceptMapSchema.parse(conceptMapRaw);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      errors.push(`Invalid concept-map schema at arch-model/concept-map.json: ${detail}`);
+    }
+  }
 
   const seenTaskKeys = new Set<string>();
   for (const task of taskRecords) {
@@ -190,6 +219,8 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
     }
   }
 
+  errors.push(...(await runTaskGraphParityChecks(cwd, taskRecords)));
+
   const driftFindings = await runDriftChecks({ cwd, taskRecords, decisionRecords });
   for (const finding of driftFindings) {
     const rendered = `[${finding.code}] ${finding.message}`;
@@ -205,6 +236,100 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
     errors,
     warnings,
   };
+}
+
+async function runTaskGraphParityChecks(
+  cwd: string,
+  taskRecords: Awaited<ReturnType<typeof collectTaskRecords>>,
+): Promise<string[]> {
+  const errors: string[] = [];
+
+  const graphPath = path.join(cwd, ".arch", "graph.json");
+  const graphTasksPath = path.join(cwd, ".arch", "nodes", "tasks.json");
+  const milestoneToTaskPath = path.join(cwd, ".arch", "edges", "milestone_to_task.json");
+
+  if (!(await pathExists(graphPath))) {
+    errors.push(
+      "Missing graph artifact '.arch/graph.json'. Rebuild graph artifacts before running parity validation.",
+    );
+    return errors;
+  }
+
+  if (!(await pathExists(graphTasksPath))) {
+    errors.push(
+      "Missing graph artifact '.arch/nodes/tasks.json'. Rebuild graph artifacts before running parity validation.",
+    );
+    return errors;
+  }
+
+  if (!(await pathExists(milestoneToTaskPath))) {
+    errors.push(
+      "Missing graph artifact '.arch/edges/milestone_to_task.json'. Rebuild graph artifacts before running parity validation.",
+    );
+    return errors;
+  }
+
+  const graph = await readJson<GraphSummary>(graphPath);
+  const graphTaskNodes = await readJson<{ tasks: GraphTaskNode[] }>(graphTasksPath);
+  const milestoneToTask = await readJson<{ edges: MilestoneToTaskEdge[] }>(milestoneToTaskPath);
+
+  const roadmapTaskMap = new Map<string, string>();
+  for (const task of taskRecords) {
+    const taskRef = `${task.phaseId}/${task.milestoneId}/${task.frontmatter.id}`;
+    roadmapTaskMap.set(taskRef, task.frontmatter.status);
+  }
+
+  const graphTaskMap = new Map<string, string>();
+  for (const task of graphTaskNodes.tasks ?? []) {
+    graphTaskMap.set(task.id, task.status);
+  }
+
+  const roadmapCount = roadmapTaskMap.size;
+  const graphNodeCount = graphTaskMap.size;
+  const graphSummaryCount = graph.nodes.tasks;
+
+  if (graphSummaryCount !== undefined && graphSummaryCount !== graphNodeCount) {
+    errors.push(
+      `Graph parity mismatch: .arch/graph.json reports nodes.tasks=${graphSummaryCount}, but .arch/nodes/tasks.json has ${graphNodeCount} task nodes.`,
+    );
+  }
+
+  if (roadmapCount !== graphNodeCount) {
+    errors.push(
+      `Graph parity mismatch: roadmap task files count is ${roadmapCount}, but .arch task node count is ${graphNodeCount} (.arch/nodes/tasks.json).`,
+    );
+  }
+
+  for (const taskRef of roadmapTaskMap.keys()) {
+    if (!graphTaskMap.has(taskRef)) {
+      errors.push(
+        `Graph parity mismatch: missing task node '${taskRef}' in .arch/nodes/tasks.json`,
+      );
+    }
+  }
+
+  const milestoneEdges = new Set(
+    (milestoneToTask.edges ?? []).map((edge) => `${edge.milestone}=>${edge.task}`),
+  );
+
+  for (const [taskRef, roadmapStatus] of roadmapTaskMap.entries()) {
+    const milestoneRef = taskRef.split("/").slice(0, 2).join("/");
+    const expectedEdge = `${milestoneRef}=>${taskRef}`;
+    if (!milestoneEdges.has(expectedEdge)) {
+      errors.push(
+        `Graph parity mismatch: missing milestone-task edge '${milestoneRef}' -> '${taskRef}' in .arch/edges/milestone_to_task.json`,
+      );
+    }
+
+    const graphStatus = graphTaskMap.get(taskRef);
+    if (graphStatus !== undefined && graphStatus !== roadmapStatus) {
+      errors.push(
+        `Graph parity mismatch: status drift for task '${taskRef}' (roadmap='${roadmapStatus}', graph='${graphStatus}') in .arch/nodes/tasks.json`,
+      );
+    }
+  }
+
+  return errors;
 }
 
 function toRuntimeModule(target: string): string | null {

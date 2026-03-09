@@ -52,6 +52,22 @@ describe("sdk/commands", () => {
       expect(commandMetadata["graph.traceTask"].inputs).toEqual(["task"]);
     });
 
+    it("should define metadata for policy.check", () => {
+      expect(commandMetadata["policy.check"]).toBeDefined();
+      expect(commandMetadata["policy.check"].description).toBe(
+        "Detect policy conflicts between tasks and architecture",
+      );
+      expect(commandMetadata["policy.check"].inputs).toEqual([]);
+    });
+
+    it("should define metadata for policy.explain", () => {
+      expect(commandMetadata["policy.explain"]).toBeDefined();
+      expect(commandMetadata["policy.explain"].description).toBe(
+        "Explain policy conflicts with remediation guidance",
+      );
+      expect(commandMetadata["policy.explain"].inputs).toEqual([]);
+    });
+
     it("should have all commands use consistent structure", () => {
       const allCommands = Object.values(commandMetadata);
 

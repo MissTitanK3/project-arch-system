@@ -68,4 +68,72 @@ export function registerMilestoneCommand(program: Command): void {
         console.log(milestone);
       }
     });
+
+  command
+    .command("activate")
+    .argument("<phaseId>")
+    .argument("<milestoneId>")
+    .description("Activate a milestone")
+    .addHelpText("after", () =>
+      formatEnhancedHelp({
+        usage: "pa milestone activate <phaseId> <milestoneId>",
+        description:
+          "Set the active milestone after validating readiness prerequisites (planned task, targets file, and success criteria/checklist).",
+        examples: [
+          {
+            description: "Activate a milestone",
+            command: "pa milestone activate phase-1 milestone-1-setup",
+          },
+        ],
+        agentMetadata: {
+          inputValidation: {
+            phaseId: "string matching /^phase-\\d+$/",
+            milestoneId: "string matching /^milestone-[\\w-]+$/",
+          },
+          outputFormat: "Success message or readiness diagnostics",
+        },
+        relatedCommands: [
+          { command: "pa milestone new --help", description: "Create a milestone" },
+          { command: "pa task new --help", description: "Create planned tasks" },
+        ],
+      }),
+    )
+    .action(async (phaseId: string, milestoneId: string) => {
+      unwrap(await milestones.milestoneActivate({ phase: phaseId, milestone: milestoneId }));
+      console.log(`Activated milestone ${phaseId}/${milestoneId}`);
+    });
+
+  command
+    .command("complete")
+    .argument("<phaseId>")
+    .argument("<milestoneId>")
+    .description("Complete a milestone")
+    .addHelpText("after", () =>
+      formatEnhancedHelp({
+        usage: "pa milestone complete <phaseId> <milestoneId>",
+        description:
+          "Complete a milestone. When discovered-load ratio exceeds policy threshold, completion requires a replan checkpoint marker.",
+        examples: [
+          {
+            description: "Complete a milestone",
+            command: "pa milestone complete phase-1 milestone-1-setup",
+          },
+        ],
+        agentMetadata: {
+          inputValidation: {
+            phaseId: "string matching /^phase-\\d+$/",
+            milestoneId: "string matching /^milestone-[\\w-]+$/",
+          },
+          outputFormat: "Success message or governance diagnostics",
+        },
+        relatedCommands: [
+          { command: "pa report", description: "View discovered-load ratio and warnings" },
+          { command: "pa milestone activate", description: "Activate a milestone" },
+        ],
+      }),
+    )
+    .action(async (phaseId: string, milestoneId: string) => {
+      unwrap(await milestones.milestoneComplete({ phase: phaseId, milestone: milestoneId }));
+      console.log(`Completed milestone ${phaseId}/${milestoneId}`);
+    });
 }

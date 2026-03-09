@@ -1,12 +1,14 @@
 import path from "path";
 import fg from "fast-glob";
+import fs from "fs-extra";
 import { nextTaskId } from "../../core/ids/task";
 import { defaultTaskBody, defaultTaskFrontmatter } from "../../core/templates/task";
 import { taskSchema, TaskLane } from "../../schemas/task";
 import { currentDateISO } from "../../utils/date";
 import { milestoneDir, milestoneTaskLaneDir, projectDocsRoot } from "../../utils/paths";
 import { pathExists, readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
-import { rebuildArchitectureGraph } from "../../graph/manifests";
+import * as graphManifests from "../../graph/manifests";
+import { withAtomicTaskMutation } from "./atomicMutation";
 
 async function assertInitialized(cwd = process.cwd()): Promise<void> {
   if (!(await pathExists(projectDocsRoot(cwd)))) {
@@ -116,8 +118,19 @@ export async function createTask(input: {
     discoveredFromTask: input.discoveredFromTask,
   });
 
-  await writeMarkdownWithFrontmatter(targetPath, frontmatter, defaultTaskBody());
-  await rebuildArchitectureGraph(cwd);
+  await withAtomicTaskMutation({
+    cwd,
+    mutateRoadmap: async () => {
+      await writeMarkdownWithFrontmatter(targetPath, frontmatter, defaultTaskBody());
+    },
+    rollbackRoadmap: async () => {
+      await fs.remove(targetPath);
+    },
+    syncGraph: async () => {
+      await graphManifests.rebuildArchitectureGraph(cwd);
+    },
+  });
+
   return targetPath;
 }
 

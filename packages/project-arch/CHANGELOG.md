@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-08
+
+### Added
+
+- Policy and governance validation surfaces across CLI/SDK.
+- Concept map schema support and validation coverage.
+- Additional CLI help topics and reporting/test coverage for milestone/task workflows.
+
+### Changed
+
+- Improved report/check output consistency and schema normalization paths.
+- Expanded SDK command registry and index exports coverage.
+
 ## [1.1.0] - 2026-03-07
 
 ### Added
@@ -46,3 +59,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [1.1.0]: https://github.com/project-arch/project-arch-system/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/project-arch/project-arch-system/releases/tag/v1.0.0
+[1.3.0]: https://github.com/project-arch/project-arch-system/compare/v1.1.0...v1.3.0

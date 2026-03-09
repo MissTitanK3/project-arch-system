@@ -66,10 +66,11 @@ describe("Help Topics", () => {
   describe("listTopics", () => {
     it("should return formatted topic list", () => {
       const list = listTopics();
-      expect(list).toContain("Available help topics:");
+      expect(list).toContain("Available Commands");
+      expect(list).toContain("Help Topics");
       expect(list).toContain("commands");
       expect(list).toContain("workflows");
-      expect(list).toContain("Usage: pa help <topic>");
+      expect(list).toContain("pa help <topic>");
     });
 
     it("should use empty description fallback for unknown topics", () => {

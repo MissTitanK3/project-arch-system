@@ -22,6 +22,7 @@ export function defaultPhaseManifest(): PhaseManifest {
     schemaVersion: "1.0",
     phases: [],
     activePhase: null,
+    activeMilestone: null,
   };
 }
 

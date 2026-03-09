@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "1.0",
+  "concepts": [
+    {
+      "id": "concept-identity-and-access",
+      "name": "Identity And Access",
+      "description": "Authentication, authorization, and role enforcement boundaries.",
+      "owningDomain": "core",
+      "moduleResponsibilities": ["packages/api", "packages/types"],
+      "implementationSurfaces": [
+        {
+          "type": "api",
+          "path": "packages/api/src/auth"
+        },
+        {
+          "type": "ui",
+          "path": "apps/web/app/(auth)"
+        }
+      ],
+      "dependencies": ["concept-user-profile"]
+    },
+    {
+      "id": "concept-user-profile",
+      "name": "User Profile",
+      "description": "Canonical user metadata and preference lifecycle.",
+      "owningDomain": "ui",
+      "moduleResponsibilities": ["apps/web", "packages/ui"],
+      "implementationSurfaces": [
+        {
+          "type": "ui",
+          "path": "apps/web/app/profile"
+        },
+        {
+          "type": "component",
+          "path": "packages/ui/src/profile"
+        }
+      ],
+      "dependencies": []
+    }
+  ],
+  "domainModuleMapping": [
+    {
+      "domain": "core",
+      "module": "packages/api",
+      "responsibility": "Policy enforcement and access control services"
+    },
+    {
+      "domain": "ui",
+      "module": "apps/web",
+      "responsibility": "User-facing workflows and interaction handling"
+    }
+  ],
+  "implementationChecklist": [
+    {
+      "conceptId": "concept-identity-and-access",
+      "checks": [
+        "Decision linkage recorded",
+        "Primary code targets identified",
+        "Verification criteria defined"
+      ]
+    },
+    {
+      "conceptId": "concept-user-profile",
+      "checks": ["Domain ownership confirmed", "Surface mapping completed", "Dependencies reviewed"]
+    }
+  ]
+}

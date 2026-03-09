@@ -3,7 +3,14 @@ import path from "path";
 import fs from "fs-extra";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createPhase } from "../phases/createPhase";
-import { createMilestone, listMilestones } from "./createMilestone";
+import {
+  createMilestone,
+  listMilestones,
+  activateMilestone,
+  completeMilestone,
+} from "./createMilestone";
+import { createTask } from "../tasks/createTask";
+import { loadPhaseManifest } from "../../graph/manifests";
 
 describe("createMilestone", () => {
   let context: TestProjectContext;
@@ -181,5 +188,167 @@ describe("createMilestone", () => {
 
     const mRoot = path.join(tempDir, "roadmap", "phases", "phase-2", "milestones", specialSlug);
     expect(await fs.pathExists(mRoot)).toBe(true);
+  });
+
+  it("blocks activation when planned lane has zero tasks", async () => {
+    await createMilestone("phase-2", "milestone-gate-empty", tempDir);
+
+    const overviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-gate-empty",
+      "overview.md",
+    );
+    await fs.writeFile(overviewPath, "## Success Criteria\n\n- [ ] ready\n", "utf8");
+
+    await expect(activateMilestone("phase-2", "milestone-gate-empty", tempDir)).rejects.toThrow(
+      "at least one planned task",
+    );
+  });
+
+  it("blocks activation when targets file is missing", async () => {
+    await createMilestone("phase-2", "milestone-gate-targets", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-gate-targets",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+
+    const milestoneRoot = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-gate-targets",
+    );
+    await fs.remove(path.join(milestoneRoot, "targets.md"));
+    await fs.writeFile(
+      path.join(milestoneRoot, "overview.md"),
+      "## Success Criteria\n\n- [ ] ready\n",
+      "utf8",
+    );
+
+    await expect(activateMilestone("phase-2", "milestone-gate-targets", tempDir)).rejects.toThrow(
+      "targets file is required",
+    );
+  });
+
+  it("blocks activation when success criteria/checklist is missing", async () => {
+    await createMilestone("phase-2", "milestone-gate-checklist", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-gate-checklist",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+
+    const overviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-gate-checklist",
+      "overview.md",
+    );
+    await fs.writeFile(overviewPath, "## Overview\n\nNo readiness checklist yet.\n", "utf8");
+
+    await expect(activateMilestone("phase-2", "milestone-gate-checklist", tempDir)).rejects.toThrow(
+      "success criteria/checklist is required",
+    );
+  });
+
+  it("activates milestone when readiness prerequisites are satisfied", async () => {
+    await createMilestone("phase-2", "milestone-gate-ready", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-gate-ready",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+
+    const overviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-gate-ready",
+      "overview.md",
+    );
+    await fs.writeFile(overviewPath, "## Success Criteria\n\n- [ ] Ship milestone scope\n", "utf8");
+
+    await activateMilestone("phase-2", "milestone-gate-ready", tempDir);
+
+    const manifest = await loadPhaseManifest(tempDir);
+    expect(manifest.activePhase).toBe("phase-2");
+    expect(manifest.activeMilestone).toBe("milestone-gate-ready");
+  });
+
+  it("blocks completion when discovered ratio exceeds threshold and checkpoint is missing", async () => {
+    await createMilestone("phase-2", "milestone-complete-blocked", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-complete-blocked",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-complete-blocked",
+      lane: "discovered",
+      discoveredFromTask: "001",
+      cwd: tempDir,
+    });
+
+    await expect(
+      completeMilestone("phase-2", "milestone-complete-blocked", tempDir),
+    ).rejects.toThrow("replan-checkpoint.md");
+  });
+
+  it("allows completion when discovered ratio exceeds threshold but checkpoint is present", async () => {
+    await createMilestone("phase-2", "milestone-complete-ready", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-complete-ready",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-complete-ready",
+      lane: "discovered",
+      discoveredFromTask: "001",
+      cwd: tempDir,
+    });
+
+    const checkpointPath = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-complete-ready",
+      "replan-checkpoint.md",
+    );
+    await fs.writeFile(
+      checkpointPath,
+      "# Replan Checkpoint\n\nAccepted replanning actions.\n",
+      "utf8",
+    );
+
+    await expect(
+      completeMilestone("phase-2", "milestone-complete-ready", tempDir),
+    ).resolves.toBeUndefined();
   });
 });

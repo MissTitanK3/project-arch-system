@@ -2,6 +2,8 @@
  * Help topics content for pa help <topic>
  */
 
+import { colors } from "../../utils/colors";
+
 export const HELP_TOPICS = {
   commands: `Available Commands for AI Agents:
 
@@ -24,7 +26,7 @@ Task Management:
     
   pa task status <phase> <milestone> <taskId>
                                        Get current status of a task
-    Output: Status string (todo|in-progress|blocked|done)
+    Output: Status string (todo|in_progress|blocked|done)
     
   pa task lanes <phase> <milestone>    Show lane usage and next available IDs
     Output: Table with used/available IDs per lane
@@ -71,6 +73,13 @@ Validation & Reporting:
     
   pa report                            Generate architecture report
     Output: Report text
+
+Policy Analysis:
+  pa policy check                      Detect policy conflicts (machine-readable JSON)
+    Output: Deterministic conflict records with severity/confidence/claims/remediation
+
+  pa policy explain                    Explain policy conflicts (human-readable)
+    Output: Rationale and remediation guidance per conflict
 
 Documentation:
   pa docs                              List all architecture docs
@@ -126,7 +135,7 @@ Task Status Management:
      pa task status phase-1 milestone-1-auth 001
      
   2. Update task status by editing the markdown file:
-     - Change 'status: todo' to 'status: in-progress'
+     - Change 'status: todo' to 'status: in_progress'
      - Add notes in the task body
      
   3. View lane usage to track progress:
@@ -292,7 +301,7 @@ Frontmatter Schema:
   Tasks require:
     - id: string (3-digit)
     - title: string
-    - status: todo|in-progress|blocked|done
+    - status: todo|in_progress|blocked|done
     - lane: planned|discovered|backlog
     - discoveredFromTask: (if lane is discovered)
     
@@ -326,12 +335,145 @@ export function getHelpTopic(topic: string): string | null {
   return null;
 }
 
+function commandLine(command: string, description: string): string {
+  return `  ${colors.command(command)} ${description}`;
+}
+
+function optionLine(option: string, description: string): string {
+  return `    ${colors.option(option)} ${description}`;
+}
+
+function listCommands(): string {
+  const separator = colors.separator("─".repeat(80));
+
+  return `${colors.bold("Available Commands:")}
+
+${separator}
+${colors.heading("Project Setup:")}
+${separator}
+${commandLine("pa init [options]", "Initialize project architecture")}
+${optionLine("--template <type>", "Template to use (default, minimal, full)")}
+${optionLine("--pm <manager>", "Package manager (npm, yarn, pnpm)")}
+${optionLine("--apps <...names>", "Application names to scaffold")}
+${optionLine("--with-ai", "Include AI integration setup")}
+${optionLine("--with-docs-site", "Include documentation site")}
+
+${separator}
+${colors.heading("Phase Management:")}
+${separator}
+${commandLine("pa phase new <phaseId>", "Create new phase")}
+${commandLine("pa phase list", "List all phases with active marker")}
+
+${separator}
+${colors.heading("Milestone Management:")}
+${separator}
+${commandLine("pa milestone new <phase> <milestone>", "Create new milestone")}
+${commandLine("pa milestone list", "List all milestones")}
+${commandLine("pa milestone activate <phase> <milestone>", "")}
+                                       Activate milestone (requires readiness check)
+${commandLine("pa milestone complete <phase> <milestone>", "")}
+                                       Complete milestone (enforces governance)
+
+${separator}
+${colors.heading("Task Management:")}
+${separator}
+${commandLine("pa task new <phase> <milestone>", "Create planned task (001-099)")}
+${optionLine("--title <text>", "Task title")}
+${optionLine("--slug <slug>", "URL-friendly identifier")}
+  
+${commandLine("pa task discover <phase> <milestone>", "Create discovered task (101-199)")}
+${optionLine("--from <taskId>", "Source task ID (required)")}
+${optionLine("--title <text>", "Task title")}
+${optionLine("--slug <slug>", "URL-friendly identifier")}
+  
+${commandLine("pa task idea <phase> <milestone>", "Create backlog task (901-999)")}
+${optionLine("--title <text>", "Task title")}
+${optionLine("--slug <slug>", "URL-friendly identifier")}
+  
+${commandLine("pa task status <phase> <milestone> <taskId>", "")}
+                                       Get task status
+  
+${commandLine("pa task lanes <phase> <milestone>", "Show lane usage and capacity")}
+${optionLine("--verbose, -v", "Show all task IDs (not truncated)")}
+
+${separator}
+${colors.heading("Decision Management:")}
+${separator}
+${commandLine("pa decision new [options]", "Create architecture decision")}
+${optionLine("--scope <type>", "Scope: project, phase, or milestone")}
+${optionLine("--phase <id>", "Phase ID (for phase/milestone scope)")}
+${optionLine("--milestone <id>", "Milestone ID (for milestone scope)")}
+${optionLine("--title <text>", "Decision title")}
+${optionLine("--slug <slug>", "URL-friendly identifier")}
+  
+${commandLine("pa decision link <id> [options]", "Link decision to artifacts")}
+${optionLine("--task <ref>", "Task reference")}
+${optionLine("--code <path>", "Code file path")}
+${optionLine("--doc <path>", "Documentation path")}
+  
+${commandLine("pa decision status <id> <status>", "")}
+                                       Status: proposed, accepted, rejected, superseded
+  
+${commandLine("pa decision supersede <id> <supersededId>", "")}
+                                       Mark decision as superseding another
+  
+${commandLine("pa decision list", "List all decisions")}
+  
+${commandLine("pa decision migrate [--scan-only]", "Migrate legacy decision files")}
+
+${separator}
+${colors.heading("Validation & Reporting:")}
+${separator}
+${commandLine("pa check", "Validate architecture integrity")}
+                                       - Task/decision consistency
+                                       - Roadmap-graph parity
+                                       - Schema compliance
+  
+${commandLine("pa report [options]", "Generate architecture report")}
+${optionLine("--verbose, -v", "Include detailed diagnostics")}
+
+${separator}
+${colors.heading("Policy Analysis:")}
+${separator}
+${commandLine("pa policy check", "Detect policy conflicts (JSON output)")}
+                                       Sets exit code 1 if conflicts found
+  
+${commandLine("pa policy explain", "Explain conflicts with remediation")}
+                                       Sets exit code 1 if conflicts found
+
+${separator}
+${colors.heading("Documentation:")}
+${separator}
+${commandLine("pa docs", "List all architecture documentation")}
+
+${separator}
+${colors.heading("Help:")}
+${separator}
+${commandLine("pa help [topic]", "Show help for specific topic")}
+${commandLine("pa help topics", "List all help topics")}
+
+${separator}
+${colors.heading("Global Options:")}
+${separator}
+  ${colors.option("--version")}                            Show version number
+  ${colors.option("--help, -h")}                           Show command help
+
+`;
+}
+
 export function listTopics(): string {
-  return `Available help topics:
+  const separator = colors.separator("─".repeat(80));
 
-${TOPIC_LIST.map((topic) => `  ${topic.padEnd(15)} ${getTopicDescription(topic)}`).join("\n")}
+  return `${listCommands()}
+${separator}
+${colors.heading("Help Topics (detailed documentation):")}
+${separator}
 
-Usage: pa help <topic>
+${TOPIC_LIST.map((topic) => `  ${colors.cyan(topic.padEnd(15))} ${colors.dim(getTopicDescription(topic))}`).join("\n")}
+
+${colors.dim("Usage:")} 
+  ${colors.command("pa help")} ${colors.dim("<topic>")}                      Show detailed topic documentation
+  ${colors.command("pa <command>")} ${colors.option("--help")}                  Show command-specific help
 `;
 }
 

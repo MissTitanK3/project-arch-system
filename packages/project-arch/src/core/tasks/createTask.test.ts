@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import path from "path";
 import fs from "fs-extra";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createTask } from "./createTask";
+import * as graphManifests from "../../graph/manifests";
 
 describe("createTask - Reliability and Safety", () => {
   let context: TestProjectContext;
@@ -192,6 +193,42 @@ Missing required title field.
       expect(content).toContain("discoveredFromTask:");
       expect(content).toContain("001");
       expect(content).toContain("lane: discovered");
+    });
+
+    it("should roll back roadmap task file when graph sync fails during create", async () => {
+      const plannedDir = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "planned",
+      );
+
+      const before = (await fs.pathExists(plannedDir)) ? await fs.readdir(plannedDir) : [];
+
+      const graphSpy = vi
+        .spyOn(graphManifests, "rebuildArchitectureGraph")
+        .mockRejectedValue(new Error("injected graph failure"));
+
+      try {
+        await expect(
+          createTask({
+            phaseId: "phase-1",
+            milestoneId: "milestone-1-setup",
+            lane: "planned",
+            discoveredFromTask: null,
+            cwd: tempDir,
+          }),
+        ).rejects.toThrow(/\.arch\/graph|rollback succeeded/i);
+      } finally {
+        graphSpy.mockRestore();
+      }
+
+      const after = (await fs.pathExists(plannedDir)) ? await fs.readdir(plannedDir) : [];
+      expect(after.length).toBe(before.length);
     });
   });
 });

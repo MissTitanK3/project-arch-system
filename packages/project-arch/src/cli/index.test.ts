@@ -83,6 +83,7 @@ describe("cli/index", () => {
         expect(commandNames).toContain("docs");
         expect(commandNames).toContain("check");
         expect(commandNames).toContain("report");
+        expect(commandNames).toContain("policy");
         expect(commandNames).toContain("help");
         return this;
       });

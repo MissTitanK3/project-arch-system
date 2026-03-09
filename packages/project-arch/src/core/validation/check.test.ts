@@ -7,7 +7,7 @@ import { createDecision } from "../decisions/createDecision";
 import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
 import { writeFile } from "../../fs";
-import { writeJsonDeterministic } from "../../utils/fs";
+import { readJson, writeJsonDeterministic } from "../../utils/fs";
 
 describe.sequential("core/validation/check", () => {
   let context: TestProjectContext;
@@ -1054,6 +1054,95 @@ completionCriteria: []
 
       // Should handle gracefully (non-domain tags should be ignored for domain validation)
       expect(result.ok !== undefined).toBe(true);
+    }, 15_000);
+
+    it("should fail when roadmap task count differs from .arch task node count", async () => {
+      const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+      const graphTasks = await readJson<{ tasks: Array<{ id: string; status: string }> }>(
+        tasksPath,
+      );
+
+      await writeJsonDeterministic(tasksPath, {
+        tasks: graphTasks.tasks.slice(0, Math.max(0, graphTasks.tasks.length - 1)),
+      });
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.ok).toBe(false);
+      expect(
+        result.errors.some(
+          (error) =>
+            error.includes("roadmap task files count") && error.includes(".arch task node count"),
+        ),
+      ).toBe(true);
+    }, 15_000);
+
+    it("should fail when milestone-task edges are missing", async () => {
+      const edgesPath = path.join(tempDir, ".arch", "edges", "milestone_to_task.json");
+      await writeJsonDeterministic(edgesPath, { edges: [] });
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.ok).toBe(false);
+      expect(result.errors.some((error) => error.includes("missing milestone-task edge"))).toBe(
+        true,
+      );
+    }, 15_000);
+
+    it("should fail when roadmap task status differs from graph task status", async () => {
+      const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+      const graphTasks = await readJson<{
+        tasks: Array<{
+          id: string;
+          title: string;
+          milestone: string;
+          domain: string | null;
+          status: string;
+          lane: string;
+        }>;
+      }>(tasksPath);
+
+      expect(graphTasks.tasks.length).toBeGreaterThan(0);
+
+      const firstTask = graphTasks.tasks[0];
+      const driftedStatus = firstTask.status === "done" ? "todo" : "done";
+
+      await writeJsonDeterministic(tasksPath, {
+        tasks: [{ ...firstTask, status: driftedStatus }, ...graphTasks.tasks.slice(1)],
+      });
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.ok).toBe(false);
+      expect(result.errors.some((error) => error.includes("status drift for task"))).toBe(true);
+    }, 15_000);
+
+    it("should fail when arch-model/concept-map.json violates schema", async () => {
+      const conceptMapPath = path.join(tempDir, "arch-model", "concept-map.json");
+
+      await writeJsonDeterministic(conceptMapPath, {
+        schemaVersion: "1.0",
+        concepts: [
+          {
+            id: "concept-a",
+            name: "Concept A",
+            description: "Example",
+            owningDomain: "core",
+            moduleResponsibilities: ["packages/api"],
+            implementationSurfaces: [{ type: "api", path: "packages/api/src" }],
+            dependencies: [],
+          },
+        ],
+      });
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.ok).toBe(false);
+      expect(
+        result.errors.some((error) =>
+          error.includes("Invalid concept-map schema at arch-model/concept-map.json"),
+        ),
+      ).toBe(true);
     }, 15_000);
   });
 });

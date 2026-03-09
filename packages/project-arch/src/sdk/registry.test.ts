@@ -26,6 +26,8 @@ describe("sdk/registry", () => {
       expect(registry.milestones).toBeDefined();
       expect(registry.milestones.milestoneCreate).toBeDefined();
       expect(registry.milestones.milestoneList).toBeDefined();
+      expect(registry.milestones.milestoneActivate).toBeDefined();
+      expect(registry.milestones.milestoneComplete).toBeDefined();
     });
 
     it("should export decisions module", () => {

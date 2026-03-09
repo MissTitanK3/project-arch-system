@@ -1,3 +1,4 @@
+import { formatIdList, formatUsageCount, formatNextId } from "../../utils/formatIdList.js";
 import path from "path";
 import { Command } from "commander";
 import { tasks } from "../../sdk";
@@ -5,6 +6,7 @@ import { unwrap } from "../../sdk/_utils";
 import { getLaneRangesTable } from "../../core/ids/task";
 import { getLaneUsage } from "../../core/tasks/laneUsage";
 import { formatEnhancedHelp } from "../help/format";
+import { formatTaskStatusForDisplay } from "../../schemas/statusNormalization";
 
 const LANE_HELP = `
 
@@ -200,7 +202,7 @@ export function registerTaskCommand(program: Command): void {
             milestoneId: "string matching /^milestone-[\\w-]+$/",
             taskId: "string matching /^\\d{3}$/",
           },
-          outputFormat: "Status string (todo|in-progress|blocked|done)",
+          outputFormat: "Status string (todo|in_progress|blocked|done)",
         },
         relatedCommands: [{ command: "pa task lanes", description: "Show lane usage" }],
       }),
@@ -209,7 +211,9 @@ export function registerTaskCommand(program: Command): void {
       const status = unwrap(
         await tasks.taskStatus({ phase: phaseId, milestone: milestoneId, taskId }),
       ).status;
-      console.log(status);
+      console.log(
+        formatTaskStatusForDisplay(status as "todo" | "in_progress" | "done" | "blocked"),
+      );
     });
 
   command
@@ -229,7 +233,8 @@ export function registerTaskCommand(program: Command): void {
             phaseId: "string matching /^phase-\\d+$/",
             milestoneId: "string matching /^milestone-[\\w-]+$/",
           },
-          outputFormat: "Table with lane name, range, used count, used IDs, and next available ID",
+          outputFormat:
+            "Table with lane name, range, used count, used IDs (truncated by default), and next available ID. Use --verbose to show all IDs.",
         },
         relatedCommands: [
           { command: "pa task new --help", description: "Create a planned task" },
@@ -237,27 +242,19 @@ export function registerTaskCommand(program: Command): void {
         ],
       }),
     )
-    .action(async (phaseId: string, milestoneId: string) => {
+    .action(async (phaseId: string, milestoneId: string, options: { verbose?: boolean }) => {
       const usages = await getLaneUsage(phaseId, milestoneId);
 
       console.log(`\nTask Lane Usage for ${phaseId}/${milestoneId}\n`);
 
       for (const usage of usages) {
         console.log(`${usage.lane.padEnd(12)} ${usage.range}`);
-        console.log(`  Used: ${usage.used}/${usage.total}`);
+        console.log(`  ${formatUsageCount(usage.used, usage.total)}`);
 
-        if (usage.usedIds.length > 0) {
-          const idsDisplay = usage.usedIds.join(", ");
-          console.log(`  IDs: ${idsDisplay}`);
-        } else {
-          console.log(`  IDs: (none)`);
-        }
+        const idsDisplay = formatIdList(usage.usedIds, { verbose: options.verbose });
+        console.log(`  IDs: ${idsDisplay}`);
 
-        if (usage.nextAvailableId) {
-          console.log(`  Next: ${usage.nextAvailableId}`);
-        } else {
-          console.log(`  Next: (none available)`);
-        }
+        console.log(`  ${formatNextId(usage.nextAvailableId)}`);
         console.log();
       }
     });

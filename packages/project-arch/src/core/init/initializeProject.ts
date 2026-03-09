@@ -645,6 +645,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       schemaVersion: "1.0",
       phases: [{ id: phaseId, createdAt: now }],
       activePhase: phaseId,
+      activeMilestone: milestoneId,
     },
     cwd,
   );
@@ -991,6 +992,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "- `dependencies.json`",
       "- `ownership.json`",
       "- `surfaces.json`",
+      "- `concept-map.json`",
     ].join("\n");
     await fs.writeFile(aiMapReadmePath, `${aiMapReadme}\n`, "utf8");
   }

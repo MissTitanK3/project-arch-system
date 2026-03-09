@@ -7,17 +7,27 @@ export function registerReportCommand(program: Command): void {
   program
     .command("report")
     .description("Generate architecture report")
+    .option("-v, --verbose", "Include detailed inconsistency diagnostics")
     .addHelpText("after", () =>
       formatEnhancedHelp({
-        usage: "pa report",
+        usage: "pa report [options]",
         description:
-          "Generate a comprehensive architecture report with task distribution, decision status, and milestone progress.",
+          "Generate a comprehensive architecture report with task distribution, decision status, milestone progress, and parity diagnostics.",
         examples: [
-          { description: "Generate report", command: "pa report" },
+          { description: "Generate concise report", command: "pa report" },
+          {
+            description: "Generate verbose report with full diagnostics",
+            command: "pa report --verbose",
+          },
           { description: "Save report to file", command: "pa report > architecture-report.txt" },
+          {
+            description: "Generate verbose report and save",
+            command: "pa report -v > detailed-report.txt",
+          },
         ],
         agentMetadata: {
-          outputFormat: "Report text with sections for tasks, decisions, phases, milestones",
+          outputFormat:
+            "Report text with sections: metrics (with provenance), parity summary, consistency checks, governance warnings. Verbose mode adds full inconsistency table.",
         },
         relatedCommands: [
           { command: "pa check", description: "Validate architecture" },
@@ -25,7 +35,7 @@ export function registerReportCommand(program: Command): void {
         ],
       }),
     )
-    .action(async () => {
-      console.log(unwrap(await report.reportGenerate()).text);
+    .action(async (options: { verbose?: boolean }) => {
+      console.log(unwrap(await report.reportGenerate({ verbose: options.verbose })).text);
     });
 }

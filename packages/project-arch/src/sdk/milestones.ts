@@ -1,4 +1,9 @@
-import { createMilestone, listMilestones } from "../core/milestones/createMilestone";
+import {
+  activateMilestone,
+  completeMilestone,
+  createMilestone,
+  listMilestones,
+} from "../core/milestones/createMilestone";
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
 
@@ -15,4 +20,26 @@ export async function milestoneCreate(input: {
 
 export async function milestoneList(input?: { cwd?: string }): Promise<OperationResult<string[]>> {
   return wrap(async () => listMilestones(input?.cwd));
+}
+
+export async function milestoneActivate(input: {
+  phase: string;
+  milestone: string;
+  cwd?: string;
+}): Promise<OperationResult<{ phase: string; milestone: string }>> {
+  return wrap(async () => {
+    await activateMilestone(input.phase, input.milestone, input.cwd);
+    return { phase: input.phase, milestone: input.milestone };
+  });
+}
+
+export async function milestoneComplete(input: {
+  phase: string;
+  milestone: string;
+  cwd?: string;
+}): Promise<OperationResult<{ phase: string; milestone: string }>> {
+  return wrap(async () => {
+    await completeMilestone(input.phase, input.milestone, input.cwd);
+    return { phase: input.phase, milestone: input.milestone };
+  });
 }

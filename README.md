@@ -123,7 +123,8 @@ source ~/.zshrc
 pnpm install
 pnpm build
 pnpm lint
-pnpm test
+pnpm --filter project-arch test
+pnpm --filter create-project-arch test
 ```
 
 ### Bump versions

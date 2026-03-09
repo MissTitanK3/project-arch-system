@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { registerMilestoneCommand } from "./milestone";
 import { createPhase } from "../../core/phases/createPhase";
 import { createMilestone } from "../../core/milestones/createMilestone";
+import { createTask } from "../../core/tasks/createTask";
 import { createTestProject, consoleAssertions, type TestProjectContext } from "../../test/helpers";
 
 describe("cli/commands/milestone", () => {
@@ -30,9 +31,13 @@ describe("cli/commands/milestone", () => {
 
       const newCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "new");
       const listCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "list");
+      const activateCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "activate");
+      const completeCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "complete");
 
       expect(newCmd).toBeDefined();
       expect(listCmd).toBeDefined();
+      expect(activateCmd).toBeDefined();
+      expect(completeCmd).toBeDefined();
     });
 
     it("should include enhanced help text for subcommands", () => {
@@ -47,6 +52,8 @@ describe("cli/commands/milestone", () => {
       const milestoneCommand = program.commands.find((cmd) => cmd.name() === "milestone");
       const newCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "new");
       const listCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "list");
+      const activateCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "activate");
+      const completeCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "complete");
 
       newCmd?.outputHelp();
       const newHelp = output.join("");
@@ -54,10 +61,20 @@ describe("cli/commands/milestone", () => {
 
       listCmd?.outputHelp();
       const listHelp = output.join("");
+      output.length = 0;
+
+      activateCmd?.outputHelp();
+      const activateHelp = output.join("");
+      output.length = 0;
+
+      completeCmd?.outputHelp();
+      const completeHelp = output.join("");
 
       expect(newHelp).toContain("pa milestone new");
       expect(newHelp).toContain("milestoneId");
       expect(listHelp).toContain("pa milestone list");
+      expect(activateHelp).toContain("pa milestone activate");
+      expect(completeHelp).toContain("pa milestone complete");
     });
   });
 
@@ -168,6 +185,157 @@ describe("cli/commands/milestone", () => {
       expect(output).toContain(phase1);
       expect(output).toContain(phase2);
 
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("milestone activate", () => {
+    it("should block activation with readiness diagnostics when prerequisites are missing", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerMilestoneCommand(program);
+
+      await createMilestone(phaseId, "m-activate-blocked");
+
+      await expect(
+        program.parseAsync([
+          "node",
+          "test",
+          "milestone",
+          "activate",
+          phaseId,
+          "m-activate-blocked",
+        ]),
+      ).rejects.toThrow("at least one planned task");
+    });
+
+    it("should activate milestone when readiness prerequisites are satisfied", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerMilestoneCommand(program);
+
+      await createMilestone(phaseId, "m-activate-ready");
+      await createTask({
+        phaseId,
+        milestoneId: "m-activate-ready",
+        lane: "planned",
+        discoveredFromTask: null,
+      });
+
+      const fs = await import("fs-extra");
+      const path = await import("path");
+      const overviewPath = path.join(
+        process.cwd(),
+        "roadmap",
+        "phases",
+        phaseId,
+        "milestones",
+        "m-activate-ready",
+        "overview.md",
+      );
+      await fs.writeFile(
+        overviewPath,
+        "## Success Criteria\n\n- [ ] Deliver milestone scope\n",
+        "utf8",
+      );
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "milestone",
+        "activate",
+        phaseId,
+        "m-activate-ready",
+      ]);
+
+      consoleAssertions.assertConsoleContains(consoleSpy, "Activated milestone");
+      consoleAssertions.assertConsoleContains(consoleSpy, `${phaseId}/m-activate-ready`);
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("milestone complete", () => {
+    it("should block completion when threshold is breached and checkpoint is missing", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerMilestoneCommand(program);
+
+      await createMilestone(phaseId, "m-complete-blocked");
+      await createTask({
+        phaseId,
+        milestoneId: "m-complete-blocked",
+        lane: "planned",
+        discoveredFromTask: null,
+      });
+      await createTask({
+        phaseId,
+        milestoneId: "m-complete-blocked",
+        lane: "discovered",
+        discoveredFromTask: "001",
+      });
+
+      await expect(
+        program.parseAsync([
+          "node",
+          "test",
+          "milestone",
+          "complete",
+          phaseId,
+          "m-complete-blocked",
+        ]),
+      ).rejects.toThrow("replan-checkpoint.md");
+    });
+
+    it("should allow completion when checkpoint is present", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerMilestoneCommand(program);
+
+      await createMilestone(phaseId, "m-complete-ready");
+      await createTask({
+        phaseId,
+        milestoneId: "m-complete-ready",
+        lane: "planned",
+        discoveredFromTask: null,
+      });
+      await createTask({
+        phaseId,
+        milestoneId: "m-complete-ready",
+        lane: "discovered",
+        discoveredFromTask: "001",
+      });
+
+      const fs = await import("fs-extra");
+      const path = await import("path");
+      await fs.writeFile(
+        path.join(
+          process.cwd(),
+          "roadmap",
+          "phases",
+          phaseId,
+          "milestones",
+          "m-complete-ready",
+          "replan-checkpoint.md",
+        ),
+        "# Replan Checkpoint\n\nCaptured replanning actions.\n",
+        "utf8",
+      );
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "milestone",
+        "complete",
+        phaseId,
+        "m-complete-ready",
+      ]);
+
+      consoleAssertions.assertConsoleContains(consoleSpy, "Completed milestone");
+      consoleAssertions.assertConsoleContains(consoleSpy, `${phaseId}/m-complete-ready`);
       consoleSpy.mockRestore();
     });
   });
