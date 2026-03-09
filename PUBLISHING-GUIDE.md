@@ -155,7 +155,7 @@ After publication:
 
 - **project-arch:** <https://www.npmjs.com/package/project-arch>
 - **create-project-arch:** <https://www.npmjs.com/package/create-project-arch>
-- **GitHub:** <https://github.com/project-arch/project-arch-system>
+- **GitHub:** <https://github.com/MissTitanK3/project-arch-system>
 
 ## Quick Stats
 

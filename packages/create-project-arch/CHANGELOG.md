@@ -51,6 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Template customization options
 - Force mode for non-empty directories
 
-[1.1.0]: https://github.com/project-arch/project-arch-system/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/project-arch/project-arch-system/releases/tag/v1.0.0
-[1.3.0]: https://github.com/project-arch/project-arch-system/compare/v1.1.0...v1.3.0
+[1.1.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/MissTitanK3/project-arch-system/releases/tag/v1.0.0
+[1.3.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.1.0...v1.3.0

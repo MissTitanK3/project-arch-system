@@ -548,7 +548,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ```bash
 # Clone the repository
-git clone https://github.com/project-arch/project-arch-system.git
+git clone https://github.com/MissTitanK3/project-arch-system.git
 cd project-arch-system
 
 # Install dependencies
@@ -626,9 +626,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- 📖 [Documentation](https://github.com/project-arch/project-arch-system#readme)
-- 🐛 [Issue Tracker](https://github.com/project-arch/project-arch-system/issues)
-- 💬 [Discussions](https://github.com/project-arch/project-arch-system/discussions)
+- 📖 [Documentation](https://github.com/MissTitanK3/project-arch-system#readme)
+- 🐛 [Issue Tracker](https://github.com/MissTitanK3/project-arch-system/issues)
+- 💬 [Discussions](https://github.com/MissTitanK3/project-arch-system/discussions)
 
 ## Acknowledgments
 

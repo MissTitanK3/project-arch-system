@@ -12,13 +12,13 @@
     "turborepo",
     "monorepo"
   ],
-  "homepage": "https://github.com/project-arch/project-arch-system#readme",
+  "homepage": "https://github.com/MissTitanK3/project-arch-system#readme",
   "bugs": {
-    "url": "https://github.com/project-arch/project-arch-system/issues"
+    "url": "https://github.com/MissTitanK3/project-arch-system/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/project-arch/project-arch-system.git",
+    "url": "git+https://github.com/MissTitanK3/project-arch-system.git",
     "directory": "packages/create-project-arch"
   },
   "license": "MIT",

@@ -656,9 +656,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- 📖 [Documentation](https://github.com/project-arch/project-arch-system#readme)
-- 🐛 [Issue Tracker](https://github.com/project-arch/project-arch-system/issues)
-- 💬 [Discussions](https://github.com/project-arch/project-arch-system/discussions)
+- 📖 [Documentation](https://github.com/MissTitanK3/project-arch-system#readme)
+- 🐛 [Issue Tracker](https://github.com/MissTitanK3/project-arch-system/issues)
+- 💬 [Discussions](https://github.com/MissTitanK3/project-arch-system/discussions)
 
 ## Acknowledgments
 
@@ -666,7 +666,7 @@ Built with:
 
 - [Commander.js](https://github.com/tj/commander.js) - CLI framework
 - [fs-extra](https://github.com/jprichardson/node-fs-extra) - File system utilities
-- [project-arch](https://github.com/project-arch/project-arch-system) - Architecture management
+- [project-arch](https://github.com/MissTitanK3/project-arch-system) - Architecture management
 
 ---
 

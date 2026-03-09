@@ -16,32 +16,32 @@ We are committed to providing a welcoming and inspiring community for all. Pleas
 
 ### Development Setup
 
-1. **Fork and clone the repository**
+### 1. **Fork and clone the repository**
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/project-arch-system.git
 cd project-arch-system
 ```
 
-2. **Install dependencies**
+### 2. **Install dependencies**
 
 ```bash
 pnpm install
 ```
 
-3. **Build the project**
+### 3. **Build the project**
 
 ```bash
 pnpm build
 ```
 
-4. **Run tests**
+### 4. **Run tests**
 
 ```bash
 pnpm test
 ```
 
-5. **Run tests with coverage**
+### 5. **Run tests with coverage**
 
 ```bash
 pnpm test --coverage
@@ -58,20 +58,20 @@ This is a monorepo with the following packages:
 
 ### Making Changes
 
-1. **Create a feature branch**
+#### 1. **Create a feature branch**
 
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
-2. **Make your changes**
+#### 2. **Make your changes**
 
 - Write clear, concise code
 - Follow existing code style and conventions
 - Add tests for new functionality
 - Update documentation as needed
 
-3. **Run tests locally**
+#### 3. **Run tests locally**
 
 ```bash
 # Run all tests
@@ -85,13 +85,13 @@ pnpm test
 pnpm test --coverage
 ```
 
-4. **Lint your code**
+#### 4. **Lint your code**
 
 ```bash
 pnpm lint
 ```
 
-5. **Type check**
+#### 5. **Type check**
 
 ```bash
 pnpm typecheck
@@ -412,9 +412,9 @@ We welcome feature suggestions! Please:
 
 ## Questions?
 
-- 📖 Check the [documentation](https://github.com/project-arch/project-arch-system#readme)
-- 💬 Start a [discussion](https://github.com/project-arch/project-arch-system/discussions)
-- 🐛 Open an [issue](https://github.com/project-arch/project-arch-system/issues)
+- 📖 Check the [documentation](https://github.com/MissTitanK3/project-arch-system#readme)
+- 💬 Start a [discussion](https://github.com/MissTitanK3/project-arch-system/discussions)
+- 🐛 Open an [issue](https://github.com/MissTitanK3/project-arch-system/issues)
 
 ## License
 
