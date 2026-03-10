@@ -31,4 +31,8 @@ export const commandMetadata = {
     description: "Explain policy conflicts with remediation guidance",
     inputs: [],
   },
+  "lint.frontmatter": {
+    description: "Lint frontmatter for schema and YAML safety issues",
+    inputs: ["fix"],
+  },
 } as const;

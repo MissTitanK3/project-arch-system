@@ -118,6 +118,34 @@ git push origin v<new-version>
    - Download stats
    - User feedback
 
+## JSON Diagnostics Schema Release Policy
+
+For `pa check --json`, treat `schemaVersion` as a public automation contract.
+
+- Schema source of truth: `packages/project-arch/docs/check-json-diagnostics-schema.md`
+- Current schema: `1.0`
+
+When changing diagnostics payload:
+
+1. **Additive-only changes** (new optional fields):
+   - Keep `schemaVersion` major unchanged (e.g. `1.x`)
+   - Update schema doc examples/field notes
+   - Mention additive schema update in release notes
+
+2. **Breaking changes** (rename/remove/type change/required field change):
+   - Bump `schemaVersion` major
+   - Update schema doc with migration notes
+   - Call out breaking contract change in release notes and changelog
+
+3. **No-shape changes** (text clarifications only):
+   - No schema version bump required
+
+Release checklist for diagnostics schema changes:
+
+- Update `CHECK_DIAGNOSTICS_SCHEMA_VERSION` in `src/core/validation/check.ts` when required
+- Keep `pa check --json` output and docs aligned
+- Ensure tests covering JSON payload shape pass
+
 ## Troubleshooting
 
 ### "You do not have permission to publish"

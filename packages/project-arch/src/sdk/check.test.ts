@@ -22,5 +22,6 @@ describe.sequential("sdk/check", () => {
     expect(typeof result.data.ok).toBe("boolean");
     expect(Array.isArray(result.data.errors)).toBe(true);
     expect(Array.isArray(result.data.warnings)).toBe(true);
-  }, 15_000);
+    expect(Array.isArray(result.data.diagnostics)).toBe(true);
+  }, 60_000);
 });

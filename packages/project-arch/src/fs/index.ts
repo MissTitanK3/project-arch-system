@@ -7,5 +7,6 @@ export {
   readJson,
   readMarkdownWithFrontmatter,
   writeJsonDeterministic,
+  writeJsonDeterministicIfChanged,
   writeMarkdownWithFrontmatter,
 } from "../utils/fs";

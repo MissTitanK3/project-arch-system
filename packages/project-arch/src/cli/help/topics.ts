@@ -30,6 +30,7 @@ Task Management:
     
   pa task lanes <phase> <milestone>    Show lane usage and next available IDs
     Output: Table with used/available IDs per lane
+    Options: -v, --verbose (show all task IDs, not truncated)
 
 Decision Management:
   pa decision new [options]            Create architecture decision record
@@ -66,13 +67,27 @@ Phase & Milestone:
     
   pa milestone list                    List all milestones
     Output: Phase/milestone paths
+    
+  pa milestone activate <phase> <milestoneId>
+                                       Activate milestone (requires readiness check)
+    Output: Success message or readiness diagnostics
+    
+  pa milestone complete <phase> <milestoneId>
+                                       Complete milestone (enforces governance)
+    Output: Success message or governance diagnostics
 
 Validation & Reporting:
-  pa check                             Validate architecture consistency
+  pa check [--json]                    Validate architecture consistency
     Output: Validation errors and warnings
-    
-  pa report                            Generate architecture report
+    --json: Machine-readable diagnostics with file paths
+
+  pa lint frontmatter [--fix]          Preflight lint for YAML frontmatter
+    Output: File+line diagnostics for tabs, missing keys, and schema/type issues
+    --fix: Safe whitespace normalization only (no scalar rewrite)
+
+  pa report [-v|--verbose]             Generate architecture report
     Output: Report text
+    --verbose: Include detailed inconsistency diagnostics
 
 Policy Analysis:
   pa policy check                      Detect policy conflicts (machine-readable JSON)
@@ -158,11 +173,14 @@ Decision Recording:
 Validation & Review:
   1. Check for consistency issues:
      pa check
+
+  2. Run frontmatter preflight lint:
+     pa lint frontmatter
      
-  2. Generate architecture report:
+  3. Generate architecture report:
      pa report
      
-  3. List all documentation:
+  4. List all documentation:
      pa docs
 `,
 
@@ -323,6 +341,339 @@ Validation Patterns:
   - Decision links must reference existing items
   - Task lanes must match ID ranges
   - Status values must match enum
+`,
+
+  validation: `Architecture Validation:
+
+Purpose:
+  Validation commands help detect issues early before they cause runtime
+  failures or break automated workflows. Use these commands to verify
+  that tasks, decisions, and documentation meet all structural and schema requirements.
+
+Validation Commands:
+
+1. pa check
+   Validates overall architecture integrity:
+   - Task ID uniqueness within milestone
+   - Decision link targets exist
+   - Phase and milestone structure
+   - Roadmap-graph parity
+   - Schema compliance for all frontmatter
+   - Cross-reference consistency
+   
+   Output: Human-readable errors and warnings
+   Exit code: 1 if any errors, 0 if clean or warnings-only
+   
+   Options:
+   --json    Output machine-readable diagnostics with file paths and line numbers
+
+2. pa lint frontmatter [--fix]
+   Preflight lint for YAML frontmatter issues:
+   - Tab indentation (should use spaces)
+   - Missing required keys by artifact type
+   - Risky unquoted scalars (numbers, booleans, dates)
+   - Invalid key types (non-string keys)
+   - Schema type mismatches
+   - YAML parse errors
+   
+   Output: File:line diagnostics with error codes
+   Exit code: 1 if any errors, 0 if clean or warnings-only
+   
+   Options:
+   --fix     Apply safe whitespace-only fixes (tabs→spaces)
+             Does NOT rewrite scalar values to preserve meaning
+
+3. pa policy check
+   Detect policy conflicts in decision records:
+   - Conflicting architectural choices
+   - Incompatible patterns or technologies
+   - Deprecated approach usage
+   
+   Output: Machine-readable JSON with conflict records
+   Exit code: 1 if conflicts found, 0 if clean
+
+4. pa policy explain
+   Explain policy conflicts with human-readable guidance:
+   - Rationale for each conflict
+   - Remediation steps
+   - Related decisions
+   
+   Output: Human-readable explanations
+   Exit code: 1 if conflicts found, 0 if clean
+
+Validation Workflow:
+
+  Step 1: Preflight lint before committing
+    pa lint frontmatter --fix
+    # Fixes tabs automatically, flags other issues
+
+  Step 2: Full validation check
+    pa check
+    # Verifies all consistency rules
+
+  Step 3: Policy conflict detection
+    pa policy check
+    # Checks for architectural conflicts
+
+  Step 4: Generate report for review
+    pa report -v
+    # Comprehensive status summary
+
+Common Issues and Solutions:
+
+  Issue: "Missing required key 'status'"
+  Solution: Add status field to task/decision frontmatter
+  Command: pa lint frontmatter  # Shows exact file:line
+
+  Issue: "Task ID already exists"
+  Solution: Check lane usage before creating
+  Command: pa task lanes <phase> <milestone>
+
+  Issue: "Decision link target not found"
+  Solution: Verify target task/file exists
+  Command: pa decision list  # View all decisions
+
+  Issue: "Tab indentation detected"
+  Solution: Use spaces for YAML indentation
+  Command: pa lint frontmatter --fix  # Auto-fixes
+
+  Issue: "Graph out of sync with roadmap"
+  Solution: Graph rebuilds automatically on next operation
+  Command: pa check  # Validates sync
+
+Best Practices:
+
+  - Run 'pa lint frontmatter --fix' before every commit
+  - Include 'pa check' in CI/CD pipeline
+  - Check 'pa policy check' when adding new decisions
+  - Use '--json' options for automated tooling
+  - Fix errors before warnings for faster resolution
+
+JSON Output Format:
+
+  pa check --json outputs:
+  {
+    "ok": boolean,
+    "errors": [...],
+    "warnings": [...]
+  }
+
+  pa policy check outputs:
+  {
+    "ok": boolean,
+    "conflicts": [
+      {
+        "id": string,
+        "severity": "high"|"medium"|"low",
+        "confidence": "high"|"medium"|"low",
+        "summary": string,
+        "relatedDecisions": string[],
+        "claims": string[],
+        "remediation": string
+      }
+    ]
+  }
+`,
+
+  remediation: `Architecture Remediation:
+
+Purpose:
+  Remediation workflows help fix validation issues and restore architecture
+  consistency. This guide provides step-by-step solutions for common problems.
+
+Common Problems and Solutions:
+
+1. Frontmatter YAML Issues
+
+  Problem: Tab indentation in frontmatter
+  Detection: pa lint frontmatter
+  Fix: pa lint frontmatter --fix
+  Manual: Replace tabs with 2 spaces in YAML section
+  
+  Problem: Missing required keys
+  Detection: pa lint frontmatter (shows file:line and key name)
+  Fix: Edit file and add required field with appropriate value
+  Example frontmatter for tasks:
+    ---
+    schemaVersion: "1.0"
+    id: "001"
+    title: "Task title"
+    status: "todo"
+    lane: "planned"
+    ---
+  
+  Problem: Unquoted numeric/boolean values
+  Detection: pa lint frontmatter (SCALAR_SAFETY warnings)
+  Fix: Add quotes around string values that look like numbers/booleans
+  Before: id: 001
+  After: id: "001"
+
+2. Task Management Issues
+
+  Problem: Task ID already exists
+  Detection: Error when creating task
+  Remediation:
+    Step 1: Check existing tasks
+      pa task lanes <phase> <milestone>
+    Step 2: Use next available ID or different lane
+    Step 3: Verify task in correct lane (planned/discovered/backlog)
+  
+  Problem: Discovered task missing --from reference
+  Detection: Error during task creation or validation
+  Remediation:
+    Step 1: Identify source task ID
+      pa task lanes <phase> <milestone>
+    Step 2: Add discoveredFromTask field to frontmatter
+    Or recreate: pa task discover <phase> <milestone> --from <taskId>
+
+3. Decision Link Issues
+
+  Problem: Decision link points to non-existent task
+  Detection: pa check (broken link error)
+  Remediation:
+    Step 1: List all decisions
+      pa decision list
+    Step 2: Verify target task exists
+      ls roadmap/phases/<phase>/milestones/<milestone>/tasks/
+    Step 3: Update link or remove invalid reference
+      pa decision link <id> --task <valid-ref>
+  
+  Problem: Decision scope mismatch
+  Detection: Decision file in wrong directory
+  Remediation:
+    Step 1: Determine correct scope (project/phase/milestone)
+    Step 2: Move file to correct directory
+      roadmap/decisions/project/ for project scope
+      roadmap/decisions/phase-{id}/ for phase scope
+      roadmap/decisions/milestone-{phase}-{milestone}/ for milestone scope
+    Step 3: Update frontmatter scope field
+
+4. Phase and Milestone Issues
+
+  Problem: Phase or milestone not found
+  Detection: Error when creating tasks/milestones
+  Remediation:
+    Step 1: List existing phases
+      pa phase list
+    Step 2: Create missing phase
+      pa phase new phase-1
+    Step 3: Create milestone
+      pa milestone new phase-1 milestone-1-setup
+  
+  Problem: Milestone structure incomplete
+  Detection: pa check reports missing overview.md
+  Remediation:
+    Create milestone overview file at:
+    roadmap/phases/<phase>/milestones/<milestone>/overview.md
+
+5. Policy Conflicts
+
+  Problem: Conflicting architectural decisions
+  Detection: pa policy check
+  Investigation: pa policy explain (shows details and rationale)
+  Remediation:
+    Step 1: Review related decisions
+      pa policy explain  # Shows conflict details
+    Step 2: Choose which decision is correct
+    Step 3: Update or supersede conflicting decision
+      pa decision status <id> rejected
+      # OR
+      pa decision supersede <new-id> <old-id>
+    Step 4: Verify resolution
+      pa policy check
+
+6. Graph Sync Issues
+
+  Problem: Graph out of sync with roadmap
+  Detection: pa check reports parity warning
+  Remediation:
+    Graph rebuilds automatically on next operation
+    Force rebuild by running any command:
+      pa report  # Rebuilds graph
+    Or wait for next task/decision operation
+
+7. Schema Validation Failures
+
+  Problem: Frontmatter doesn't match schema
+  Detection: pa check or pa lint frontmatter
+  Remediation:
+    Step 1: View schema requirements
+      pa help standards
+    Step 2: Compare against your frontmatter
+    Step 3: Add missing required fields
+    Step 4: Fix field types (string vs number vs array)
+    Step 5: Verify with lint
+      pa lint frontmatter
+
+Remediation Workflow:
+
+  1. Identify Issues
+     pa check --json > issues.json
+     pa lint frontmatter > lint-issues.txt
+     pa policy check > conflicts.json
+
+  2. Triage by Severity
+     - Fix errors before warnings
+     - Fix frontmatter before structural issues
+     - Fix broken links before policy conflicts
+
+  3. Apply Fixes
+     - Use pa lint frontmatter --fix for safe auto-fixes
+     - Manually edit files for schema/content issues
+     - Use pa commands to update links and status
+
+  4. Verify Resolution
+     pa lint frontmatter  # Should show no errors
+     pa check             # Should show OK
+     pa policy check      # Should show no conflicts
+
+  5. Generate Clean Report
+     pa report -v         # Verify everything is consistent
+
+Automated Remediation:
+
+  Safe auto-fixes (automated):
+  - Tab indentation → spaces (pa lint frontmatter --fix)
+  
+  Manual fixes required:
+  - Missing required keys (must choose appropriate values)
+  - Invalid key types (must determine correct type)
+  - Broken links (must identify correct targets)
+  - Policy conflicts (must make architectural decisions)
+  - Schema mismatches (must understand domain requirements)
+
+Prevention Tips:
+
+  - Use pa lint frontmatter --fix before committing
+  - Create phases/milestones before tasks
+  - Verify task lanes before creating tasks
+  - Link decisions when creating them, not retroactively
+  - Run pa check in CI pipeline to catch issues early
+  - Use --help on commands to see valid options
+  - Review pa help standards for schema requirements
+
+Emergency Recovery:
+
+  If architecture is severely broken:
+  
+  1. Backup current state
+     cp -r roadmap roadmap.backup
+  
+  2. Run comprehensive diagnostics
+     pa check --json > check-report.json
+     pa lint frontmatter > lint-report.txt
+  
+  3. Fix files one by one, starting with:
+     - Phases (pa phase list to verify)
+     - Milestones (pa milestone list to verify)
+     - Tasks (fix frontmatter first, then content)
+     - Decisions (fix links last)
+  
+  4. Verify after each major fix
+     pa check
+  
+  5. Generate final report
+     pa report -v
 `,
 };
 
@@ -485,6 +836,8 @@ function getTopicDescription(topic: string): string {
     decisions: "Architecture decision management",
     architecture: "Repository structure and validation",
     standards: "File naming and schema standards",
+    validation: "Validation commands and workflows",
+    remediation: "Fix common architecture issues",
   };
   return descriptions[topic] || "";
 }

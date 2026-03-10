@@ -16,6 +16,26 @@ export async function writeJsonDeterministic(targetPath: string, data: unknown):
   await fs.appendFile(targetPath, "\n");
 }
 
+export async function writeJsonDeterministicIfChanged(
+  targetPath: string,
+  data: unknown,
+): Promise<boolean> {
+  await fs.ensureDir(path.dirname(targetPath));
+
+  const nextRaw = `${JSON.stringify(data, null, 2)}\n`;
+  const exists = await fs.pathExists(targetPath);
+
+  if (exists) {
+    const currentRaw = await fs.readFile(targetPath, "utf8");
+    if (currentRaw === nextRaw) {
+      return false;
+    }
+  }
+
+  await fs.writeFile(targetPath, nextRaw, "utf8");
+  return true;
+}
+
 export async function readJson<T>(targetPath: string): Promise<T> {
   return fs.readJSON(targetPath) as Promise<T>;
 }

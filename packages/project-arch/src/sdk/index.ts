@@ -5,6 +5,7 @@ export * as milestones from "./milestones";
 export * as decisions from "./decisions";
 export * as graph from "./graph";
 export * as check from "./check";
+export * as lint from "./lint";
 export * as report from "./report";
 export * as policy from "./policy";
 export * as docs from "./docs";

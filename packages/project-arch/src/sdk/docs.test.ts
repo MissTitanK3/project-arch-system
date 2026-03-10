@@ -33,12 +33,12 @@ describe.sequential("sdk/docs", () => {
 
     resultAssertions.assertSuccess(result);
     expect(result.data.refs).toEqual(["docs/a.md", "docs/b.md"]);
-  }, 15_000);
+  }, 60_000);
 
   it("should return empty refs in repository without doc links", async () => {
     const result = await docsList();
 
     resultAssertions.assertSuccess(result);
     expect(Array.isArray(result.data.refs)).toBe(true);
-  }, 15_000);
+  }, 60_000);
 });

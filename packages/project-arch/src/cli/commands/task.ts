@@ -7,6 +7,7 @@ import { getLaneRangesTable } from "../../core/ids/task";
 import { getLaneUsage } from "../../core/tasks/laneUsage";
 import { formatEnhancedHelp } from "../help/format";
 import { formatTaskStatusForDisplay } from "../../schemas/statusNormalization";
+import { registerSurfaces } from "../../core/tasks/registerSurfaces";
 
 const LANE_HELP = `
 
@@ -221,6 +222,7 @@ export function registerTaskCommand(program: Command): void {
     .argument("<phaseId>")
     .argument("<milestoneId>")
     .description("Show task lane usage and next available IDs")
+    .option("-v, --verbose", "Show all task IDs (not truncated)")
     .addHelpText("after", () =>
       formatEnhancedHelp({
         usage: "pa task lanes <phaseId> <milestoneId>",
@@ -258,4 +260,125 @@ export function registerTaskCommand(program: Command): void {
         console.log();
       }
     });
+
+  command
+    .command("register-surfaces")
+    .argument("<phaseId>")
+    .argument("<milestoneId>")
+    .argument("<taskId>")
+    .description("Register untracked implementation surfaces to task codeTargets")
+    .option("--from-check", "Get untracked paths from pa check diagnostics", true)
+    .option("--include <glob...>", "Include paths matching glob patterns")
+    .option("--exclude <glob...>", "Exclude paths matching glob patterns")
+    .option("--dry-run", "Show what would be added without modifying files", false)
+    .addHelpText("after", () =>
+      formatEnhancedHelp({
+        usage: "pa task register-surfaces <phaseId> <milestoneId> <taskId> [options]",
+        description:
+          "Bulk-register untracked implementation surfaces to a task's codeTargets array. Appends only missing paths and preserves deterministic order.",
+        options: [
+          {
+            flag: "--from-check",
+            description: "Get paths from UNTRACKED_IMPLEMENTATION diagnostics (default: true)",
+          },
+          {
+            flag: "--include <glob...>",
+            description: "Filter to include only paths matching these glob patterns",
+          },
+          {
+            flag: "--exclude <glob...>",
+            description: "Filter to exclude paths matching these glob patterns",
+          },
+          { flag: "--dry-run", description: "Preview changes without modifying files" },
+        ],
+        examples: [
+          {
+            description: "Register all untracked surfaces from check",
+            command: "pa task register-surfaces phase-1 milestone-1-auth 001",
+          },
+          {
+            description: "Preview what would be added",
+            command: "pa task register-surfaces phase-1 m1 001 --dry-run",
+          },
+          {
+            description: "Register only specific paths",
+            command:
+              'pa task register-surfaces phase-1 m1 001 --include "apps/web/**" --exclude "**/*.test.ts"',
+          },
+        ],
+        agentMetadata: {
+          inputValidation: {
+            phaseId: "string matching /^phase-\\d+$/",
+            milestoneId: "string matching /^milestone-[\\w-]+$/",
+            taskId: "string matching /^\\d{3}$/",
+          },
+          outputFormat:
+            "Reports number of paths added and skipped. In dry-run mode, shows proposed changes.",
+        },
+        relatedCommands: [
+          { command: "pa check", description: "View all diagnostics including untracked files" },
+          { command: "pa help validation", description: "Learn about validation workflows" },
+          { command: "pa help remediation", description: "Learn about fixing validation issues" },
+        ],
+      }),
+    )
+    .action(
+      async (
+        phaseId: string,
+        milestoneId: string,
+        taskId: string,
+        options: {
+          fromCheck?: boolean;
+          include?: string[];
+          exclude?: string[];
+          dryRun?: boolean;
+        },
+      ) => {
+        try {
+          const result = await registerSurfaces({
+            phase: phaseId,
+            milestone: milestoneId,
+            taskId,
+            fromCheck: options.fromCheck !== false,
+            include: options.include ?? [],
+            exclude: options.exclude ?? [],
+            dryRun: options.dryRun === true,
+          });
+
+          console.log(`Task: ${result.taskPath}`);
+          console.log(`Existing codeTargets: ${result.existingTargets.length}`);
+          console.log(`Candidate paths: ${result.candidatePaths.length}`);
+
+          if (result.dryRun) {
+            console.log("\n[DRY RUN] Would add:");
+            for (const p of result.addedPaths) {
+              console.log(`  + ${p}`);
+            }
+            if (result.skippedPaths.length > 0) {
+              console.log(`\nWould skip (already tracked): ${result.skippedPaths.length}`);
+            }
+          } else {
+            if (result.addedPaths.length > 0) {
+              console.log(`\nAdded ${result.addedPaths.length} path(s) to codeTargets:`);
+              for (const p of result.addedPaths) {
+                console.log(`  + ${p}`);
+              }
+            } else {
+              console.log("\nNo new paths to add (all candidates already tracked)");
+            }
+
+            if (result.skippedPaths.length > 0) {
+              console.log(`\nSkipped (already tracked): ${result.skippedPaths.length}`);
+            }
+          }
+        } catch (error) {
+          if (error instanceof Error) {
+            console.error(`ERROR: ${error.message}`);
+          } else {
+            console.error(`ERROR: ${String(error)}`);
+          }
+          process.exitCode = 1;
+        }
+      },
+    );
 }

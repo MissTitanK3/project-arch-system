@@ -10,6 +10,7 @@ describe("project-arch SDK", () => {
     expect(sdk.decisions).toBeDefined();
     expect(sdk.graph).toBeDefined();
     expect(sdk.check).toBeDefined();
+    expect(sdk.lint).toBeDefined();
     expect(sdk.report).toBeDefined();
     expect(sdk.policy).toBeDefined();
     expect(sdk.docs).toBeDefined();

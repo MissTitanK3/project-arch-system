@@ -19,6 +19,8 @@ import {
   rebuildArchitectureGraph,
   savePhaseManifest,
 } from "../../core/manifests";
+import { ObservationStore } from "../../feedback/observation-store";
+import { IssueStore } from "../../feedback/issue-store";
 import { defaultTaskFrontmatter } from "../../core/templates/task";
 import { defaultArchitectureSpecTemplate } from "../../core/templates/architecture";
 import { defaultConceptMapTemplate } from "../../core/templates/conceptMap";
@@ -2194,6 +2196,13 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     ].join("\n");
     await fs.writeFile(agentsDocPath, `${agentsDoc}\n`, "utf8");
   }
+
+  // Initialize feedback system stores
+  const archDir = path.join(cwd, ".arch");
+  const observationStore = new ObservationStore(archDir);
+  const issueStore = new IssueStore(archDir);
+  await observationStore.initialize();
+  await issueStore.initialize();
 
   await rebuildArchitectureGraph(cwd);
   console.log(`Initialized project architecture layout on ${currentDateISO()}`);

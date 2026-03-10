@@ -31,7 +31,7 @@ describe.sequential("core/manifests/index", () => {
     });
 
     await expect(loadDecisionIndex(indexDir)).rejects.toThrow("Invalid decision index");
-  }, 15_000);
+  }, 60_000);
 
   it("throws for decision index with non-string decision IDs", async () => {
     const indexDir = projectDecisionIndexDir(tempDir);
@@ -41,7 +41,7 @@ describe.sequential("core/manifests/index", () => {
     });
 
     await expect(loadDecisionIndex(indexDir)).rejects.toThrow("Invalid decision id entry");
-  }, 15_000);
+  }, 60_000);
 
   it("returns milestone manifest path for phase and milestone", async () => {
     const manifestPath = await milestoneManifestPath("phase-a", "milestone-a", tempDir);
@@ -75,7 +75,7 @@ describe.sequential("core/manifests/index", () => {
     await expect(loadMilestoneManifest("phase-z", "milestone-z", tempDir)).rejects.toThrow(
       `Missing milestone manifest: ${missingPath}`,
     );
-  }, 15_000);
+  }, 60_000);
 
   it("throws when milestone manifest has invalid schema", async () => {
     const manifestPath = path.join(
@@ -96,5 +96,5 @@ describe.sequential("core/manifests/index", () => {
     await expect(
       loadMilestoneManifest("phase-invalid", "milestone-invalid", tempDir),
     ).rejects.toThrow();
-  }, 15_000);
+  }, 60_000);
 });

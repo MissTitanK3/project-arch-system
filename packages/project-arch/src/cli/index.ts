@@ -9,10 +9,42 @@ import { registerCheckCommand } from "./commands/check";
 import { registerReportCommand } from "./commands/report";
 import { registerPolicyCommand } from "./commands/policy";
 import { registerHelpCommand } from "./commands/help";
+import { registerLintCommand } from "./commands/lint";
+import { registerFeedbackCommand } from "./commands/feedback";
+import {
+  getArchDir,
+  getCommandPathFromCommander,
+  inferCommandPathFromArgv,
+  safelyCaptureFeedback,
+} from "../feedback/integration";
+
+function buildCommandChainFromAction(actionCommand: Command): string[] {
+  const names: string[] = [];
+  let current: Command | null = actionCommand;
+
+  while (current) {
+    names.push(current.name());
+    const parentCommand = current.parent as Command | undefined;
+    current = parentCommand ?? null;
+  }
+
+  return names.reverse();
+}
 
 export async function runCli(argv = process.argv): Promise<void> {
   const program = new Command();
   program.name("pa").description("Project architecture CLI").version("1.0.0");
+  const archDir = getArchDir(process.cwd());
+
+  program.hook("postAction", async (_thisCommand, actionCommand) => {
+    const commandPath = getCommandPathFromCommander(buildCommandChainFromAction(actionCommand));
+    const exitCode = typeof process.exitCode === "number" ? process.exitCode : undefined;
+    await safelyCaptureFeedback(archDir, {
+      commandPath,
+      argv,
+      exitCode,
+    });
+  });
 
   registerInitCommand(program);
   registerPhaseCommand(program);
@@ -21,9 +53,26 @@ export async function runCli(argv = process.argv): Promise<void> {
   registerDecisionCommand(program);
   registerDocsCommand(program);
   registerCheckCommand(program);
+  registerLintCommand(program);
   registerReportCommand(program);
   registerPolicyCommand(program);
+  registerFeedbackCommand(program);
   registerHelpCommand(program);
 
-  await program.parseAsync(argv);
+  try {
+    await program.parseAsync(argv);
+  } catch (error) {
+    const commandPath = inferCommandPathFromArgv(argv);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const exitCode = typeof process.exitCode === "number" ? process.exitCode : undefined;
+
+    await safelyCaptureFeedback(archDir, {
+      commandPath,
+      argv,
+      exitCode,
+      errorMessage,
+    });
+
+    throw error;
+  }
 }

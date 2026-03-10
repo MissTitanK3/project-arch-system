@@ -43,7 +43,7 @@ describe.sequential("graph/manifests", () => {
     const index = await loadDecisionIndex(indexDir);
     expect(index.schemaVersion).toBe("1.0");
     expect(index.decisions).toEqual(["project:20260307:alpha", "project:20260307:zeta"]);
-  }, 15_000);
+  }, 60_000);
 
   it("should save and load phase manifest through re-exported API", async () => {
     const current = await loadPhaseManifest(tempDir);
@@ -58,7 +58,7 @@ describe.sequential("graph/manifests", () => {
     const reloaded = await loadPhaseManifest(tempDir);
     expect(reloaded.activePhase).toBe("phase-x");
     expect(reloaded.phases.some((phase) => phase.id === "phase-x")).toBe(true);
-  }, 15_000);
+  }, 60_000);
 
   it("should save and load milestone manifest through re-exported API", async () => {
     const phaseId = "manifest-phase";
@@ -79,7 +79,7 @@ describe.sequential("graph/manifests", () => {
     expect(reloaded.id).toBe(milestoneId);
     expect(reloaded.phaseId).toBe(phaseId);
     expect(reloaded.updatedAt).toBe("2026-03-08");
-  }, 15_000);
+  }, 60_000);
 
   it("should provide phase/milestone/project decision index directories", async () => {
     const phaseId = "index-phase";

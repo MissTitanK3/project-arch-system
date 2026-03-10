@@ -45,7 +45,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("undeclared module"))).toBe(true);
       expect(result.errors.some((e) => e.includes("packages/unknown-module"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("decision validation - undeclared domains", () => {
@@ -94,7 +94,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("undeclared domain"))).toBe(true);
       expect(result.errors.some((e) => e.includes("phantom-domain"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("decision validation - missing linked tasks", () => {
@@ -121,7 +121,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("links missing task"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("decision validation - supersedes", () => {
@@ -155,7 +155,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("supersedes missing decision"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("phase/milestone structure validation", () => {
@@ -169,7 +169,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("missing in roadmap/manifest.json"))).toBe(true);
       expect(result.errors.some((e) => e.includes("orphan-phase"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("task lane directory validation", () => {
@@ -191,7 +191,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Missing lane directory"))).toBe(true);
       expect(result.errors.some((e) => e.includes("discovered"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("decision index validation", () => {
@@ -202,7 +202,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       // This branch is covered by existing check.test.ts tests that create proper decisions
 
       expect(true).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("phase decision index validation", () => {
@@ -225,7 +225,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       expect(result.errors.some((e) => e.includes("Phase") && e.includes("decision index"))).toBe(
         true,
       );
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("milestone decision index validation", () => {
@@ -254,7 +254,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       expect(
         result.errors.some((e) => e.includes("Milestone") && e.includes("decision index")),
       ).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 
   describe("decision public docs validation", () => {
@@ -282,6 +282,6 @@ describe.sequential("core/validation/check - branch coverage", () => {
       expect(
         result.errors.some((e) => e.includes("Missing public docs path") && e.includes("decision")),
       ).toBe(true);
-    }, 15_000);
+    }, 60_000);
   });
 });

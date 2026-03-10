@@ -1,6 +1,6 @@
 {
   "name": "create-project-arch",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Scaffold new projects with Project Arch templates including Next.js apps and component libraries",
   "keywords": [
     "create",

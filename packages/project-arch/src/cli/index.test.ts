@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Command } from "commander";
+import path from "path";
+import { ensureDir, writeFile } from "fs-extra";
 import { runCli } from "./index";
-import { createTempDir, type TestProjectContext } from "../test/helpers";
+import { createTempDir, createTestProject, type TestProjectContext } from "../test/helpers";
+import { ObservationStore } from "../feedback/observation-store";
 
 describe("cli/index", () => {
   let context: TestProjectContext;
@@ -82,8 +85,10 @@ describe("cli/index", () => {
         expect(commandNames).toContain("decision");
         expect(commandNames).toContain("docs");
         expect(commandNames).toContain("check");
+        expect(commandNames).toContain("lint");
         expect(commandNames).toContain("report");
         expect(commandNames).toContain("policy");
+        expect(commandNames).toContain("feedback");
         expect(commandNames).toContain("help");
         return this;
       });
@@ -92,5 +97,90 @@ describe("cli/index", () => {
 
       spy.mockRestore();
     });
+
+    it("captures task ambiguity friction when command exits non-zero", async () => {
+      const project = await createTestProject(originalCwd);
+
+      try {
+        process.exitCode = undefined;
+
+        await runCli([
+          "node",
+          "test",
+          "task",
+          "discover",
+          "phase-1",
+          "milestone-1-foundation",
+          "--from",
+          "abc",
+        ]);
+
+        const observationStore = new ObservationStore(path.join(process.cwd(), ".arch"));
+        await observationStore.initialize();
+        const today = new Date().toISOString().split("T")[0] ?? "";
+        const observations = await observationStore.readObservationsByDate(today);
+
+        expect(observations.some((obs) => obs.category === "ambiguity")).toBe(true);
+      } finally {
+        await project.cleanup();
+      }
+    }, 60_000);
+
+    it("captures check validation friction when command reports errors", async () => {
+      const project = await createTestProject(originalCwd);
+
+      try {
+        process.exitCode = undefined;
+
+        const taskDir = path.join(
+          process.cwd(),
+          "roadmap",
+          "phases",
+          "phase-1",
+          "milestones",
+          "milestone-1-foundation",
+          "tasks",
+          "planned",
+        );
+        await ensureDir(taskDir);
+
+        await writeFile(
+          path.join(taskDir, "043-lane-mismatch.md"),
+          `---
+schemaVersion: "1.0"
+id: "043"
+slug: lane-mismatch
+lane: discovered
+title: Lane Mismatch Task
+status: todo
+createdAt: "2026-03-07"
+updatedAt: "2026-03-07"
+discoveredFromTask: null
+publicDocs: []
+codeTargets: []
+tags: []
+decisions: []
+completionCriteria: []
+---
+
+# Lane Mismatch Task
+
+This task has a lane mismatch.
+`,
+          "utf8",
+        );
+
+        await expect(runCli(["node", "test", "check"])).rejects.toThrow();
+
+        const observationStore = new ObservationStore(path.join(process.cwd(), ".arch"));
+        await observationStore.initialize();
+        const today = new Date().toISOString().split("T")[0] ?? "";
+        const observations = await observationStore.readObservationsByDate(today);
+
+        expect(observations.some((obs) => obs.category === "validation-gap")).toBe(true);
+      } finally {
+        await project.cleanup();
+      }
+    }, 60_000);
   });
 });

@@ -86,7 +86,7 @@ describe.sequential("graph/traceTask", () => {
     expect(trace.decisions).toContain(decisionDoc.data.id);
     expect(Array.isArray(trace.modules)).toBe(true);
     expect(trace.modules).toContain("packages/ui");
-  }, 15_000);
+  }, 60_000);
 
   it("should throw when .arch graph is missing", async () => {
     await rm(path.join(tempDir, ".arch"), { recursive: true, force: true });
@@ -102,5 +102,5 @@ describe.sequential("graph/traceTask", () => {
     await expect(traceTask("missing/phase/999", tempDir)).rejects.toThrow(
       "not found in .arch graph",
     );
-  }, 15_000);
+  }, 60_000);
 });

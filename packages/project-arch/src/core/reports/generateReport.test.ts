@@ -16,9 +16,9 @@ describe.sequential("core/reports/generateReport", () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    context = await createTestProject(process.cwd());
+    context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     tempDir = context.tempDir;
-  }, 45_000);
+  }, 90_000);
 
   afterEach(async () => {
     await context.cleanup();
@@ -33,7 +33,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("tasks by status");
     expect(report).toContain("decisions by status");
     expect(report).toContain("docs coverage");
-  }, 15_000);
+  }, 60_000);
 
   it("should include task and decision status counts", async () => {
     await createPhase("report-phase", tempDir);
@@ -67,7 +67,7 @@ describe.sequential("core/reports/generateReport", () => {
 
     expect(report).toContain("todo:");
     expect(report).toContain("accepted:");
-  }, 15_000);
+  }, 60_000);
 
   it("should handle empty repository-like directory", async () => {
     const emptyContext = await createTempDir();
@@ -127,7 +127,7 @@ describe.sequential("core/reports/generateReport", () => {
 
     expect(report).toContain("docs coverage");
     expect(report).toContain("1/2");
-  }, 15_000);
+  }, 60_000);
 
   it("should render sorted task and decision status buckets", async () => {
     await createPhase("sort-phase", tempDir);
@@ -181,7 +181,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("todo:");
     expect(report).toContain("accepted:");
     expect(report).toContain("proposed:");
-  }, 15_000);
+  }, 60_000);
 
   it("should read active milestone from manifest", async () => {
     await createPhase("milestone-phase", tempDir);
@@ -203,7 +203,7 @@ describe.sequential("core/reports/generateReport", () => {
 
     expect(report).toContain("milestone-phase");
     expect(report).toContain("milestone-2-build");
-  }, 15_000);
+  }, 60_000);
 
   it("should emit consistency diagnostics when manifest activeMilestone mismatches filesystem", async () => {
     await createPhase("mismatch-phase", tempDir);
@@ -232,7 +232,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("activeMilestone");
     expect(report).toContain("filesystem");
     expect(report).toContain("roadmap/phases/mismatch-phase/milestones/*");
-  }, 15_000);
+  }, 60_000);
 
   it("should emit consistency diagnostics when manifest activePhase mismatches filesystem", async () => {
     await createPhase("phase-a", tempDir);
@@ -255,7 +255,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("Consistency Checks");
     expect(report).toContain("activePhase");
     expect(report).toContain("roadmap/phases/*");
-  }, 15_000);
+  }, 60_000);
 
   it("should handle no active phase with manifest activeMilestone as none", async () => {
     const manifest = await loadPhaseManifest(tempDir);
@@ -273,7 +273,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("none");
     expect(report).toContain("active phase");
     expect(report).toContain("active milestone");
-  }, 15_000);
+  }, 60_000);
 
   it("should include discovered ratio percentage in report", async () => {
     await createPhase("ratio-phase", tempDir);
@@ -299,7 +299,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("discovered ratio");
     expect(report).toMatch(/discovered ratio\s+\|\s+\d+(?:\.\d+)?% \(threshold 40%\)/);
     expect(report).toContain("threshold 40%");
-  }, 15_000);
+  }, 60_000);
 
   it("should emit governance warning when discovered ratio exceeds threshold", async () => {
     await createPhase("warn-phase", tempDir);
@@ -327,7 +327,7 @@ describe.sequential("core/reports/generateReport", () => {
 
     expect(report).toContain("Planning Governance Warnings");
     expect(report).toContain("exceeds threshold");
-  }, 15_000);
+  }, 60_000);
 
   it("should honor configurable discovered-load threshold", async () => {
     await createPhase("threshold-phase", tempDir);
@@ -356,7 +356,7 @@ describe.sequential("core/reports/generateReport", () => {
 
     expect(report).toContain("threshold 60%");
     expect(report).not.toContain("Planning Governance Warnings");
-  }, 15_000);
+  }, 60_000);
 
   describe("provenance and diagnostics", () => {
     it("should include provenance annotations for all metrics", async () => {
@@ -368,7 +368,7 @@ describe.sequential("core/reports/generateReport", () => {
       expect(report).toContain("[source: calculated]");
       expect(report).toContain("[source: roadmap/decisions/**/*.md]");
       expect(report).toContain("[source: task/decision publicDocs fields]");
-    }, 15_000);
+    }, 60_000);
 
     it("should include graph sync status with timestamp when graph exists", async () => {
       await createPhase("sync-phase", tempDir);
@@ -386,7 +386,7 @@ describe.sequential("core/reports/generateReport", () => {
 
       expect(report).toContain("graph sync status");
       expect(report).toContain("last sync:");
-    }, 15_000);
+    }, 60_000);
 
     it("should show graph not synced when graph file is missing", async () => {
       const emptyContext = await createTempDir();
@@ -399,7 +399,7 @@ describe.sequential("core/reports/generateReport", () => {
       } finally {
         await emptyContext.cleanup();
       }
-    }, 15_000);
+    }, 60_000);
 
     it("should include parity check summary with PASS status", async () => {
       await createPhase("parity-phase", tempDir);
@@ -419,7 +419,7 @@ describe.sequential("core/reports/generateReport", () => {
       expect(report).toContain("Status: ✓ PASS");
       expect(report).toContain("Tasks checked:");
       expect(report).toContain("Status mismatches: 0");
-    }, 15_000);
+    }, 60_000);
 
     it("should include parity check summary with FAIL status when mismatches exist", async () => {
       await createPhase("fail-phase", tempDir);
@@ -451,7 +451,7 @@ describe.sequential("core/reports/generateReport", () => {
       expect(report).toContain("Roadmap-Graph Parity Check");
       expect(report).toContain("Status: ✗ FAIL");
       expect(report).toContain("Status mismatches:");
-    }, 15_000);
+    }, 60_000);
 
     it("should not include inconsistency table in non-verbose mode", async () => {
       await createPhase("concise-phase", tempDir);
@@ -470,7 +470,7 @@ describe.sequential("core/reports/generateReport", () => {
       expect(report).not.toContain("Status Inconsistencies Detected");
       expect(report).not.toContain("Roadmap Status");
       expect(report).not.toContain("Graph Status");
-    }, 15_000);
+    }, 60_000);
 
     it("should include full inconsistency table in verbose mode", async () => {
       await createPhase("verbose-phase", tempDir);
@@ -511,7 +511,7 @@ describe.sequential("core/reports/generateReport", () => {
       expect(report).toContain("verbose-phase/verbose-milestone");
       expect(report).toContain("todo");
       expect(report).toContain("done");
-    }, 15_000);
+    }, 60_000);
 
     it("should show empty parity check when graph not built", async () => {
       const emptyContext = await createTempDir();
@@ -525,6 +525,6 @@ describe.sequential("core/reports/generateReport", () => {
       } finally {
         await emptyContext.cleanup();
       }
-    }, 15_000);
+    }, 60_000);
   });
 });

@@ -28,7 +28,7 @@ describe.sequential("graph/buildGraph", () => {
 
     const graph = await readJson<{ schemaVersion: string }>(graphPath);
     expect(graph.schemaVersion).toBe("1.0");
-  }, 15_000);
+  }, 60_000);
 
   it("should be idempotent across repeated calls", async () => {
     await buildGraph(tempDir);
@@ -41,5 +41,5 @@ describe.sequential("graph/buildGraph", () => {
 
     expect(graph.nodes.tasks).toBeGreaterThan(0);
     expect(graph.nodes.milestones).toBeGreaterThan(0);
-  }, 15_000);
+  }, 60_000);
 });

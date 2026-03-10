@@ -6,6 +6,7 @@ import {
   ensureDir,
   pathExists,
   writeJsonDeterministic,
+  writeJsonDeterministicIfChanged,
   readJson,
   writeMarkdownWithFrontmatter,
   readMarkdownWithFrontmatter,
@@ -41,6 +42,17 @@ describe("utils/fs", () => {
 
     expect(loaded).toEqual(payload);
     expect(raw.endsWith("\n")).toBe(true);
+  });
+
+  it("should skip deterministic json write when content is unchanged", async () => {
+    const filePath = path.join(tempDir, "data", "same.json");
+    const payload = { name: "demo", count: 2 };
+
+    const wroteFirst = await writeJsonDeterministicIfChanged(filePath, payload);
+    const wroteSecond = await writeJsonDeterministicIfChanged(filePath, payload);
+
+    expect(wroteFirst).toBe(true);
+    expect(wroteSecond).toBe(false);
   });
 
   it("should write markdown with frontmatter and read it back", async () => {

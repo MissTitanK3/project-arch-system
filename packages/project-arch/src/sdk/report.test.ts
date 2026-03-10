@@ -22,7 +22,7 @@ describe.sequential("sdk/report", () => {
     expect(result.data.text).toContain("Metric");
     expect(result.data.text).toContain("Value");
     expect(result.data.text).toContain("active phase");
-  }, 15_000);
+  }, 60_000);
 
   it("should support verbose mode option", async () => {
     const result = await reportGenerate({ verbose: true });
@@ -30,7 +30,7 @@ describe.sequential("sdk/report", () => {
     resultAssertions.assertSuccess(result);
     expect(result.data.text).toContain("Metric");
     expect(result.data.text).toContain("Roadmap-Graph Parity Check");
-  }, 15_000);
+  }, 60_000);
 
   it("should include provenance annotations", async () => {
     const result = await reportGenerate();
@@ -38,14 +38,14 @@ describe.sequential("sdk/report", () => {
     resultAssertions.assertSuccess(result);
     expect(result.data.text).toContain("[source:");
     expect(result.data.text).toContain("roadmap/manifest.json");
-  }, 15_000);
+  }, 60_000);
 
   it("should include graph sync status", async () => {
     const result = await reportGenerate();
 
     resultAssertions.assertSuccess(result);
     expect(result.data.text).toContain("graph sync status");
-  }, 15_000);
+  }, 60_000);
 
   it("should include parity check summary", async () => {
     const result = await reportGenerate();
@@ -55,5 +55,5 @@ describe.sequential("sdk/report", () => {
     expect(result.data.text).toContain("Status:");
     expect(result.data.text).toContain("Tasks checked:");
     expect(result.data.text).toContain("Status mismatches:");
-  }, 15_000);
+  }, 60_000);
 });

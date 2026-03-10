@@ -10,6 +10,7 @@ describe("fs/index", () => {
     expect(typeof fsIndex.readJson).toBe("function");
     expect(typeof fsIndex.readMarkdownWithFrontmatter).toBe("function");
     expect(typeof fsIndex.writeJsonDeterministic).toBe("function");
+    expect(typeof fsIndex.writeJsonDeterministicIfChanged).toBe("function");
     expect(typeof fsIndex.writeMarkdownWithFrontmatter).toBe("function");
   });
 });

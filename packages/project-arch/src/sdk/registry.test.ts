@@ -51,6 +51,11 @@ describe("sdk/registry", () => {
       expect(registry.check.checkRun).toBeDefined();
     });
 
+    it("should export lint module", () => {
+      expect(registry.lint).toBeDefined();
+      expect(registry.lint.lintFrontmatterRun).toBeDefined();
+    });
+
     it("should export report module", () => {
       expect(registry.report).toBeDefined();
       expect(registry.report.reportGenerate).toBeDefined();

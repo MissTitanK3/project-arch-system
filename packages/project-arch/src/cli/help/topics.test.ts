@@ -10,6 +10,8 @@ describe("Help Topics", () => {
       expect(TOPIC_LIST).toContain("decisions");
       expect(TOPIC_LIST).toContain("architecture");
       expect(TOPIC_LIST).toContain("standards");
+      expect(TOPIC_LIST).toContain("validation");
+      expect(TOPIC_LIST).toContain("remediation");
     });
   });
 
@@ -57,9 +59,68 @@ describe("Help Topics", () => {
       expect(content).toContain("File Naming");
     });
 
+    it("should return content for validation topic", () => {
+      const content = getHelpTopic("validation");
+      expect(content).toBeTruthy();
+      expect(content).toContain("Architecture Validation");
+      expect(content).toContain("pa check");
+      expect(content).toContain("pa lint frontmatter");
+      expect(content).toContain("pa policy check");
+    });
+
+    it("should return content for remediation topic", () => {
+      const content = getHelpTopic("remediation");
+      expect(content).toBeTruthy();
+      expect(content).toContain("Architecture Remediation");
+      expect(content).toContain("Frontmatter YAML Issues");
+      expect(content).toContain("Task Management Issues");
+    });
+
     it("should return null for invalid topic", () => {
       const content = getHelpTopic("invalid-topic");
       expect(content).toBeNull();
+    });
+  });
+
+  describe("Command Option Parity", () => {
+    describe("commands topic documentation", () => {
+      const commandsTopic = getHelpTopic("commands");
+
+      it("should document pa check with --json option", () => {
+        expect(commandsTopic).toContain("pa check");
+        expect(commandsTopic).toContain("--json");
+      });
+
+      it("should document pa report with --verbose option", () => {
+        expect(commandsTopic).toContain("pa report");
+        expect(commandsTopic).toContain("--verbose");
+      });
+
+      it("should document pa lint frontmatter with --fix option", () => {
+        expect(commandsTopic).toContain("pa lint frontmatter");
+        expect(commandsTopic).toContain("--fix");
+      });
+
+      it("should document pa task lanes with --verbose option", () => {
+        expect(commandsTopic).toContain("pa task lanes");
+        expect(commandsTopic).toContain("--verbose");
+      });
+
+      it("should document pa milestone activate command", () => {
+        expect(commandsTopic).toContain("pa milestone activate");
+      });
+
+      it("should document pa milestone complete command", () => {
+        expect(commandsTopic).toContain("pa milestone complete");
+      });
+
+      it("should document pa policy check command", () => {
+        expect(commandsTopic).toContain("pa policy check");
+      });
+
+      it("should document pa policy explain command", () => {
+        expect(commandsTopic).toContain("pa policy explain");
+      });
     });
   });
 

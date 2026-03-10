@@ -12,7 +12,37 @@ export interface CheckResult {
   ok: boolean;
   errors: string[];
   warnings: string[];
+  diagnostics: CheckDiagnostic[];
 }
+
+export type CheckDiagnosticSeverity = "error" | "warning";
+
+export interface CheckDiagnostic {
+  code: string;
+  severity: CheckDiagnosticSeverity;
+  message: string;
+  path: string | null;
+  hint: string | null;
+}
+
+export interface CheckDiagnosticsPayload {
+  schemaVersion: string;
+  status: "ok" | "invalid";
+  summary: {
+    errorCount: number;
+    warningCount: number;
+    diagnosticCount: number;
+  };
+  diagnostics: CheckDiagnostic[];
+}
+
+export interface CheckDiagnosticFilters {
+  only?: string[];
+  severity?: CheckDiagnosticSeverity[];
+  paths?: string[];
+}
+
+export const CHECK_DIAGNOSTICS_SCHEMA_VERSION = "1.0";
 
 interface GraphSummary {
   schemaVersion: string;
@@ -235,6 +265,72 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
     ok: errors.length === 0,
     errors,
     warnings,
+    diagnostics: [
+      ...errors.map((message) => toDiagnostic(message, "error")),
+      ...warnings.map((message) => toDiagnostic(message, "warning")),
+    ],
+  };
+}
+
+export function toCheckDiagnosticsPayload(result: CheckResult): CheckDiagnosticsPayload {
+  return {
+    schemaVersion: CHECK_DIAGNOSTICS_SCHEMA_VERSION,
+    status: result.ok ? "ok" : "invalid",
+    summary: {
+      errorCount: result.errors.length,
+      warningCount: result.warnings.length,
+      diagnosticCount: result.diagnostics.length,
+    },
+    diagnostics: result.diagnostics,
+  };
+}
+
+export function filterCheckResult(
+  result: CheckResult,
+  filters: CheckDiagnosticFilters,
+): CheckResult {
+  const normalizedCodes = new Set((filters.only ?? []).map((code) => code.trim().toUpperCase()));
+  const normalizedSeverities = new Set(
+    (filters.severity ?? []).map(
+      (severity) => severity.trim().toLowerCase() as CheckDiagnosticSeverity,
+    ),
+  );
+  const pathPatterns = (filters.paths ?? []).map((pattern) => pattern.trim()).filter(Boolean);
+
+  const diagnostics = result.diagnostics.filter((diagnostic) => {
+    if (normalizedCodes.size > 0 && !normalizedCodes.has(diagnostic.code.toUpperCase())) {
+      return false;
+    }
+
+    if (normalizedSeverities.size > 0 && !normalizedSeverities.has(diagnostic.severity)) {
+      return false;
+    }
+
+    if (pathPatterns.length > 0) {
+      if (!diagnostic.path) {
+        return false;
+      }
+      const normalizedPath = diagnostic.path.replace(/\\/g, "/");
+      if (!pathPatterns.some((pattern) => matchGlob(normalizedPath, pattern))) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const errors = diagnostics
+    .filter((diagnostic) => diagnostic.severity === "error")
+    .map(renderDiagnosticForTextOutput);
+  const warnings = diagnostics
+    .filter((diagnostic) => diagnostic.severity === "warning")
+    .map(renderDiagnosticForTextOutput);
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    warnings,
+    diagnostics,
   };
 }
 
@@ -388,4 +484,83 @@ async function loadDeclaredDomains(cwd: string): Promise<Set<string>> {
     )
     .map((item) => item.name.toLowerCase());
   return new Set(domains);
+}
+
+function toDiagnostic(message: string, severity: CheckDiagnosticSeverity): CheckDiagnostic {
+  const parsed = parseDiagnosticCode(message);
+  const normalizedMessage = parsed.message;
+  return {
+    code: parsed.code ?? (severity === "error" ? "CHECK_ERROR" : "CHECK_WARNING"),
+    severity,
+    message: normalizedMessage,
+    path: extractPath(normalizedMessage),
+    hint: extractHint(normalizedMessage),
+  };
+}
+
+function parseDiagnosticCode(message: string): { code: string | null; message: string } {
+  const match = message.match(/^\[([A-Z0-9_]+)\]\s+(.+)$/);
+  if (!match) {
+    return { code: null, message };
+  }
+  return {
+    code: match[1],
+    message: match[2],
+  };
+}
+
+function extractPath(message: string): string | null {
+  const quotedMatch = message.match(
+    /'((?:\.arch|arch-model|arch-domains|roadmap|apps|packages)\/[^'\s]+)'/,
+  );
+  if (quotedMatch) {
+    return quotedMatch[1];
+  }
+
+  const inlineMatch = message.match(
+    /(?:\.arch|arch-model|arch-domains|roadmap|apps|packages)\/[^\s'\])]+/,
+  );
+  if (inlineMatch) {
+    return inlineMatch[0];
+  }
+
+  const conceptMapMatch = message.match(/at\s+(arch-model\/concept-map\.json)/);
+  if (conceptMapMatch) {
+    return conceptMapMatch[1];
+  }
+
+  return null;
+}
+
+function extractHint(message: string): string | null {
+  const declareIdx = message.indexOf("Declare it in ");
+  if (declareIdx >= 0) {
+    return message.slice(declareIdx).trim();
+  }
+
+  const rebuildIdx = message.indexOf("Rebuild graph artifacts");
+  if (rebuildIdx >= 0) {
+    return message.slice(rebuildIdx).trim();
+  }
+
+  return null;
+}
+
+function renderDiagnosticForTextOutput(diagnostic: CheckDiagnostic): string {
+  if (diagnostic.code === "CHECK_ERROR" || diagnostic.code === "CHECK_WARNING") {
+    return diagnostic.message;
+  }
+  return `[${diagnostic.code}] ${diagnostic.message}`;
+}
+
+function matchGlob(filePath: string, pattern: string): boolean {
+  const normalizedPattern = pattern.replace(/\\/g, "/");
+  const escaped = normalizedPattern.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  const regexPattern = escaped
+    .replace(/\*\*/g, "§§")
+    .replace(/\*/g, "[^/]*")
+    .replace(/§§/g, ".*")
+    .replace(/\?/g, "[^/]");
+  const regex = new RegExp(`^${regexPattern}$`);
+  return regex.test(filePath);
 }

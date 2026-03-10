@@ -55,6 +55,15 @@ pnpm test
 
 Runs the Vitest test suites across the workspace.
 
+**Current Test Metrics:**
+
+- **Test Files**: 94 (all passing)
+- **Tests**: 945 (all passing)
+- **Duration**: ~35 seconds
+- **Coverage Target**: >80% for critical modules (SDK, core, CLI)
+
+See [TESTING.md](./TESTING.md) for detailed testing documentation.
+
 ### Typecheck
 
 ```bash

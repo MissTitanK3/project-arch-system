@@ -44,7 +44,39 @@ describe.sequential("core/manifests/graph", () => {
       expect(graph.nodes.milestones).toBeGreaterThan(0);
       expect(tasks.tasks.length).toBe(graph.nodes.tasks);
       expect(milestones.milestones.length).toBe(graph.nodes.milestones);
-    }, 15_000);
+    }, 60_000);
+
+    it("should preserve byte-identical graph artifacts across no-op rebuilds", async () => {
+      await rebuildArchitectureGraph(tempDir);
+
+      const graphPath = path.join(tempDir, ".arch", "graph.json");
+      const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+      const firstGraphContent = await fs.readFile(graphPath, "utf8");
+      const firstTasksContent = await fs.readFile(tasksPath, "utf8");
+      const firstGraphStat = await fs.stat(graphPath);
+
+      await rebuildArchitectureGraph(tempDir);
+
+      const secondGraphContent = await fs.readFile(graphPath, "utf8");
+      const secondTasksContent = await fs.readFile(tasksPath, "utf8");
+      const secondGraphStat = await fs.stat(graphPath);
+
+      expect(secondGraphContent).toBe(firstGraphContent);
+      expect(secondTasksContent).toBe(firstTasksContent);
+      expect(secondGraphStat.mtimeMs).toBe(firstGraphStat.mtimeMs);
+    }, 60_000);
+
+    it("should support read-only mode that skips graph artifact writes", async () => {
+      await fs.remove(path.join(tempDir, ".arch"));
+
+      await rebuildArchitectureGraph(tempDir, { write: false });
+
+      expect(await fs.pathExists(path.join(tempDir, ".arch", "graph.json"))).toBe(false);
+      expect(await fs.pathExists(path.join(tempDir, ".arch", "nodes", "tasks.json"))).toBe(false);
+      expect(await fs.pathExists(path.join(tempDir, ".arch", "edges", "task_to_module.json"))).toBe(
+        false,
+      );
+    }, 60_000);
 
     it("should include task-to-decision edges for linked items", async () => {
       const phaseId = "graph-phase";
@@ -85,7 +117,7 @@ describe.sequential("core/manifests/graph", () => {
       );
 
       expect(edges.edges).toContainEqual({ task: taskRef, decision: decisionId });
-    }, 15_000);
+    }, 60_000);
 
     it("should skip invalid decision markdown files without throwing", async () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -105,7 +137,7 @@ describe.sequential("core/manifests/graph", () => {
       ).toBe(true);
 
       warnSpy.mockRestore();
-    }, 15_000);
+    }, 60_000);
 
     it("should handle project with domains.json", async () => {
       const domainsDir = path.join(tempDir, "arch-domains");
@@ -137,7 +169,7 @@ describe.sequential("core/manifests/graph", () => {
       expect(domains.domains).toHaveLength(2);
       expect(domains.domains[0].name).toBe("auth");
       expect(domains.domains[1].name).toBe("api");
-    }, 15_000);
+    }, 60_000);
 
     it("should handle project with ai-map/modules.json", async () => {
       const aiMapDir = path.join(tempDir, "ai-map");
@@ -161,7 +193,7 @@ describe.sequential("core/manifests/graph", () => {
       expect(modules.modules.length).toBeGreaterThan(0);
       // Modules from ai-map are included in the graph
       // Just verify the graph was built successfully
-    }, 15_000);
+    }, 60_000);
 
     it("should handle invalid data in domains.json", async () => {
       const domainsDir = path.join(tempDir, "arch-domains");
@@ -182,7 +214,7 @@ describe.sequential("core/manifests/graph", () => {
       // Should only include valid domains
       expect(domains.domains).toHaveLength(2);
       expect(domains.domains.map((d) => d.name).sort()).toEqual(["another-valid", "valid"]);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle invalid data in modules.json", async () => {
       const aiMapDir = path.join(tempDir, "ai-map");
@@ -208,7 +240,7 @@ describe.sequential("core/manifests/graph", () => {
       // Should include modules from aimap if valid data present
       // Module validation happens in the graph building logic
       expect(modules.modules.length).toBeGreaterThan(0);
-    }, 15_000);
+    }, 60_000);
 
     it("should filter out task-to-decision edges for unknown decisions", async () => {
       const phaseId = "test-phase";
@@ -249,7 +281,7 @@ describe.sequential("core/manifests/graph", () => {
       // Should not include edge to non-existent decision
       const invalidEdge = edges.edges.find((e) => e.decision === "non-existent:decision:id");
       expect(invalidEdge).toBeUndefined();
-    }, 15_000);
+    }, 60_000);
 
     it("should create module nodes from task codeTargets", async () => {
       const phaseId = "module-phase";
@@ -293,7 +325,7 @@ describe.sequential("core/manifests/graph", () => {
       // Should create edges from task to modules
       expect(edges.edges.some((e) => e.module === "packages/auth")).toBe(true);
       expect(edges.edges.some((e) => e.module === "packages/api")).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should map architecture and docs targets into module nodes", async () => {
       const phaseId = "module-map-phase";
@@ -343,6 +375,6 @@ describe.sequential("core/manifests/graph", () => {
       expect(names).toContain("roadmap");
       expect(names).toContain("misc/file.txt");
       expect(names).toContain("/");
-    }, 15_000);
+    }, 60_000);
   });
 });

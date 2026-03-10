@@ -68,6 +68,14 @@ describe("sdk/commands", () => {
       expect(commandMetadata["policy.explain"].inputs).toEqual([]);
     });
 
+    it("should define metadata for lint.frontmatter", () => {
+      expect(commandMetadata["lint.frontmatter"]).toBeDefined();
+      expect(commandMetadata["lint.frontmatter"].description).toBe(
+        "Lint frontmatter for schema and YAML safety issues",
+      );
+      expect(commandMetadata["lint.frontmatter"].inputs).toEqual(["fix"]);
+    });
+
     it("should have all commands use consistent structure", () => {
       const allCommands = Object.values(commandMetadata);
 

@@ -6,7 +6,7 @@ This guide documents the testing patterns, strategies, and conventions used thro
 
 - **Test Framework**: [Vitest](https://vitest.dev/) 4.0.18+
 - **Test Runner**: `pnpm test` (from `packages/project-arch`)
-- **Coverage**: 440+ tests across 65 test files
+- **Coverage**: 945 tests across 94 test files
 - **Target Coverage**: >80% for critical modules (SDK, core, CLI)
 
 ## Quick Start

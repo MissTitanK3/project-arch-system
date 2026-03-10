@@ -87,12 +87,73 @@ Run architectural validations to ensure consistency and compliance.
 
 ```bash
 pa check
+pa check --json
+pa check --only UNTRACKED_IMPLEMENTATION
+pa check --severity warning
+pa check --paths "apps/web/**"
 
 # Validates:
 # - Task ID ranges match lane directories
 # - Milestone and phase structure
 # - Decision record format
 # - Graph dependencies
+
+# --json output shape:
+# {
+#   "schemaVersion": "1.0",
+#   "status": "ok" | "invalid",
+#   "summary": {
+#     "errorCount": number,
+#     "warningCount": number,
+#     "diagnosticCount": number
+#   },
+#   "diagnostics": [
+#     {
+#       "code": string,
+#       "severity": "error" | "warning",
+#       "message": string,
+#       "path": string | null,
+#       "hint": string | null
+#     }
+#   ]
+# }
+
+# Triage filters:
+# --only <codes>       Filter by diagnostic code(s), comma-separated or repeatable
+# --severity <levels>  Filter by severity: error, warning
+# --paths <patterns>   Filter by diagnostic path glob(s), comma-separated or repeatable
+#
+# Examples:
+# pa check --only UNTRACKED_IMPLEMENTATION --severity warning
+# pa check --paths "packages/**" --json
+```
+
+Schema contract: [docs/check-json-diagnostics-schema.md](docs/check-json-diagnostics-schema.md)
+
+Compatibility expectations for `pa check --json`:
+
+- `schemaVersion` is the machine contract version (current: `1.0`)
+- Additive payload changes are minor-version compatible
+- Breaking payload changes require a schema major version bump and release notes
+- Consumers should rely on `code` + `severity` for automation and treat unknown codes as forward-compatible
+
+#### `pa lint frontmatter`
+
+Run preflight lint checks on task/decision YAML frontmatter and report each issue with file+line.
+
+```bash
+pa lint frontmatter
+pa lint frontmatter --fix
+
+# Lint rules include:
+# - Tab indentation detection
+# - Missing required keys by artifact type
+# - Scalar safety checks for risky unquoted values
+# - Key type and schema type checks
+
+# --fix behavior:
+# - Applies whitespace-only indentation normalization
+# - Does not rewrite scalar values or meaning
 ```
 
 #### `pa report`
@@ -119,19 +180,40 @@ pa docs
 # Generates documentation in arch-model/docs/
 ```
 
-#### `pa help [command]`
+#### `pa help [topic]`
 
-Display comprehensive help documentation.
+Display comprehensive help documentation on specific topics.
 
 ```bash
-# General help
+# List all available help topics
 pa help
 
-# Command-specific help
-pa help task
-pa help check
-pa help phase
+# View detailed topic documentation
+pa help commands      # Complete command reference
+pa help workflows     # Common task and decision workflows
+pa help lanes         # Task lane system explained
+pa help decisions     # Architecture decision management
+pa help architecture  # Repository structure
+pa help standards     # File naming and schema standards
+pa help validation    # Validation commands and workflows
+pa help remediation   # Fix common architecture issues
+
+# Command-specific help using --help flag
+pa check --help
+pa task new --help
+pa milestone activate --help
 ```
+
+**Topics Available:**
+
+- `commands`: Complete command reference for all available commands and options
+- `workflows`: Step-by-step workflows for common tasks
+- `lanes`: Understanding planned, discovered, and backlog task lanes
+- `decisions`: Architecture decision record management
+- `architecture`: Repository structure and validation overview
+- `standards`: File naming conventions and frontmatter schemas
+- `validation`: Using validation commands (check, lint, policy)
+- `remediation`: Solutions for common architecture issues
 
 ### Phase Management
 
@@ -266,6 +348,56 @@ pa task complete phase-1 milestone-1 003
 pa task block phase-1 milestone-1 003 --reason "Waiting for API design"
 ```
 
+#### Register Untracked Implementation Surfaces
+
+Bulk-register untracked files from `apps/` and `packages/` to a task's `codeTargets`.
+
+```bash
+# Register all untracked files detected by `pa check`
+pa task register-surfaces phase-1 milestone-1 003
+
+# Preview changes without modifying files (dry-run)
+pa task register-surfaces phase-1 milestone-1 003 --dry-run
+
+# Filter by include patterns (from check diagnostics)
+pa task register-surfaces phase-1 milestone-1 003 --include "apps/web/**"
+
+# Exclude certain patterns
+pa task register-surfaces phase-1 milestone-1 003 --exclude "**/*.test.ts"
+
+# Use explicit glob patterns instead of check diagnostics
+pa task register-surfaces phase-1 milestone-1 003 --no-from-check --include "apps/**/*.ts"
+
+# Combine filters for precise control
+pa task register-surfaces phase-1 milestone-1 003 \\
+  --include "apps/admin/**" \\
+  --exclude "**/*.test.ts" \\
+  --exclude "**/__tests__/**" \\
+  --dry-run
+```
+
+**Options:**
+
+- `--from-check`: Get untracked paths from `pa check` diagnostics (default: true)
+- `--no-from-check`: Use explicit `--include` patterns instead
+- `--include <glob...>`: Filter or specify paths to register (supports multiple)
+- `--exclude <glob...>`: Exclude paths matching these patterns (supports multiple)
+- `--dry-run`: Preview changes without modifying task file
+
+**Workflow:**
+
+1. Run `pa check` to see UNTRACKED_IMPLEMENTATION warnings
+2. Use `pa task register-surfaces` to bulk-register relevant files
+3. Review changes with `--dry-run` before committing
+4. Use `--include`/`--exclude` to filter specific packages or file types
+
+**Notes:**
+
+- Automatically skips paths already in `codeTargets` (no duplicates)
+- Updates task `updatedAt` timestamp
+- Rebuilds architecture graph after successful registration
+- Supports glob patterns: `**` (any depth), `*` (any chars), `?` (single char)
+
 ### Task ID Validation
 
 Task IDs must match their lane directory:
@@ -292,6 +424,18 @@ console.log(`Passed: ${results.passed}, Failed: ${results.failed}`);
 // Parse the dependency graph
 const nodes = await graph.buildProjectGraph(process.cwd());
 console.log(`Found ${nodes.length} nodes in graph`);
+```
+
+### Graph Sync Write Modes
+
+```typescript
+import { graph } from "project-arch";
+
+// Default mode writes .arch graph artifacts only when content changes
+await graph.graphBuild({ cwd: process.cwd() });
+
+// Read-only mode computes graph state without writing .arch artifacts
+await graph.graphBuild({ cwd: process.cwd(), write: false });
 ```
 
 ### Working with Tasks

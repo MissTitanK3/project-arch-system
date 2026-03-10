@@ -36,7 +36,7 @@ importers:
         specifier: ^11.3.0
         version: 11.3.4
       project-arch:
-        specifier: workspace:^1.0.0
+        specifier: workspace:^1.3.0
         version: link:../project-arch
     devDependencies:
       '@types/fs-extra':

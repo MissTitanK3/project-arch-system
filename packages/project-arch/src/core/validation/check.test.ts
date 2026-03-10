@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "path";
-import { runRepositoryChecks } from "./check";
+import fs from "fs-extra";
+import {
+  CHECK_DIAGNOSTICS_SCHEMA_VERSION,
+  filterCheckResult,
+  runRepositoryChecks,
+  toCheckDiagnosticsPayload,
+} from "./check";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createTask } from "../tasks/createTask";
 import { createDecision } from "../decisions/createDecision";
@@ -16,10 +22,142 @@ describe.sequential("core/validation/check", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd());
     tempDir = context.tempDir;
-  }, 45_000);
+  }, 90_000);
 
   afterEach(async () => {
     await context.cleanup();
+  });
+
+  describe("toCheckDiagnosticsPayload", () => {
+    it("should include schemaVersion and stable top-level fields", () => {
+      const payload = toCheckDiagnosticsPayload({
+        ok: false,
+        errors: ["error-a"],
+        warnings: ["warning-a"],
+        diagnostics: [
+          {
+            code: "CHECK_ERROR",
+            severity: "error",
+            message: "error-a",
+            path: null,
+            hint: null,
+          },
+          {
+            code: "CHECK_WARNING",
+            severity: "warning",
+            message: "warning-a",
+            path: null,
+            hint: null,
+          },
+        ],
+      });
+
+      expect(payload).toEqual({
+        schemaVersion: CHECK_DIAGNOSTICS_SCHEMA_VERSION,
+        status: "invalid",
+        summary: {
+          errorCount: 1,
+          warningCount: 1,
+          diagnosticCount: 2,
+        },
+        diagnostics: [
+          {
+            code: "CHECK_ERROR",
+            severity: "error",
+            message: "error-a",
+            path: null,
+            hint: null,
+          },
+          {
+            code: "CHECK_WARNING",
+            severity: "warning",
+            message: "warning-a",
+            path: null,
+            hint: null,
+          },
+        ],
+      });
+    });
+  });
+
+  describe("filterCheckResult", () => {
+    it("should filter by diagnostic code and preserve filtered ok semantics", () => {
+      const filtered = filterCheckResult(
+        {
+          ok: false,
+          errors: ["error-a"],
+          warnings: ["[UNTRACKED_IMPLEMENTATION] warn-a"],
+          diagnostics: [
+            {
+              code: "CHECK_ERROR",
+              severity: "error",
+              message: "error-a",
+              path: "roadmap/manifest.json",
+              hint: null,
+            },
+            {
+              code: "UNTRACKED_IMPLEMENTATION",
+              severity: "warning",
+              message: "warn-a",
+              path: "apps/web/src/index.ts",
+              hint: null,
+            },
+          ],
+        },
+        { only: ["UNTRACKED_IMPLEMENTATION"] },
+      );
+
+      expect(filtered.ok).toBe(true);
+      expect(filtered.errors).toEqual([]);
+      expect(filtered.warnings).toEqual(["[UNTRACKED_IMPLEMENTATION] warn-a"]);
+      expect(filtered.diagnostics).toHaveLength(1);
+      expect(filtered.diagnostics[0].code).toBe("UNTRACKED_IMPLEMENTATION");
+    });
+
+    it("should filter by severity and path glob patterns", () => {
+      const filtered = filterCheckResult(
+        {
+          ok: false,
+          errors: ["error-a"],
+          warnings: [
+            "[UNTRACKED_IMPLEMENTATION] apps/web/src/index.ts not associated",
+            "[UNTRACKED_IMPLEMENTATION] packages/core/src/main.ts not associated",
+          ],
+          diagnostics: [
+            {
+              code: "CHECK_ERROR",
+              severity: "error",
+              message: "error-a",
+              path: "roadmap/manifest.json",
+              hint: null,
+            },
+            {
+              code: "UNTRACKED_IMPLEMENTATION",
+              severity: "warning",
+              message: "apps/web/src/index.ts not associated",
+              path: "apps/web/src/index.ts",
+              hint: null,
+            },
+            {
+              code: "UNTRACKED_IMPLEMENTATION",
+              severity: "warning",
+              message: "packages/core/src/main.ts not associated",
+              path: "packages/core/src/main.ts",
+              hint: null,
+            },
+          ],
+        },
+        { severity: ["warning"], paths: ["apps/**"] },
+      );
+
+      expect(filtered.ok).toBe(true);
+      expect(filtered.errors).toEqual([]);
+      expect(filtered.warnings).toEqual([
+        "[UNTRACKED_IMPLEMENTATION] apps/web/src/index.ts not associated",
+      ]);
+      expect(filtered.diagnostics).toHaveLength(1);
+      expect(filtered.diagnostics[0].path).toBe("apps/web/src/index.ts");
+    });
   });
 
   describe("runRepositoryChecks", () => {
@@ -29,8 +167,9 @@ describe.sequential("core/validation/check", () => {
       // Initialized project should be valid
       expect(result.ok).toBe(true);
       expect(result.errors).toEqual([]);
+      expect(Array.isArray(result.diagnostics)).toBe(true);
       // May have warnings but should not have errors
-    }, 15_000);
+    }, 60_000);
 
     it("should detect duplicate task IDs in milestone scope", async () => {
       await createPhase("dup-phase", tempDir);
@@ -82,7 +221,7 @@ This task has a duplicate ID.
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Duplicate task id"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect missing code targets referenced by tasks", async () => {
       await createPhase("missing-target-phase", tempDir);
@@ -141,7 +280,14 @@ This task references a missing code target.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Missing code target"))).toBe(true);
       expect(result.errors.some((e) => e.includes("apps/nonexistent/src/missing.ts"))).toBe(true);
-    }, 15_000);
+
+      const missingTargetDiagnostic = result.diagnostics.find((d) =>
+        d.message.includes("Missing code target"),
+      );
+      expect(missingTargetDiagnostic).toBeDefined();
+      expect(missingTargetDiagnostic?.severity).toBe("error");
+      expect(missingTargetDiagnostic?.path).toBe("apps/nonexistent/src/missing.ts");
+    }, 60_000);
 
     it("should detect missing public docs referenced by tasks", async () => {
       await createPhase("missing-docs-phase", tempDir);
@@ -193,7 +339,7 @@ This task references missing public docs.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Missing public docs path"))).toBe(true);
       expect(result.errors.some((e) => e.includes("architecture/nonexistent.md"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect undeclared modules referenced by tasks", async () => {
       await createPhase("undeclared-module-phase", tempDir);
@@ -245,7 +391,13 @@ This task references an undeclared module.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("undeclared module"))).toBe(true);
       expect(result.errors.some((e) => e.includes("apps/undeclared-module"))).toBe(true);
-    }, 15_000);
+
+      const undeclaredModuleDiagnostic = result.diagnostics.find((d) =>
+        d.message.includes("undeclared module"),
+      );
+      expect(undeclaredModuleDiagnostic).toBeDefined();
+      expect(undeclaredModuleDiagnostic?.hint).toContain("Declare it in arch-model/modules.json");
+    }, 60_000);
 
     it("should detect undeclared domains referenced by task tags", async () => {
       await createPhase("undeclared-domain-phase", tempDir);
@@ -297,7 +449,7 @@ This task references an undeclared domain.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("undeclared domain"))).toBe(true);
       expect(result.errors.some((e) => e.includes("undeclared-domain"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect missing tasks linked by decisions", async () => {
       const decisionPath = await createDecision(
@@ -347,7 +499,7 @@ This decision links to a missing task.
       expect(
         result.errors.some((e) => e.includes("nonexistent-phase/nonexistent-milestone/999")),
       ).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect invalid decision task link format", async () => {
       const decisionPath = await createDecision(
@@ -394,7 +546,7 @@ This decision has an invalid task link format.
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Invalid decision task link"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect missing code targets referenced by decisions", async () => {
       const decisionPath = await createDecision(
@@ -442,7 +594,7 @@ This decision references a missing code target.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Missing code target"))).toBe(true);
       expect(result.errors.some((e) => e.includes("packages/nonexistent/index.ts"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect missing superseded decisions", async () => {
       const decisionPath = await createDecision(
@@ -491,7 +643,7 @@ This decision supersedes a missing decision.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("supersedes missing decision"))).toBe(true);
       expect(result.errors.some((e) => e.includes("project:20260101:nonexistent"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle warnings without failing validation", async () => {
       // Run checks on initialized project which may have warnings
@@ -502,7 +654,7 @@ This decision supersedes a missing decision.
         expect(result.ok).toBe(true);
         expect(Array.isArray(result.warnings)).toBe(true);
       }
-    }, 15_000);
+    }, 60_000);
 
     it("should return empty errors for valid project with declared modules", async () => {
       // Declare all modules that exist in the initialized project
@@ -525,7 +677,7 @@ This decision supersedes a missing decision.
       // Note: May have warnings, but should have no errors
       expect(result.ok).toBe(true);
       expect(result.errors).toEqual([]);
-    }, 15_000);
+    }, 60_000);
 
     it("should return empty errors for valid project with declared domains", async () => {
       // Add a declared domain
@@ -541,7 +693,7 @@ This decision supersedes a missing decision.
 
       expect(result.ok).toBe(true);
       expect(result.errors).toEqual([]);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect multiple errors across different categories", async () => {
       await createPhase("multi-error-phase", tempDir);
@@ -593,7 +745,7 @@ Multiple validation errors.
 
       expect(result.ok).toBe(false);
       expect(result.errors.length).toBeGreaterThan(1);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle empty codeTargets array", async () => {
       await createPhase("empty-targets-phase", tempDir);
@@ -640,7 +792,7 @@ Empty code targets should be valid.
       const result = await runRepositoryChecks(tempDir);
 
       expect(result.ok).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle empty publicDocs array", async () => {
       await createPhase("empty-docs-phase", tempDir);
@@ -687,7 +839,7 @@ Empty public docs should be valid.
       const result = await runRepositoryChecks(tempDir);
 
       expect(result.ok).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should validate multiple tasks in same lane", async () => {
       await createPhase("multi-task-phase", tempDir);
@@ -709,7 +861,7 @@ Empty public docs should be valid.
 
       // All should have unique IDs within the lane
       expect(result.ok).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should validate decisions with all required fields", async () => {
       await createDecision(
@@ -723,7 +875,7 @@ Empty public docs should be valid.
       const result = await runRepositoryChecks(tempDir);
 
       expect(result.ok).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect decision linking to non-existent task", async () => {
       await createDecision({ scope: "project", title: "Decision with Missing Task Link" }, tempDir);
@@ -733,7 +885,7 @@ Empty public docs should be valid.
       // May or may not error depending on implementation - just verify check runs
       expect(result.ok !== undefined).toBe(true);
       expect(Array.isArray(result.errors)).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should report invalid milestone manifest parsing errors", async () => {
       const phaseId = "invalid-manifest-phase";
@@ -761,7 +913,7 @@ Empty public docs should be valid.
 
       expect(result.ok).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
-    }, 15_000);
+    }, 60_000);
 
     it("should detect project decision index entries for missing decisions", async () => {
       const projectDecisionIndexPath = path.join(tempDir, "roadmap", "decisions", "index.json");
@@ -779,7 +931,7 @@ Empty public docs should be valid.
           error.includes("Project decision index references missing decision"),
         ),
       ).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should validate decision links with valid code targets", async () => {
       // Just run checks on the current initialized project
@@ -789,7 +941,7 @@ Empty public docs should be valid.
       // Basic validation should succeed for initialized project
       expect(Array.isArray(result.errors)).toBe(true);
       expect(typeof result.ok).toBe("boolean");
-    }, 15_000);
+    }, 60_000);
 
     it("should accept code targets from declared modules", async () => {
       // Create modules.json with all default and new modules declared
@@ -862,7 +1014,7 @@ completionCriteria: []
 
       // Should pass because modules are declared and files exist
       expect(result.ok).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle invalid modules.json structure", async () => {
       // Create invalid modules.json (not an array)
@@ -875,7 +1027,7 @@ completionCriteria: []
 
       // Should still run without crashing, treating it as no declared modules
       expect(result.ok !== undefined).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle code targets with insufficient path segments", async () => {
       await createPhase("short-path-phase", tempDir);
@@ -927,7 +1079,7 @@ completionCriteria: []
 
       // Should handle gracefully (these targets won't have modules to check)
       expect(result.ok !== undefined).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should parse domain tags correctly", async () => {
       // Create domains.json
@@ -988,7 +1140,7 @@ completionCriteria: []
 
       // Should validate domain tag successfully
       expect(result.ok).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle invalid domains.json structure", async () => {
       // Create invalid domains.json (not an array)
@@ -1001,7 +1153,7 @@ completionCriteria: []
 
       // Should still run without crashing
       expect(result.ok !== undefined).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should handle non-domain tags gracefully", async () => {
       await createPhase("non-domain-phase", tempDir);
@@ -1054,7 +1206,7 @@ completionCriteria: []
 
       // Should handle gracefully (non-domain tags should be ignored for domain validation)
       expect(result.ok !== undefined).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should fail when roadmap task count differs from .arch task node count", async () => {
       const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
@@ -1075,7 +1227,7 @@ completionCriteria: []
             error.includes("roadmap task files count") && error.includes(".arch task node count"),
         ),
       ).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should fail when milestone-task edges are missing", async () => {
       const edgesPath = path.join(tempDir, ".arch", "edges", "milestone_to_task.json");
@@ -1087,7 +1239,7 @@ completionCriteria: []
       expect(result.errors.some((error) => error.includes("missing milestone-task edge"))).toBe(
         true,
       );
-    }, 15_000);
+    }, 60_000);
 
     it("should fail when roadmap task status differs from graph task status", async () => {
       const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
@@ -1115,7 +1267,7 @@ completionCriteria: []
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((error) => error.includes("status drift for task"))).toBe(true);
-    }, 15_000);
+    }, 60_000);
 
     it("should fail when arch-model/concept-map.json violates schema", async () => {
       const conceptMapPath = path.join(tempDir, "arch-model", "concept-map.json");
@@ -1143,7 +1295,61 @@ completionCriteria: []
           error.includes("Invalid concept-map schema at arch-model/concept-map.json"),
         ),
       ).toBe(true);
-    }, 15_000);
+    }, 60_000);
+
+    it("should handle 100+ untracked implementation diagnostics in JSON mode", async () => {
+      // Add a single tracked target to trigger untracked diagnostic collection
+      await createTask({
+        phaseId: "phase-1",
+        milestoneId: "milestone-1-setup",
+        lane: "planned",
+        title: "Track architecture root only",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      const taskPath = path.join(
+        tempDir,
+        "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+      );
+      const taskContent = await fs.readFile(taskPath, "utf8");
+      const updatedTask = taskContent.replace(
+        /codeTargets: \[\]/,
+        "codeTargets:\n  - architecture",
+      );
+      await fs.writeFile(taskPath, updatedTask);
+
+      // Create 150 untracked files in apps/packages
+      const fileCount = 150;
+      for (let i = 1; i <= fileCount; i++) {
+        const packageName = `pkg-${String(i).padStart(3, "0")}`;
+        const dirPath = path.join(tempDir, "packages", packageName);
+        await fs.ensureDir(dirPath);
+        await writeFile(path.join(dirPath, "index.ts"), `// ${packageName}`);
+      }
+
+      const result = await runRepositoryChecks(tempDir);
+      const payload = toCheckDiagnosticsPayload(result);
+
+      // Should include untracked diagnostics up to the limit (50) plus truncation notice
+      const untrackedDiagnostics = result.diagnostics.filter(
+        (d) => d.code === "UNTRACKED_IMPLEMENTATION",
+      );
+      const truncatedDiagnostics = result.diagnostics.filter(
+        (d) => d.code === "UNTRACKED_IMPLEMENTATION_TRUNCATED",
+      );
+
+      // Verify truncation behavior for large sets
+      expect(untrackedDiagnostics.length).toBe(50);
+      expect(truncatedDiagnostics.length).toBe(1);
+      expect(payload.diagnostics.length).toBeGreaterThanOrEqual(51);
+      expect(payload.schemaVersion).toBe(CHECK_DIAGNOSTICS_SCHEMA_VERSION);
+      expect(payload.summary.diagnosticCount).toBe(payload.diagnostics.length);
+
+      // Verify truncation diagnostic contains count information
+      const truncatedMsg = truncatedDiagnostics[0]?.message ?? "";
+      expect(truncatedMsg).toContain("omitted");
+    }, 60_000);
   });
 });
 

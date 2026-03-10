@@ -7,7 +7,7 @@ import {
   pathExists,
   readJson,
   readMarkdownWithFrontmatter,
-  writeJsonDeterministic,
+  writeJsonDeterministicIfChanged,
 } from "../../utils/fs";
 
 interface DomainSpec {
@@ -157,12 +157,13 @@ function inferDomainsForDecision(
   return [...inferred].sort((a, b) => a.localeCompare(b));
 }
 
-export async function rebuildArchitectureGraph(cwd = process.cwd()): Promise<void> {
+export async function rebuildArchitectureGraph(
+  cwd = process.cwd(),
+  options: { write?: boolean } = {},
+): Promise<void> {
   const archRoot = path.join(cwd, ".arch");
   const nodesRoot = path.join(archRoot, "nodes");
   const edgesRoot = path.join(archRoot, "edges");
-  await ensureDir(nodesRoot);
-  await ensureDir(edgesRoot);
 
   const domainsPath = path.join(cwd, "arch-domains", "domains.json");
   const domainsData = (await pathExists(domainsPath))
@@ -353,42 +354,42 @@ export async function rebuildArchitectureGraph(cwd = process.cwd()): Promise<voi
     return existing ?? { name, type: "unknown", description: "" };
   });
 
-  await writeJsonDeterministic(path.join(nodesRoot, "domains.json"), {
+  const domainsPayload = {
     domains: domains.map((domain) => ({
       name: domain.name,
       ownedPackages: uniqueSorted(domain.ownedPackages),
       ownedFeatures: uniqueSorted(domain.ownedFeatures),
     })),
-  });
-  await writeJsonDeterministic(path.join(nodesRoot, "decisions.json"), {
+  };
+  const decisionsPayload = {
     decisions: decisionNodes.sort((a, b) => a.id.localeCompare(b.id)),
-  });
-  await writeJsonDeterministic(path.join(nodesRoot, "milestones.json"), {
+  };
+  const milestonesPayload = {
     milestones: milestoneNodes.sort((a, b) => a.id.localeCompare(b.id)),
-  });
-  await writeJsonDeterministic(path.join(nodesRoot, "tasks.json"), {
+  };
+  const tasksPayload = {
     tasks: taskNodes.sort((a, b) => a.id.localeCompare(b.id)),
-  });
-  await writeJsonDeterministic(path.join(nodesRoot, "modules.json"), {
+  };
+  const modulesPayload = {
     modules: moduleNodes.sort((a, b) => a.name.localeCompare(b.name)),
-  });
+  };
 
-  await writeJsonDeterministic(path.join(edgesRoot, "task_to_decision.json"), {
+  const taskToDecisionPayload = {
     edges: normalizedTaskToDecision,
-  });
-  await writeJsonDeterministic(path.join(edgesRoot, "task_to_module.json"), {
+  };
+  const taskToModulePayload = {
     edges: normalizedTaskToModule,
-  });
-  await writeJsonDeterministic(path.join(edgesRoot, "decision_to_domain.json"), {
+  };
+  const decisionToDomainPayload = {
     edges: normalizedDecisionToDomain,
-  });
-  await writeJsonDeterministic(path.join(edgesRoot, "milestone_to_task.json"), {
+  };
+  const milestoneToTaskPayload = {
     edges: normalizedMilestoneToTask,
-  });
+  };
 
-  await writeJsonDeterministic(path.join(archRoot, "graph.json"), {
+  const graphPath = path.join(archRoot, "graph.json");
+  const nextGraphSummary = {
     schemaVersion: "1.0",
-    lastSync: new Date().toISOString(),
     nodes: {
       domains: domains.length,
       decisions: decisionNodes.length,
@@ -402,5 +403,63 @@ export async function rebuildArchitectureGraph(cwd = process.cwd()): Promise<voi
       decision_to_domain: normalizedDecisionToDomain.length,
       milestone_to_task: normalizedMilestoneToTask.length,
     },
+  };
+
+  let lastSync = new Date().toISOString();
+  if (await pathExists(graphPath)) {
+    const existingGraph = await readJson<{
+      schemaVersion?: string;
+      lastSync?: string;
+      nodes?: Record<string, number>;
+      edges?: Record<string, number>;
+    }>(graphPath);
+
+    const existingSummary = {
+      schemaVersion: existingGraph.schemaVersion,
+      nodes: existingGraph.nodes,
+      edges: existingGraph.edges,
+    };
+    if (
+      JSON.stringify(existingSummary) === JSON.stringify(nextGraphSummary) &&
+      existingGraph.lastSync
+    ) {
+      lastSync = existingGraph.lastSync;
+    }
+  }
+
+  const write = options.write ?? true;
+  if (!write) {
+    return;
+  }
+
+  await ensureDir(nodesRoot);
+  await ensureDir(edgesRoot);
+
+  await writeJsonDeterministicIfChanged(path.join(nodesRoot, "domains.json"), domainsPayload);
+  await writeJsonDeterministicIfChanged(path.join(nodesRoot, "decisions.json"), decisionsPayload);
+  await writeJsonDeterministicIfChanged(path.join(nodesRoot, "milestones.json"), milestonesPayload);
+  await writeJsonDeterministicIfChanged(path.join(nodesRoot, "tasks.json"), tasksPayload);
+  await writeJsonDeterministicIfChanged(path.join(nodesRoot, "modules.json"), modulesPayload);
+
+  await writeJsonDeterministicIfChanged(
+    path.join(edgesRoot, "task_to_decision.json"),
+    taskToDecisionPayload,
+  );
+  await writeJsonDeterministicIfChanged(
+    path.join(edgesRoot, "task_to_module.json"),
+    taskToModulePayload,
+  );
+  await writeJsonDeterministicIfChanged(
+    path.join(edgesRoot, "decision_to_domain.json"),
+    decisionToDomainPayload,
+  );
+  await writeJsonDeterministicIfChanged(
+    path.join(edgesRoot, "milestone_to_task.json"),
+    milestoneToTaskPayload,
+  );
+
+  await writeJsonDeterministicIfChanged(graphPath, {
+    ...nextGraphSummary,
+    lastSync,
   });
 }

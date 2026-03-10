@@ -5,9 +5,14 @@ import { pathExists, readJson } from "../fs";
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
 
-export async function graphBuild(cwd?: string): Promise<OperationResult<{ path: string }>> {
+export async function graphBuild(
+  input: {
+    cwd?: string;
+    write?: boolean;
+  } = {},
+): Promise<OperationResult<{ path: string }>> {
   return wrap(async () => {
-    await buildGraph(cwd);
+    await buildGraph(input.cwd, { write: input.write });
     return { path: ".arch/graph.json" };
   });
 }
