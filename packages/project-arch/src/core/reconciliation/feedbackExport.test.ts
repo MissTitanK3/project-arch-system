@@ -1,0 +1,102 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import path from "path";
+import fs from "fs-extra";
+import { createTestProject, type TestProjectContext } from "../../test/helpers";
+import { exportToolingFeedbackFromReconciliation } from "./feedbackExport";
+import { reconciliationReportSchema } from "../../schemas/reconciliationReport";
+
+describe("core/reconciliation/feedbackExport", () => {
+  const originalCwd = process.cwd();
+  let context: TestProjectContext;
+
+  beforeEach(async () => {
+    context = await createTestProject(originalCwd);
+  }, 60_000);
+
+  afterEach(async () => {
+    process.chdir(originalCwd);
+    await context.cleanup();
+  }, 60_000);
+
+  it("exports one tooling-feedback report per feedbackCandidate", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await fs.ensureDir(reconcileDir);
+
+    const sourcePath = path.join(reconcileDir, "001-2026-03-12.json");
+    await fs.writeJson(sourcePath, {
+      schemaVersion: "1.0",
+      id: "reconcile-001-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "001",
+      date: "2026-03-12",
+      changedFiles: ["packages/project-arch/src/cli/commands/reconcile.ts"],
+      affectedAreas: ["packages/project-arch/src/cli"],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: [
+        "Expose pa reconcile trigger-check in CLI",
+        "Add reconciliation schema docs for onboarding",
+      ],
+    });
+
+    const result = await exportToolingFeedbackFromReconciliation({
+      reconciliationId: "reconcile-001-2026-03-12",
+      cwd: process.cwd(),
+    });
+
+    expect(result.generatedCount).toBe(2);
+    expect(result.jsonPaths).toHaveLength(2);
+    expect(result.markdownPaths).toHaveLength(2);
+
+    for (const jsonPath of result.jsonPaths) {
+      expect(await fs.pathExists(jsonPath)).toBe(true);
+      const parsed = reconciliationReportSchema.parse(await fs.readJson(jsonPath));
+      expect(parsed.type).toBe("tooling-feedback");
+      expect(parsed.affectedAreas.every((area) => area.startsWith("project-arch/"))).toBe(true);
+    }
+
+    for (const markdownPath of result.markdownPaths) {
+      expect(await fs.pathExists(markdownPath)).toBe(true);
+      const markdown = await fs.readFile(markdownPath, "utf8");
+      expect(markdown).toContain("## Summary");
+      expect(markdown).toContain("## Feedback Candidates");
+      expect(markdown).toContain("**Type**: tooling-feedback");
+    }
+  });
+
+  it("returns empty result when reconciliation report has no feedbackCandidates", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await fs.ensureDir(reconcileDir);
+
+    const sourcePath = path.join(reconcileDir, "002-2026-03-12.json");
+    await fs.writeJson(sourcePath, {
+      schemaVersion: "1.0",
+      id: "reconcile-002-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "002",
+      date: "2026-03-12",
+      changedFiles: [],
+      affectedAreas: [],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: [],
+    });
+
+    const result = await exportToolingFeedbackFromReconciliation({
+      reconciliationId: "reconcile-002-2026-03-12",
+      cwd: process.cwd(),
+    });
+
+    expect(result.generatedCount).toBe(0);
+    expect(result.jsonPaths).toEqual([]);
+    expect(result.markdownPaths).toEqual([]);
+  });
+});

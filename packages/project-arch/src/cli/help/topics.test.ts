@@ -25,8 +25,22 @@ describe("Help Topics", () => {
     it("should return content for workflows topic", () => {
       const content = getHelpTopic("workflows");
       expect(content).toBeTruthy();
+      if (!content) {
+        throw new Error("workflows help topic should be available");
+      }
       expect(content).toContain("Common Workflows");
       expect(content).toContain("pa task new");
+      expect(content).toContain("pa lint frontmatter --fix");
+      expect(content).toContain("pnpm lint:md");
+      expect(content).toContain("pa check");
+      expect(content).toContain("pa doctor");
+
+      const lintIdx = content.indexOf("pa lint frontmatter --fix");
+      const mdLintIdx = content.indexOf("pnpm lint:md");
+      const checkIdx = content.indexOf("pa check");
+      expect(lintIdx).toBeGreaterThanOrEqual(0);
+      expect(mdLintIdx).toBeGreaterThan(lintIdx);
+      expect(checkIdx).toBeGreaterThan(mdLintIdx);
     });
 
     it("should return content for lanes topic", () => {

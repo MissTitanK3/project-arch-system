@@ -89,6 +89,8 @@ describe("cli/index", () => {
         expect(commandNames).toContain("report");
         expect(commandNames).toContain("policy");
         expect(commandNames).toContain("feedback");
+        expect(commandNames).toContain("reconcile");
+        expect(commandNames).toContain("backfill");
         expect(commandNames).toContain("help");
         return this;
       });

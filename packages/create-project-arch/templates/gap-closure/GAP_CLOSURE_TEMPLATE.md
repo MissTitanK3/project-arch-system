@@ -23,6 +23,8 @@
 
 - [ ] Architecture docs updated
 - [ ] Roadmap tasks/decisions synchronized
+- [ ] Frontmatter preflight lint passes (`pa lint frontmatter --fix`)
+- [ ] Markdown lint passes (`pnpm lint:md`)
 - [ ] Graph/parity checks pass (`pa check`)
 - [ ] Report diagnostics reviewed (`pa report`)
 

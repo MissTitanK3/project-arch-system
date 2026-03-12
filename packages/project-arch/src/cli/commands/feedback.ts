@@ -9,6 +9,7 @@ import { FeedbackPruner } from "../../feedback/prune";
 import { FeedbackPromoter } from "../../feedback/promoter";
 import { writeFeedbackExportArtifact, type FeedbackExportFormat } from "../../feedback/exporter";
 import { writeFeedbackReports } from "../../feedback/report-writer";
+import { exportToolingFeedbackFromReconciliation } from "../../core/reconciliation/feedbackExport";
 import { formatEnhancedHelp } from "../help/format";
 
 type FeedbackListOptions = {
@@ -407,14 +408,14 @@ export function registerFeedbackCommand(program: Command): void {
 
   command
     .command("export")
-    .description("Export a feedback issue without changing issue state")
-    .argument("<issueId>", "Issue ID (e.g. FB-AMB-001)")
+    .description("Export a feedback issue or promote reconciliation feedback candidates")
+    .argument("<id>", "Issue ID (e.g. FB-AMB-001) or reconciliation report ID/path")
     .option("--format <format>", "Export format: md | json", "md")
     .addHelpText("after", () =>
       formatEnhancedHelp({
-        usage: "pa feedback export <issueId> [--format md|json]",
+        usage: "pa feedback export <id> [--format md|json]",
         description:
-          "Generate a portable issue export artifact without mutating issue lifecycle state.",
+          "Generate a portable issue export artifact (FB-* IDs) or promote feedbackCandidates from a reconciliation report into tooling-feedback reports.",
         options: [{ flag: "--format <format>", description: "Export format (default: md)" }],
         examples: [
           { description: "Export markdown", command: "pa feedback export FB-AMB-001" },
@@ -422,10 +423,35 @@ export function registerFeedbackCommand(program: Command): void {
             description: "Export JSON",
             command: "pa feedback export FB-AMB-001 --format json",
           },
+          {
+            description: "Promote reconciliation feedback candidates",
+            command: "pa feedback export reconcile-001-2026-03-12",
+          },
         ],
       }),
     )
-    .action(async (issueId: string, options: FeedbackExportOptions) => {
+    .action(async (id: string, options: FeedbackExportOptions) => {
+      if (!/^FB-/i.test(id)) {
+        const result = await exportToolingFeedbackFromReconciliation({
+          reconciliationId: id,
+          cwd: process.cwd(),
+        });
+
+        if (result.generatedCount === 0) {
+          console.log("No feedbackCandidates found in reconciliation report.");
+          return;
+        }
+
+        console.log(`Generated tooling-feedback reports: ${result.generatedCount}`);
+        for (const jsonPath of result.jsonPaths) {
+          console.log(`json: ${path.relative(process.cwd(), jsonPath)}`);
+        }
+        for (const markdownPath of result.markdownPaths) {
+          console.log(`md:   ${path.relative(process.cwd(), markdownPath)}`);
+        }
+        return;
+      }
+
       const format = options.format === "json" ? "json" : options.format === "md" ? "md" : null;
       if (!format) {
         console.error(`Invalid export format: ${options.format}. Use 'md' or 'json'.`);
@@ -437,9 +463,9 @@ export function registerFeedbackCommand(program: Command): void {
       const issueStore = new IssueStore(archDir);
       await issueStore.initialize();
 
-      const issue = await issueStore.getIssue(issueId);
+      const issue = await issueStore.getIssue(id);
       if (!issue) {
-        console.error(`Feedback issue not found: ${issueId}`);
+        console.error(`Feedback issue not found: ${id}`);
         process.exitCode = 1;
         return;
       }
@@ -453,7 +479,7 @@ export function registerFeedbackCommand(program: Command): void {
 
       await appendFeedbackAudit(archDir, {
         command: "feedback export",
-        issueId,
+        issueId: id,
         format,
         timestamp: now.toISOString(),
         exportPath,

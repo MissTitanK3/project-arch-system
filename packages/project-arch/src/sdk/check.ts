@@ -2,7 +2,11 @@ import { runCheck } from "../core/checks/runCheck";
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
 
-export async function checkRun(): Promise<
+export interface CheckRunOptions {
+  failFast?: boolean;
+}
+
+export async function checkRun(options: CheckRunOptions = {}): Promise<
   OperationResult<{
     ok: boolean;
     errors: string[];
@@ -16,5 +20,5 @@ export async function checkRun(): Promise<
     }>;
   }>
 > {
-  return wrap(async () => runCheck());
+  return wrap(async () => runCheck(process.cwd(), { failFast: options.failFast }));
 }

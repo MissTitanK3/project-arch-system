@@ -443,6 +443,83 @@ describe("cli/commands/feedback", () => {
     expect(logSpy).toHaveBeenCalled();
   });
 
+  it("export promotes reconciliation feedbackCandidates into tooling-feedback reports", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await (await import("fs-extra")).ensureDir(reconcileDir);
+    await (
+      await import("fs-extra")
+    ).writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-001-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "001",
+      date: "2026-03-12",
+      changedFiles: ["packages/project-arch/src/cli/commands/reconcile.ts"],
+      affectedAreas: ["packages/project-arch/src/cli"],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: ["Add pa status summary for outstanding tooling feedback"],
+    });
+
+    const program = new Command();
+    program.exitOverride();
+    registerFeedbackCommand(program);
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await program.parseAsync(["node", "test", "feedback", "export", "reconcile-001-2026-03-12"]);
+
+    const output = logSpy.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(output).toContain("Generated tooling-feedback reports: 1");
+
+    const feedbackDir = path.join(process.cwd(), ".project-arch", "feedback");
+    const files = await (await import("fs-extra")).readdir(feedbackDir);
+    expect(
+      files.some((name) => name.includes("tooling-feedback-001-01") && name.endsWith(".json")),
+    ).toBe(true);
+    expect(
+      files.some((name) => name.includes("tooling-feedback-001-01") && name.endsWith(".md")),
+    ).toBe(true);
+  });
+
+  it("export reports when reconciliation source has no feedbackCandidates", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await (await import("fs-extra")).ensureDir(reconcileDir);
+    await (
+      await import("fs-extra")
+    ).writeJson(path.join(reconcileDir, "002-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-002-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "002",
+      date: "2026-03-12",
+      changedFiles: [],
+      affectedAreas: [],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: [],
+    });
+
+    const program = new Command();
+    program.exitOverride();
+    registerFeedbackCommand(program);
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await program.parseAsync(["node", "test", "feedback", "export", "reconcile-002-2026-03-12"]);
+
+    const output = logSpy.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(output).toContain("No feedbackCandidates found in reconciliation report.");
+  });
+
   it("prune --dry-run reports deletions without removing retained files", async () => {
     const archDir = path.join(process.cwd(), ".arch");
     await writeObservationDateFile(archDir, "2026-02-01", [

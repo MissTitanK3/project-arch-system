@@ -7,6 +7,59 @@ export function registerPolicyCommand(program: Command): void {
   const command = program.command("policy").description("Policy conflict detection commands");
 
   command
+    .command("resolved")
+    .description("Print the effective resolved policy profile")
+    .addHelpText("after", () =>
+      formatEnhancedHelp({
+        usage: "pa policy resolved",
+        description:
+          "Print effective policy settings after file loading, profile selection, and PA_POLICY_PROFILE override.",
+        examples: [
+          { description: "Print effective policy profile", command: "pa policy resolved" },
+          {
+            description: "Inspect a specific profile via env override",
+            command: "PA_POLICY_PROFILE=strict pa policy resolved",
+          },
+        ],
+        agentMetadata: {
+          outputFormat:
+            "Deterministic JSON with selected profile metadata, source, env override, and normalized timing policy.",
+        },
+        relatedCommands: [
+          { command: "pa policy setup", description: "Create roadmap/policy.json if missing" },
+          { command: "pa policy check", description: "Run policy conflict detection" },
+        ],
+      }),
+    )
+    .action(async () => {
+      const result = unwrap(await policy.policyResolved());
+      console.log(JSON.stringify(result, null, 2));
+    });
+
+  command
+    .command("setup")
+    .description("Create roadmap/policy.json for already initialized projects")
+    .addHelpText("after", () =>
+      formatEnhancedHelp({
+        usage: "pa policy setup",
+        description:
+          "Create default roadmap/policy.json when missing. Safe to run repeatedly; existing files are left unchanged.",
+        examples: [{ description: "Scaffold policy config", command: "pa policy setup" }],
+        agentMetadata: {
+          outputFormat: "JSON: { created: boolean, policyPath: string }",
+        },
+        relatedCommands: [
+          { command: "pa policy resolved", description: "Inspect effective policy settings" },
+          { command: "pa init", description: "Initialize full roadmap structure" },
+        ],
+      }),
+    )
+    .action(async () => {
+      const result = unwrap(await policy.policySetup());
+      console.log(JSON.stringify(result, null, 2));
+    });
+
+  command
     .command("check")
     .description("Detect task vs architecture policy conflicts (machine-readable)")
     .addHelpText("after", () =>

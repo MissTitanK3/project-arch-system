@@ -18,15 +18,6 @@ type WorkspaceFilters = {
   hopDepth: number;
 };
 
-type WorkspacePersistedState = {
-  splitPane: boolean;
-  leftCollapsed: boolean;
-  rightCollapsed: boolean;
-  leftWidth: number;
-  rightWidth: number;
-  filtersByView: Record<GraphViewMode, WorkspaceFilters>;
-};
-
 type WorkspaceContextValue = {
   splitPane: boolean;
   leftCollapsed: boolean;
@@ -127,36 +118,38 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (typeof parsed.rightWidth === "number") setRightWidth(clamp(parsed.rightWidth, 320, 720));
       if (parsed.filtersByView) {
         const views: GraphViewMode[] = ["architecture-map", "tasks", "project"];
-        const nextByView = { ...filtersByView };
-        for (const view of views) {
-          const incoming = parsed.filtersByView[view];
-          if (!incoming) continue;
-          const base = defaultFilters();
-          nextByView[view] = {
-            nodeTypes: {
-              domains: incoming.nodeTypes?.domains ?? base.nodeTypes.domains,
-              modules: incoming.nodeTypes?.modules ?? base.nodeTypes.modules,
-              tasks: incoming.nodeTypes?.tasks ?? base.nodeTypes.tasks,
-              decisions: incoming.nodeTypes?.decisions ?? base.nodeTypes.decisions,
-            },
-            edgeTypes: {
-              dependency: incoming.edgeTypes?.dependency ?? base.edgeTypes.dependency,
-              "data-flow": incoming.edgeTypes?.["data-flow"] ?? base.edgeTypes["data-flow"],
-              blocking: incoming.edgeTypes?.blocking ?? base.edgeTypes.blocking,
-            },
-            authorityTypes: {
-              authoritative:
-                incoming.authorityTypes?.authoritative ?? base.authorityTypes.authoritative,
-              manual: incoming.authorityTypes?.manual ?? base.authorityTypes.manual,
-              inferred: incoming.authorityTypes?.inferred ?? base.authorityTypes.inferred,
-            },
-            hideCompletedTasks: incoming.hideCompletedTasks ?? base.hideCompletedTasks,
-            showExternalDependencies:
-              incoming.showExternalDependencies ?? base.showExternalDependencies,
-            hopDepth: clamp(incoming.hopDepth ?? base.hopDepth, 0, 3),
-          };
-        }
-        setFiltersByView(nextByView);
+        setFiltersByView((prev) => {
+          const nextByView = { ...prev };
+          for (const view of views) {
+            const incoming = parsed.filtersByView?.[view];
+            if (!incoming) continue;
+            const base = defaultFilters();
+            nextByView[view] = {
+              nodeTypes: {
+                domains: incoming.nodeTypes?.domains ?? base.nodeTypes.domains,
+                modules: incoming.nodeTypes?.modules ?? base.nodeTypes.modules,
+                tasks: incoming.nodeTypes?.tasks ?? base.nodeTypes.tasks,
+                decisions: incoming.nodeTypes?.decisions ?? base.nodeTypes.decisions,
+              },
+              edgeTypes: {
+                dependency: incoming.edgeTypes?.dependency ?? base.edgeTypes.dependency,
+                "data-flow": incoming.edgeTypes?.["data-flow"] ?? base.edgeTypes["data-flow"],
+                blocking: incoming.edgeTypes?.blocking ?? base.edgeTypes.blocking,
+              },
+              authorityTypes: {
+                authoritative:
+                  incoming.authorityTypes?.authoritative ?? base.authorityTypes.authoritative,
+                manual: incoming.authorityTypes?.manual ?? base.authorityTypes.manual,
+                inferred: incoming.authorityTypes?.inferred ?? base.authorityTypes.inferred,
+              },
+              hideCompletedTasks: incoming.hideCompletedTasks ?? base.hideCompletedTasks,
+              showExternalDependencies:
+                incoming.showExternalDependencies ?? base.showExternalDependencies,
+              hopDepth: clamp(incoming.hopDepth ?? base.hopDepth, 0, 3),
+            };
+          }
+          return nextByView;
+        });
       }
     } catch {
       // Ignore invalid persisted state.

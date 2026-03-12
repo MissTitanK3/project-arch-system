@@ -70,6 +70,64 @@ export function registerMilestoneCommand(program: Command): void {
     });
 
   command
+    .command("status")
+    .argument("<phaseId>")
+    .argument("<milestoneId>")
+    .description("Show milestone task statuses with dependency gating")
+    .addHelpText("after", () =>
+      formatEnhancedHelp({
+        usage: "pa milestone status <phaseId> <milestoneId>",
+        description:
+          "Show milestone task status, including dependency-derived blocked states from task frontmatter dependsOn links.",
+        examples: [
+          {
+            description: "Inspect milestone readiness and dependency blockers",
+            command: "pa milestone status phase-1 milestone-1-setup",
+          },
+        ],
+        agentMetadata: {
+          inputValidation: {
+            phaseId: "string matching /^phase-\\d+$/",
+            milestoneId: "string matching /^milestone-[\\w-]+$/",
+          },
+          outputFormat:
+            "One task per line with effective status; blocked tasks list unresolved dependency IDs.",
+        },
+        relatedCommands: [
+          { command: "pa task status", description: "Check raw status for a single task" },
+          { command: "pa milestone complete", description: "Complete a milestone" },
+        ],
+      }),
+    )
+    .action(async (phaseId: string, milestoneId: string) => {
+      const result = unwrap(
+        await milestones.milestoneStatus({ phase: phaseId, milestone: milestoneId }),
+      );
+
+      console.log(`Milestone status ${phaseId}/${milestoneId}`);
+
+      let hasBlockedTasks = false;
+      for (const task of result.tasks) {
+        if (task.unresolvedDependsOn.length > 0 && task.effectiveStatus === "blocked") {
+          hasBlockedTasks = true;
+          console.log(
+            `${task.id} [${task.lane}] blocked (raw: ${task.status}) - unresolved dependencies: ${task.unresolvedDependsOn.join(", ")}`,
+          );
+          continue;
+        }
+
+        console.log(`${task.id} [${task.lane}] ${task.effectiveStatus}`);
+      }
+
+      if (hasBlockedTasks) {
+        console.log(
+          "Resolve prerequisite tasks and mark them done before advancing blocked tasks.",
+        );
+        process.exitCode = 1;
+      }
+    });
+
+  command
     .command("activate")
     .argument("<phaseId>")
     .argument("<milestoneId>")
@@ -107,6 +165,7 @@ export function registerMilestoneCommand(program: Command): void {
     .command("complete")
     .argument("<phaseId>")
     .argument("<milestoneId>")
+    .option("--force <reason>", "Bypass reconciliation-required blockers with an explicit reason")
     .description("Complete a milestone")
     .addHelpText("after", () =>
       formatEnhancedHelp({
@@ -132,8 +191,23 @@ export function registerMilestoneCommand(program: Command): void {
         ],
       }),
     )
-    .action(async (phaseId: string, milestoneId: string) => {
-      unwrap(await milestones.milestoneComplete({ phase: phaseId, milestone: milestoneId }));
+    .action(async (phaseId: string, milestoneId: string, options: { force?: string }) => {
+      const result = unwrap(
+        await milestones.milestoneComplete({
+          phase: phaseId,
+          milestone: milestoneId,
+          forceReason: options.force,
+        }),
+      );
+
+      for (const warning of result.warnings) {
+        console.warn(`WARNING: ${warning}`);
+      }
+
+      if (result.overrideLogPath) {
+        console.log(`Reconciliation override logged at ${result.overrideLogPath}`);
+      }
+
       console.log(`Completed milestone ${phaseId}/${milestoneId}`);
     });
 }

@@ -10,8 +10,10 @@ Create/update a closure report when a milestone reaches completion readiness.
 
 1. Copy `GAP_CLOSURE_TEMPLATE.md` into the milestone or reference location.
 2. Fill each section with concrete findings and evidence.
-3. Run validation commands (`pa check`, `pa report`) and record outcomes.
-4. Track unresolved items as follow-on tasks/decisions.
+3. Run `pa lint frontmatter --fix`.
+4. Run `pnpm lint:md`.
+5. Run `pa check` and `pa report`, then record outcomes.
+6. Track unresolved items as follow-on tasks/decisions.
 
 ## Suggested Locations
 

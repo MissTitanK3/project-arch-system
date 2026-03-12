@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs-extra";
 import { spawnSync } from "child_process";
 import { Command } from "commander";
+import { validateProjectName } from "./projectNameValidation";
 
 interface CreateOptions {
   template: string;
@@ -125,6 +126,82 @@ async function wireProjectArchUsage(targetDir: string): Promise<void> {
 
   await fs.writeJSON(rootPackageJsonPath, nextPkg, { spaces: 2 });
   await fs.appendFile(rootPackageJsonPath, "\n");
+}
+
+async function normalizeTurboSchema(targetDir: string): Promise<void> {
+  const turboConfigPath = path.join(targetDir, "turbo.json");
+  if (!(await fs.pathExists(turboConfigPath))) {
+    return;
+  }
+
+  const turboConfig = (await fs.readJSON(turboConfigPath)) as {
+    $schema?: string;
+    globalEnv?: string[];
+  };
+
+  const existingGlobalEnv = Array.isArray(turboConfig.globalEnv)
+    ? turboConfig.globalEnv.filter((entry) => typeof entry === "string")
+    : [];
+  const globalEnv = existingGlobalEnv.includes("PROJECT_ROOT")
+    ? existingGlobalEnv
+    : [...existingGlobalEnv, "PROJECT_ROOT"];
+
+  await fs.writeJSON(
+    turboConfigPath,
+    {
+      ...turboConfig,
+      $schema: "./node_modules/turbo/schema.json",
+      globalEnv,
+    },
+    { spaces: 2 },
+  );
+  await fs.appendFile(turboConfigPath, "\n");
+}
+
+function getAppReadmeContent(title: string, appDir: string): string {
+  return [
+    `# ${title}`,
+    "",
+    `This app lives in \`${appDir}\` and is part of the generated workspace.`,
+    "",
+    "## Getting Started",
+    "",
+    "Run from the repository root:",
+    "",
+    "```bash",
+    `pnpm --filter ${appDir.split("/").pop()} dev`,
+    "```",
+    "",
+    "Or run all apps in dev mode:",
+    "",
+    "```bash",
+    "pnpm dev",
+    "```",
+    "",
+  ].join("\n");
+}
+
+async function normalizeGeneratedAppReadmes(targetDir: string): Promise<void> {
+  const readmeTargets: Array<{ readmePath: string; title: string; appDir: string }> = [
+    {
+      readmePath: path.join(targetDir, "apps", "web", "README.md"),
+      title: "Web App",
+      appDir: "apps/web",
+    },
+    {
+      readmePath: path.join(targetDir, "apps", "docs", "README.md"),
+      title: "Docs App",
+      appDir: "apps/docs",
+    },
+  ];
+
+  for (const target of readmeTargets) {
+    if (!(await fs.pathExists(target.readmePath))) {
+      continue;
+    }
+
+    await fs.writeFile(target.readmePath, getAppReadmeContent(target.title, target.appDir), "utf8");
+  }
 }
 
 async function scaffoldArchitectureApps(targetDir: string): Promise<void> {
@@ -425,11 +502,7 @@ async function main(): Promise<void> {
         );
       }
 
-      if (!/^[a-zA-Z0-9-_]+$/.test(projectName)) {
-        throw new Error(
-          "Invalid project name. Only alphanumeric characters, dashes, and underscores are allowed.",
-        );
-      }
+      validateProjectName(projectName);
 
       const targetDir = path.resolve(process.cwd(), projectName);
       await ensureTargetDir(targetDir, options.force);
@@ -459,6 +532,8 @@ async function main(): Promise<void> {
       await scaffoldArchitectureApps(targetDir);
       await upsertArchModulesInMap(targetDir);
       await wireProjectArchUsage(targetDir);
+      await normalizeTurboSchema(targetDir);
+      await normalizeGeneratedAppReadmes(targetDir);
 
       const relativeTarget = path.relative(process.cwd(), targetDir) || ".";
       console.log(`\nCreated project-arch repo at ${relativeTarget}`);

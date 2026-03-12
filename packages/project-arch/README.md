@@ -88,9 +88,11 @@ Run architectural validations to ensure consistency and compliance.
 ```bash
 pa check
 pa check --json
+pa check --changed
 pa check --only UNTRACKED_IMPLEMENTATION
 pa check --severity warning
 pa check --paths "apps/web/**"
+pa doctor
 
 # Validates:
 # - Task ID ranges match lane directories
@@ -122,7 +124,15 @@ pa check --paths "apps/web/**"
 # --only <codes>       Filter by diagnostic code(s), comma-separated or repeatable
 # --severity <levels>  Filter by severity: error, warning
 # --paths <patterns>   Filter by diagnostic path glob(s), comma-separated or repeatable
+# --changed            Scope diagnostics to changed git paths (+ required dependency paths)
+#                      Falls back to full check with explicit warning if changed scope cannot be inferred
 #
+
+# Canonical preflight:
+# pa doctor runs (in order):
+# 1) pa lint frontmatter --fix
+# 2) pnpm lint:md
+# 3) pa check --json
 # Examples:
 # pa check --only UNTRACKED_IMPLEMENTATION --severity warning
 # pa check --paths "packages/**" --json
@@ -136,6 +146,44 @@ Compatibility expectations for `pa check --json`:
 - Additive payload changes are minor-version compatible
 - Breaking payload changes require a schema major version bump and release notes
 - Consumers should rely on `code` + `severity` for automation and treat unknown codes as forward-compatible
+
+#### `roadmap/policy.json`
+
+`pa init` now creates `roadmap/policy.json`, which controls policy-check behavior per profile.
+
+```json
+{
+  "schemaVersion": "1.0",
+  "defaultProfile": "default",
+  "profiles": {
+    "default": {
+      "timing": {
+        "phase": {
+          "enforceStatuses": ["in_progress", "done"],
+          "skipDoneIfCompletedContainer": true,
+          "completionMode": "metadata_or_all_tasks_done"
+        },
+        "milestone": {
+          "enforceStatuses": ["in_progress", "done"],
+          "skipDoneIfCompletedContainer": false,
+          "completionMode": "metadata_or_all_tasks_done"
+        }
+      }
+    }
+  }
+}
+```
+
+Profile selection:
+
+- Default profile uses `defaultProfile` from `roadmap/policy.json`.
+- Override at runtime with `PA_POLICY_PROFILE=<profile-name>`.
+
+Timing completion modes:
+
+- `metadata_only`: completion comes only from `overview.md` frontmatter `status: completed`.
+- `all_tasks_done`: completion comes only when all tasks in that phase/milestone are `done`.
+- `metadata_or_all_tasks_done`: either metadata or all tasks done marks completion.
 
 #### `pa lint frontmatter`
 

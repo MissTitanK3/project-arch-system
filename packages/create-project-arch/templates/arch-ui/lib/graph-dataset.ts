@@ -67,8 +67,6 @@ async function walkDirectories(
   onDirectory: (relativePath: string, parentRelativePath: string | null) => Promise<void> | void,
   maxDepth = 6,
 ): Promise<void> {
-  const start = path.join(root, relativeDir);
-
   async function walk(currentRelative: string, parentRelative: string | null, depth: number) {
     if (depth > maxDepth) return;
     await onDirectory(currentRelative, parentRelative);
@@ -138,7 +136,7 @@ async function filterGitIgnoredPaths(root: string, paths: string[]): Promise<Set
       }
     }
     return ignored;
-  } catch (error) {
+  } catch {
     // If git is unavailable or command fails unexpectedly, do not block graph generation.
     return new Set();
   }

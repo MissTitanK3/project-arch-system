@@ -118,7 +118,7 @@ export default function WorkPage() {
       (Object.entries(filters.edgeTypes) as Array<[keyof typeof filters.edgeTypes, boolean]>)
         .filter(([, enabled]) => enabled)
         .map(([filter]) => filter as GraphEdgeFilter),
-    [filters.edgeTypes],
+    [filters],
   );
   const activeAuthorityFilters = useMemo(
     () =>
@@ -129,7 +129,7 @@ export default function WorkPage() {
       )
         .filter(([, enabled]) => enabled)
         .map(([filter]) => filter),
-    [filters.authorityTypes],
+    [filters],
   );
 
   return (

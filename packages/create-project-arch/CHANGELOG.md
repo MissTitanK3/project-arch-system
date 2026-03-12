@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-12
+
+### Added
+
+- Scaffolded projects now receive 8 bootstrap architecture tasks on `pa init` (previously 5)
+- New bootstrap tasks 006 `define-system-boundaries`, 007 `define-module-model`, and 008 `define-runtime-architecture` included in generated milestone
+- Bootstrap tasks 006–008 carry `discover` and `greenfield` tags for dual-mode authoring guidance
+- `pa milestone status` command available in all scaffolded projects for dependency-aware task blocking visibility
+
+### Changed
+
+- Updated templates to use `project-arch@1.5.0`
+- Bootstrap task 005 slug updated to `finalize-architecture-foundation` in all scaffolded projects
+- task 005 in generated projects now declares `dependsOn` on tasks 001–004 and 006–008, enforcing correct completion order
+
+---
+
 ## [1.4.0] - 2026-03-10
 
 ### Added

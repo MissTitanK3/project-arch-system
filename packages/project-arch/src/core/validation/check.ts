@@ -7,6 +7,8 @@ import { milestoneDir, milestoneTaskLaneDir, phaseDir, projectDocsRoot } from ".
 import { pathExists, readJson } from "../../utils/fs";
 import { runDriftChecks } from "../../graph/drift/runChecks";
 import { conceptMapSchema } from "../../schemas/conceptMap";
+import { reconciliationReportSchema } from "../../schemas/reconciliationReport";
+import { findReconcileConfigPath, loadReconcileConfig } from "../reconciliation/triggerDetection";
 
 export interface CheckResult {
   ok: boolean;
@@ -42,7 +44,67 @@ export interface CheckDiagnosticFilters {
   paths?: string[];
 }
 
+export interface RunRepositoryChecksOptions {
+  failFast?: boolean;
+}
+
 export const CHECK_DIAGNOSTICS_SCHEMA_VERSION = "1.0";
+
+const STABLE_DIAGNOSTIC_CODE_MAPPINGS: Array<{ pattern: RegExp; code: string }> = [
+  { pattern: /^Duplicate task id in milestone scope:/, code: "DUPLICATE_TASK_ID" },
+  { pattern: /^Missing code target '.*' referenced by task /, code: "MISSING_TASK_CODE_TARGET" },
+  {
+    pattern: /^Missing code target '.*' referenced by decision /,
+    code: "MISSING_DECISION_CODE_TARGET",
+  },
+  {
+    pattern: /^Missing public docs path '.*' referenced by task /,
+    code: "MISSING_TASK_PUBLIC_DOC",
+  },
+  {
+    pattern: /^Missing public docs path '.*' referenced by decision /,
+    code: "MISSING_DECISION_PUBLIC_DOC",
+  },
+  {
+    pattern: /^Task .* references undeclared module '.*' via '.*'\./,
+    code: "TASK_UNDECLARED_MODULE",
+  },
+  {
+    pattern: /^Decision .* references undeclared module '.*' via '.*'\./,
+    code: "DECISION_UNDECLARED_MODULE",
+  },
+  {
+    pattern: /^Task .* references undeclared domain '.*' in tag '.*'\./,
+    code: "TASK_UNDECLARED_DOMAIN",
+  },
+  { pattern: /^Invalid decision task link '.*' in /, code: "INVALID_DECISION_TASK_LINK" },
+  { pattern: /^Decision .* links missing task '.*'/, code: "MISSING_LINKED_TASK" },
+  { pattern: /^Decision .* supersedes missing decision '.*'/, code: "MISSING_SUPERSEDED_DECISION" },
+  {
+    pattern: /^Project decision index references missing decision '.*'/,
+    code: "PROJECT_DECISION_INDEX_MISSING_ENTRY",
+  },
+  {
+    pattern: /^Phase .* decision index references missing decision '.*'/,
+    code: "PHASE_DECISION_INDEX_MISSING_ENTRY",
+  },
+  {
+    pattern: /^Milestone .* decision index references missing decision '.*'/,
+    code: "MILESTONE_DECISION_INDEX_MISSING_ENTRY",
+  },
+  { pattern: /^Missing lane directory '/, code: "MISSING_LANE_DIRECTORY" },
+  { pattern: /^Missing graph artifact '/, code: "MISSING_GRAPH_ARTIFACT" },
+  { pattern: /^Graph parity mismatch:/, code: "GRAPH_PARITY_MISMATCH" },
+  {
+    pattern: /^Invalid concept-map schema at arch-model\/concept-map\.json:/,
+    code: "INVALID_CONCEPT_MAP_SCHEMA",
+  },
+  {
+    pattern:
+      /^Invalid reconcile config schema at \.project-arch\/(?:reconcile\.config\.json|reconcile-config\.json):/,
+    code: "INVALID_RECONCILE_CONFIG_SCHEMA",
+  },
+];
 
 interface GraphSummary {
   schemaVersion: string;
@@ -61,9 +123,28 @@ interface MilestoneToTaskEdge {
   task: string;
 }
 
-export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckResult> {
+export async function runRepositoryChecks(
+  cwd = process.cwd(),
+  options: RunRepositoryChecksOptions = {},
+): Promise<CheckResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const failFast = options.failFast === true;
+
+  const addError = (message: string): boolean => {
+    errors.push(message);
+    return failFast;
+  };
+
+  const toResult = (): CheckResult => ({
+    ok: errors.length === 0,
+    errors,
+    warnings,
+    diagnostics: [
+      ...errors.map((message) => toDiagnostic(message, "error")),
+      ...warnings.map((message) => toDiagnostic(message, "warning")),
+    ],
+  });
 
   const taskRecords = await collectTaskRecords(cwd);
   const decisionRecords = await collectDecisionRecords(cwd);
@@ -77,7 +158,22 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
       conceptMapSchema.parse(conceptMapRaw);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      errors.push(`Invalid concept-map schema at arch-model/concept-map.json: ${detail}`);
+      if (addError(`Invalid concept-map schema at arch-model/concept-map.json: ${detail}`)) {
+        return toResult();
+      }
+    }
+  }
+
+  const reconcileConfigPath = await findReconcileConfigPath(cwd);
+  if (reconcileConfigPath) {
+    try {
+      await loadReconcileConfig(cwd);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      const relativePath = path.relative(cwd, reconcileConfigPath);
+      if (addError(`Invalid reconcile config schema at ${relativePath}: ${detail}`)) {
+        return toResult();
+      }
     }
   }
 
@@ -85,7 +181,9 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
   for (const task of taskRecords) {
     const key = `${task.phaseId}/${task.milestoneId}/${task.frontmatter.id}`;
     if (seenTaskKeys.has(key)) {
-      errors.push(`Duplicate task id in milestone scope: ${key}`);
+      if (addError(`Duplicate task id in milestone scope: ${key}`)) {
+        return toResult();
+      }
     } else {
       seenTaskKeys.add(key);
     }
@@ -93,29 +191,41 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
     for (const target of task.frontmatter.codeTargets) {
       const targetPath = path.join(cwd, target);
       if (!(await pathExists(targetPath))) {
-        errors.push(`Missing code target '${target}' referenced by task ${key}`);
+        if (addError(`Missing code target '${target}' referenced by task ${key}`)) {
+          return toResult();
+        }
       }
       const runtimeModule = toRuntimeModule(target);
       if (runtimeModule && !declaredModules.has(runtimeModule)) {
-        errors.push(
-          `Task ${key} references undeclared module '${runtimeModule}' via '${target}'. Declare it in arch-model/modules.json before implementation.`,
-        );
+        if (
+          addError(
+            `Task ${key} references undeclared module '${runtimeModule}' via '${target}'. Declare it in arch-model/modules.json before implementation.`,
+          )
+        ) {
+          return toResult();
+        }
       }
     }
 
     for (const ref of task.frontmatter.publicDocs) {
       const docPath = path.join(cwd, ref);
       if (!(await pathExists(docPath))) {
-        errors.push(`Missing public docs path '${ref}' referenced by task ${key}`);
+        if (addError(`Missing public docs path '${ref}' referenced by task ${key}`)) {
+          return toResult();
+        }
       }
     }
 
     for (const tag of task.frontmatter.tags) {
       const domainName = parseDomainTag(tag);
       if (domainName && !declaredDomains.has(domainName)) {
-        errors.push(
-          `Task ${key} references undeclared domain '${domainName}' in tag '${tag}'. Declare it in arch-domains/domains.json before implementation.`,
-        );
+        if (
+          addError(
+            `Task ${key} references undeclared domain '${domainName}' in tag '${tag}'. Declare it in arch-domains/domains.json before implementation.`,
+          )
+        ) {
+          return toResult();
+        }
       }
     }
   }
@@ -128,7 +238,9 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
     for (const taskRef of decision.frontmatter.links.tasks) {
       const parts = taskRef.split("/");
       if (parts.length !== 3) {
-        errors.push(`Invalid decision task link '${taskRef}' in ${id}`);
+        if (addError(`Invalid decision task link '${taskRef}' in ${id}`)) {
+          return toResult();
+        }
         continue;
       }
       const [phaseId, milestoneId, taskId] = parts;
@@ -140,34 +252,46 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
           record.frontmatter.id === taskId,
       );
       if (!linkedTask) {
-        errors.push(`Decision ${id} links missing task '${taskRef}'`);
+        if (addError(`Decision ${id} links missing task '${taskRef}'`)) {
+          return toResult();
+        }
       }
     }
 
     for (const target of decision.frontmatter.links.codeTargets) {
       const targetPath = path.join(cwd, target);
       if (!(await pathExists(targetPath))) {
-        errors.push(`Missing code target '${target}' referenced by decision ${id}`);
+        if (addError(`Missing code target '${target}' referenced by decision ${id}`)) {
+          return toResult();
+        }
       }
       const runtimeModule = toRuntimeModule(target);
       if (runtimeModule && !declaredModules.has(runtimeModule)) {
-        errors.push(
-          `Decision ${id} references undeclared module '${runtimeModule}' via '${target}'. Declare it in arch-model/modules.json before implementation.`,
-        );
+        if (
+          addError(
+            `Decision ${id} references undeclared module '${runtimeModule}' via '${target}'. Declare it in arch-model/modules.json before implementation.`,
+          )
+        ) {
+          return toResult();
+        }
       }
     }
 
     for (const ref of decision.frontmatter.links.publicDocs) {
       const docPath = path.join(cwd, ref);
       if (!(await pathExists(docPath))) {
-        errors.push(`Missing public docs path '${ref}' referenced by decision ${id}`);
+        if (addError(`Missing public docs path '${ref}' referenced by decision ${id}`)) {
+          return toResult();
+        }
       }
     }
 
     const supersedes = decision.frontmatter.supersedes ?? [];
     for (const supersededId of supersedes) {
       if (!decisionIds.has(supersededId)) {
-        errors.push(`Decision ${id} supersedes missing decision '${supersededId}'`);
+        if (addError(`Decision ${id} supersedes missing decision '${supersededId}'`)) {
+          return toResult();
+        }
       }
     }
   }
@@ -179,7 +303,9 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
   for (const phasePath of phaseDirs) {
     const phaseId = path.basename(phasePath);
     if (!phaseIdsFromManifest.has(phaseId)) {
-      errors.push(`Phase directory '${phaseId}' is missing in roadmap/manifest.json`);
+      if (addError(`Phase directory '${phaseId}' is missing in roadmap/manifest.json`)) {
+        return toResult();
+      }
     }
 
     const milestones = await fg(`roadmap/phases/${phaseId}/milestones/*`, {
@@ -201,13 +327,17 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
         await loadMilestoneManifest(pId, mId, cwd);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        errors.push(message);
+        if (addError(message)) {
+          return toResult();
+        }
       }
 
       for (const lane of ["planned", "discovered", "backlog"] as const) {
         const laneDir = milestoneTaskLaneDir(pId, mId, lane, cwd);
         if (!(await pathExists(laneDir))) {
-          errors.push(`Missing lane directory '${laneDir}'`);
+          if (addError(`Missing lane directory '${laneDir}'`)) {
+            return toResult();
+          }
         }
       }
     }
@@ -218,7 +348,9 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
   );
   for (const id of projectDecisionIndex.decisions) {
     if (!decisionIds.has(id)) {
-      errors.push(`Project decision index references missing decision '${id}'`);
+      if (addError(`Project decision index references missing decision '${id}'`)) {
+        return toResult();
+      }
     }
   }
 
@@ -226,7 +358,9 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
     const index = await loadDecisionIndex(path.join(phaseDir(phaseId, cwd), "decisions"));
     for (const id of index.decisions) {
       if (!decisionIds.has(id)) {
-        errors.push(`Phase ${phaseId} decision index references missing decision '${id}'`);
+        if (addError(`Phase ${phaseId} decision index references missing decision '${id}'`)) {
+          return toResult();
+        }
       }
     }
 
@@ -241,35 +375,76 @@ export async function runRepositoryChecks(cwd = process.cwd()): Promise<CheckRes
       );
       for (const id of mIndex.decisions) {
         if (!decisionIds.has(id)) {
-          errors.push(
-            `Milestone ${phaseId}/${mId} decision index references missing decision '${id}'`,
-          );
+          if (
+            addError(
+              `Milestone ${phaseId}/${mId} decision index references missing decision '${id}'`,
+            )
+          ) {
+            return toResult();
+          }
         }
       }
     }
   }
 
-  errors.push(...(await runTaskGraphParityChecks(cwd, taskRecords)));
+  const parityErrors = await runTaskGraphParityChecks(cwd, taskRecords, { failFast });
+  for (const parityError of parityErrors) {
+    if (addError(parityError)) {
+      return toResult();
+    }
+  }
 
   const driftFindings = await runDriftChecks({ cwd, taskRecords, decisionRecords });
   for (const finding of driftFindings) {
     const rendered = `[${finding.code}] ${finding.message}`;
     if (finding.severity === "error") {
-      errors.push(rendered);
+      if (addError(rendered)) {
+        return toResult();
+      }
     } else {
       warnings.push(rendered);
     }
   }
 
-  return {
-    ok: errors.length === 0,
-    errors,
-    warnings,
-    diagnostics: [
-      ...errors.map((message) => toDiagnostic(message, "error")),
-      ...warnings.map((message) => toDiagnostic(message, "warning")),
-    ],
-  };
+  const outstandingToolingFeedback = await countOutstandingToolingFeedbackReports(cwd);
+  if (outstandingToolingFeedback > 0) {
+    warnings.push(
+      `[OUTSTANDING_TOOLING_FEEDBACK] Outstanding tooling-feedback reports: ${outstandingToolingFeedback} in .project-arch/feedback/`,
+    );
+  }
+
+  return toResult();
+}
+
+async function countOutstandingToolingFeedbackReports(cwd: string): Promise<number> {
+  const feedbackReportFiles = await fg(".project-arch/feedback/*.json", {
+    cwd,
+    absolute: true,
+    onlyFiles: true,
+  });
+
+  let count = 0;
+  for (const reportFile of feedbackReportFiles) {
+    try {
+      const payload = await readJson<unknown>(reportFile);
+      const parsed = reconciliationReportSchema.safeParse(payload);
+      if (!parsed.success) {
+        continue;
+      }
+
+      if (parsed.data.type !== "tooling-feedback") {
+        continue;
+      }
+
+      if (parsed.data.status !== "reconciliation complete") {
+        count += 1;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return count;
 }
 
 export function toCheckDiagnosticsPayload(result: CheckResult): CheckDiagnosticsPayload {
@@ -337,29 +512,35 @@ export function filterCheckResult(
 async function runTaskGraphParityChecks(
   cwd: string,
   taskRecords: Awaited<ReturnType<typeof collectTaskRecords>>,
+  options: { failFast?: boolean } = {},
 ): Promise<string[]> {
   const errors: string[] = [];
+  const failFast = options.failFast === true;
+  const addError = (message: string): boolean => {
+    errors.push(message);
+    return failFast;
+  };
 
   const graphPath = path.join(cwd, ".arch", "graph.json");
   const graphTasksPath = path.join(cwd, ".arch", "nodes", "tasks.json");
   const milestoneToTaskPath = path.join(cwd, ".arch", "edges", "milestone_to_task.json");
 
   if (!(await pathExists(graphPath))) {
-    errors.push(
+    addError(
       "Missing graph artifact '.arch/graph.json'. Rebuild graph artifacts before running parity validation.",
     );
     return errors;
   }
 
   if (!(await pathExists(graphTasksPath))) {
-    errors.push(
+    addError(
       "Missing graph artifact '.arch/nodes/tasks.json'. Rebuild graph artifacts before running parity validation.",
     );
     return errors;
   }
 
   if (!(await pathExists(milestoneToTaskPath))) {
-    errors.push(
+    addError(
       "Missing graph artifact '.arch/edges/milestone_to_task.json'. Rebuild graph artifacts before running parity validation.",
     );
     return errors;
@@ -385,22 +566,32 @@ async function runTaskGraphParityChecks(
   const graphSummaryCount = graph.nodes.tasks;
 
   if (graphSummaryCount !== undefined && graphSummaryCount !== graphNodeCount) {
-    errors.push(
-      `Graph parity mismatch: .arch/graph.json reports nodes.tasks=${graphSummaryCount}, but .arch/nodes/tasks.json has ${graphNodeCount} task nodes.`,
-    );
+    if (
+      addError(
+        `Graph parity mismatch: .arch/graph.json reports nodes.tasks=${graphSummaryCount}, but .arch/nodes/tasks.json has ${graphNodeCount} task nodes.`,
+      )
+    ) {
+      return errors;
+    }
   }
 
   if (roadmapCount !== graphNodeCount) {
-    errors.push(
-      `Graph parity mismatch: roadmap task files count is ${roadmapCount}, but .arch task node count is ${graphNodeCount} (.arch/nodes/tasks.json).`,
-    );
+    if (
+      addError(
+        `Graph parity mismatch: roadmap task files count is ${roadmapCount}, but .arch task node count is ${graphNodeCount} (.arch/nodes/tasks.json).`,
+      )
+    ) {
+      return errors;
+    }
   }
 
   for (const taskRef of roadmapTaskMap.keys()) {
     if (!graphTaskMap.has(taskRef)) {
-      errors.push(
-        `Graph parity mismatch: missing task node '${taskRef}' in .arch/nodes/tasks.json`,
-      );
+      if (
+        addError(`Graph parity mismatch: missing task node '${taskRef}' in .arch/nodes/tasks.json`)
+      ) {
+        return errors;
+      }
     }
   }
 
@@ -412,16 +603,24 @@ async function runTaskGraphParityChecks(
     const milestoneRef = taskRef.split("/").slice(0, 2).join("/");
     const expectedEdge = `${milestoneRef}=>${taskRef}`;
     if (!milestoneEdges.has(expectedEdge)) {
-      errors.push(
-        `Graph parity mismatch: missing milestone-task edge '${milestoneRef}' -> '${taskRef}' in .arch/edges/milestone_to_task.json`,
-      );
+      if (
+        addError(
+          `Graph parity mismatch: missing milestone-task edge '${milestoneRef}' -> '${taskRef}' in .arch/edges/milestone_to_task.json`,
+        )
+      ) {
+        return errors;
+      }
     }
 
     const graphStatus = graphTaskMap.get(taskRef);
     if (graphStatus !== undefined && graphStatus !== roadmapStatus) {
-      errors.push(
-        `Graph parity mismatch: status drift for task '${taskRef}' (roadmap='${roadmapStatus}', graph='${graphStatus}') in .arch/nodes/tasks.json`,
-      );
+      if (
+        addError(
+          `Graph parity mismatch: status drift for task '${taskRef}' (roadmap='${roadmapStatus}', graph='${graphStatus}') in .arch/nodes/tasks.json`,
+        )
+      ) {
+        return errors;
+      }
     }
   }
 
@@ -490,12 +689,24 @@ function toDiagnostic(message: string, severity: CheckDiagnosticSeverity): Check
   const parsed = parseDiagnosticCode(message);
   const normalizedMessage = parsed.message;
   return {
-    code: parsed.code ?? (severity === "error" ? "CHECK_ERROR" : "CHECK_WARNING"),
+    code:
+      parsed.code ??
+      resolveStableDiagnosticCode(normalizedMessage) ??
+      (severity === "error" ? "CHECK_ERROR" : "CHECK_WARNING"),
     severity,
     message: normalizedMessage,
     path: extractPath(normalizedMessage),
     hint: extractHint(normalizedMessage),
   };
+}
+
+function resolveStableDiagnosticCode(message: string): string | null {
+  for (const mapping of STABLE_DIAGNOSTIC_CODE_MAPPINGS) {
+    if (mapping.pattern.test(message)) {
+      return mapping.code;
+    }
+  }
+  return null;
 }
 
 function parseDiagnosticCode(message: string): { code: string | null; message: string } {
@@ -511,14 +722,14 @@ function parseDiagnosticCode(message: string): { code: string | null; message: s
 
 function extractPath(message: string): string | null {
   const quotedMatch = message.match(
-    /'((?:\.arch|arch-model|arch-domains|roadmap|apps|packages)\/[^'\s]+)'/,
+    /'((?:\.arch|\.project-arch|arch-model|arch-domains|roadmap|apps|packages)\/[^'\s]+)'/,
   );
   if (quotedMatch) {
     return quotedMatch[1];
   }
 
   const inlineMatch = message.match(
-    /(?:\.arch|arch-model|arch-domains|roadmap|apps|packages)\/[^\s'\])]+/,
+    /(?:\.arch|\.project-arch|arch-model|arch-domains|roadmap|apps|packages)\/[^\s'\])]+/,
   );
   if (inlineMatch) {
     return inlineMatch[0];

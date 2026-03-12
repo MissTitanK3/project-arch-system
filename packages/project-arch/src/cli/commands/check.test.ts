@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Command } from "commander";
 import { registerCheckCommand } from "./check";
+import * as changedScope from "./checkChangedScope";
 import { check as checkSdk } from "../../sdk";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 
@@ -418,6 +419,194 @@ describe("cli/commands/check", () => {
       expect(payload.diagnostics[149].path).toBe("packages/pkg-150/src/index.ts");
 
       logSpy.mockRestore();
+    });
+
+    it("should use fail-fast mode and emit only first actionable diagnostic context", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      const checkRunSpy = vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: false,
+          warnings: ["[UNTRACKED_IMPLEMENTATION] apps/web/src/index.ts not associated"],
+          errors: [
+            "Missing code target 'apps/missing/src/index.ts' referenced by task phase-1/milestone-1/001",
+            "Decision project:20260312:test links missing task 'phase-1/milestone-1/999'",
+          ],
+          diagnostics: [
+            {
+              code: "MISSING_TASK_CODE_TARGET",
+              severity: "error",
+              message:
+                "Missing code target 'apps/missing/src/index.ts' referenced by task phase-1/milestone-1/001",
+              path: "apps/missing/src/index.ts",
+              hint: "Declare it in arch-model/modules.json before implementation.",
+            },
+            {
+              code: "MISSING_LINKED_TASK",
+              severity: "error",
+              message:
+                "Decision project:20260312:test links missing task 'phase-1/milestone-1/999'",
+              path: null,
+              hint: null,
+            },
+            {
+              code: "UNTRACKED_IMPLEMENTATION",
+              severity: "warning",
+              message: "apps/web/src/index.ts not associated",
+              path: "apps/web/src/index.ts",
+              hint: null,
+            },
+          ],
+        },
+      });
+
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--fail-fast"]);
+
+      expect(checkRunSpy).toHaveBeenCalledWith({ failFast: true });
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(logSpy).not.toHaveBeenCalledWith("OK");
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const rendered = String(errorSpy.mock.calls[0]?.[0]);
+      expect(rendered).toContain("[MISSING_TASK_CODE_TARGET]");
+      expect(rendered).toContain("Location: apps/missing/src/index.ts");
+      expect(rendered).toContain(
+        "Hint: Declare it in arch-model/modules.json before implementation.",
+      );
+      expect(process.exitCode).toBe(1);
+
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it("should scope diagnostics when --changed detects changed files", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      vi.spyOn(changedScope, "detectChangedPaths").mockReturnValue({
+        ok: true,
+        paths: ["apps/web/src/index.ts"],
+      });
+
+      vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: false,
+          warnings: ["[UNTRACKED_IMPLEMENTATION] apps/web/src/index.ts not associated"],
+          errors: [
+            "Missing code target 'packages/core/src/main.ts' referenced by task phase-1/m1/001",
+          ],
+          diagnostics: [
+            {
+              code: "UNTRACKED_IMPLEMENTATION",
+              severity: "warning",
+              message: "apps/web/src/index.ts not associated",
+              path: "apps/web/src/index.ts",
+              hint: null,
+            },
+            {
+              code: "MISSING_TASK_CODE_TARGET",
+              severity: "error",
+              message:
+                "Missing code target 'packages/core/src/main.ts' referenced by task phase-1/m1/001",
+              path: "packages/core/src/main.ts",
+              hint: null,
+            },
+          ],
+        },
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--json", "--changed"]);
+
+      expect(logSpy).toHaveBeenCalled();
+      const payload = JSON.parse(String(logSpy.mock.calls[logSpy.mock.calls.length - 1]?.[0])) as {
+        summary: { errorCount: number; warningCount: number; diagnosticCount: number };
+        diagnostics: Array<{ path: string | null; code: string; severity: string }>;
+      };
+
+      expect(payload.summary).toEqual({ errorCount: 0, warningCount: 1, diagnosticCount: 1 });
+      expect(payload.diagnostics).toHaveLength(1);
+      expect(payload.diagnostics[0]).toMatchObject({
+        code: "UNTRACKED_IMPLEMENTATION",
+        severity: "warning",
+        path: "apps/web/src/index.ts",
+      });
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("--changed fallback to full check"),
+      );
+
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it("should fallback to full check when --changed inference is unavailable", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      vi.spyOn(changedScope, "detectChangedPaths").mockReturnValue({
+        ok: false,
+        paths: [],
+        reason: "not a git repository",
+      });
+
+      vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: false,
+          warnings: ["[UNTRACKED_IMPLEMENTATION] apps/web/src/index.ts not associated"],
+          errors: [
+            "Missing code target 'packages/core/src/main.ts' referenced by task phase-1/m1/001",
+          ],
+          diagnostics: [
+            {
+              code: "UNTRACKED_IMPLEMENTATION",
+              severity: "warning",
+              message: "apps/web/src/index.ts not associated",
+              path: "apps/web/src/index.ts",
+              hint: null,
+            },
+            {
+              code: "MISSING_TASK_CODE_TARGET",
+              severity: "error",
+              message:
+                "Missing code target 'packages/core/src/main.ts' referenced by task phase-1/m1/001",
+              path: "packages/core/src/main.ts",
+              hint: null,
+            },
+          ],
+        },
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--json", "--changed"]);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        "WARNING: --changed fallback to full check (not a git repository).",
+      );
+
+      const payload = JSON.parse(String(logSpy.mock.calls[logSpy.mock.calls.length - 1]?.[0])) as {
+        summary: { errorCount: number; warningCount: number; diagnosticCount: number };
+        diagnostics: Array<{ path: string | null; code: string; severity: string }>;
+      };
+      expect(payload.summary).toEqual({ errorCount: 1, warningCount: 1, diagnosticCount: 2 });
+      expect(payload.diagnostics).toHaveLength(2);
+
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
     });
   });
 });

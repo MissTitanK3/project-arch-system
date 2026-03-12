@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs-extra";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { runPolicyChecks, renderPolicyExplanation } from "./policy";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
@@ -178,5 +179,363 @@ describe.sequential("core/validation/policy", () => {
     const result = await runPolicyChecks(context.tempDir);
     expect(result.ok).toBe(false);
     expect(result.conflicts.some((c) => c.ruleId === "TIMING_CONFLICT")).toBe(true);
+  });
+
+  it("does not flag done task in completed non-active phase by default policy", async () => {
+    await createPhase("phase-2", context.tempDir);
+    await createMilestone("phase-2", "milestone-1-wrapup", context.tempDir);
+
+    const phaseOverviewPath = path.join(
+      context.tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "overview.md",
+    );
+    const phaseOverview =
+      await readMarkdownWithFrontmatter<Record<string, unknown>>(phaseOverviewPath);
+    await writeMarkdownWithFrontmatter(
+      phaseOverviewPath,
+      {
+        ...phaseOverview.data,
+        status: "completed",
+      },
+      phaseOverview.content,
+    );
+
+    const taskPath = await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-1-wrapup",
+      lane: "planned",
+      cwd: context.tempDir,
+      title: "Finished work in completed phase",
+      discoveredFromTask: null,
+    });
+
+    const absoluteTaskPath = path.isAbsolute(taskPath)
+      ? taskPath
+      : path.join(context.tempDir, taskPath);
+    const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(absoluteTaskPath);
+    await writeMarkdownWithFrontmatter(
+      absoluteTaskPath,
+      {
+        ...parsed.data,
+        status: "done",
+      },
+      parsed.content,
+    );
+
+    const manifest = await loadPhaseManifest(context.tempDir);
+    await savePhaseManifest(
+      {
+        ...manifest,
+        activePhase: "phase-1",
+        activeMilestone: "milestone-1-setup",
+      },
+      context.tempDir,
+    );
+
+    const result = await runPolicyChecks(context.tempDir);
+    const conflict = result.conflicts.find(
+      (item) => item.ruleId === "TIMING_CONFLICT" && item.taskRef.startsWith("phase-2/"),
+    );
+    expect(conflict).toBeUndefined();
+  });
+
+  it("still flags in_progress task in non-active phase", async () => {
+    await createPhase("phase-2", context.tempDir);
+    await createMilestone("phase-2", "milestone-2-api", context.tempDir);
+
+    const taskPath = await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-2-api",
+      lane: "planned",
+      cwd: context.tempDir,
+      title: "Active work in non-active phase",
+      discoveredFromTask: null,
+    });
+
+    const absoluteTaskPath = path.isAbsolute(taskPath)
+      ? taskPath
+      : path.join(context.tempDir, taskPath);
+    const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(absoluteTaskPath);
+    await writeMarkdownWithFrontmatter(
+      absoluteTaskPath,
+      {
+        ...parsed.data,
+        status: "in_progress",
+      },
+      parsed.content,
+    );
+
+    const manifest = await loadPhaseManifest(context.tempDir);
+    await savePhaseManifest(
+      {
+        ...manifest,
+        activePhase: "phase-1",
+        activeMilestone: "milestone-1-setup",
+      },
+      context.tempDir,
+    );
+
+    const result = await runPolicyChecks(context.tempDir);
+    expect(
+      result.conflicts.some(
+        (item) => item.ruleId === "TIMING_CONFLICT" && item.taskRef.startsWith("phase-2/"),
+      ),
+    ).toBe(true);
+  });
+
+  it("flags done task in non-completed non-active phase", async () => {
+    await createPhase("phase-2", context.tempDir);
+    await createMilestone("phase-2", "milestone-2-api", context.tempDir);
+
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-2-api",
+      lane: "planned",
+      cwd: context.tempDir,
+      title: "Pending task keeps phase incomplete",
+      discoveredFromTask: null,
+    });
+
+    const taskPath = await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-2-api",
+      lane: "planned",
+      cwd: context.tempDir,
+      title: "Done work in incomplete non-active phase",
+      discoveredFromTask: null,
+    });
+
+    const absoluteTaskPath = path.isAbsolute(taskPath)
+      ? taskPath
+      : path.join(context.tempDir, taskPath);
+    const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(absoluteTaskPath);
+    await writeMarkdownWithFrontmatter(
+      absoluteTaskPath,
+      {
+        ...parsed.data,
+        status: "done",
+      },
+      parsed.content,
+    );
+
+    const manifest = await loadPhaseManifest(context.tempDir);
+    await savePhaseManifest(
+      {
+        ...manifest,
+        activePhase: "phase-1",
+        activeMilestone: "milestone-1-setup",
+      },
+      context.tempDir,
+    );
+
+    const result = await runPolicyChecks(context.tempDir);
+    expect(
+      result.conflicts.some(
+        (item) => item.ruleId === "TIMING_CONFLICT" && item.taskRef.startsWith("phase-2/"),
+      ),
+    ).toBe(true);
+  });
+
+  it("uses task-status fallback when phase overview is not completed", async () => {
+    await createPhase("phase-2", context.tempDir);
+    await createMilestone("phase-2", "milestone-1-wrapup", context.tempDir);
+
+    const phaseOverviewPath = path.join(
+      context.tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "overview.md",
+    );
+    const phaseOverview =
+      await readMarkdownWithFrontmatter<Record<string, unknown>>(phaseOverviewPath);
+    await writeMarkdownWithFrontmatter(
+      phaseOverviewPath,
+      {
+        ...phaseOverview.data,
+        status: "in_progress",
+      },
+      phaseOverview.content,
+    );
+
+    const taskPath = await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-1-wrapup",
+      lane: "planned",
+      cwd: context.tempDir,
+      title: "Done task with incomplete phase metadata",
+      discoveredFromTask: null,
+    });
+
+    const absoluteTaskPath = path.isAbsolute(taskPath)
+      ? taskPath
+      : path.join(context.tempDir, taskPath);
+    const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(absoluteTaskPath);
+    await writeMarkdownWithFrontmatter(
+      absoluteTaskPath,
+      {
+        ...parsed.data,
+        status: "done",
+      },
+      parsed.content,
+    );
+
+    const manifest = await loadPhaseManifest(context.tempDir);
+    await savePhaseManifest(
+      {
+        ...manifest,
+        activePhase: "phase-1",
+        activeMilestone: "milestone-1-setup",
+      },
+      context.tempDir,
+    );
+
+    const result = await runPolicyChecks(context.tempDir);
+    const conflict = result.conflicts.find(
+      (item) => item.ruleId === "TIMING_CONFLICT" && item.taskRef.startsWith("phase-2/"),
+    );
+    expect(conflict).toBeUndefined();
+  });
+
+  it("handles malformed phase overview metadata deterministically", async () => {
+    await createPhase("phase-2", context.tempDir);
+    await createMilestone("phase-2", "milestone-1-wrapup", context.tempDir);
+
+    const phaseOverviewPath = path.join(
+      context.tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "overview.md",
+    );
+    await fs.writeFile(
+      phaseOverviewPath,
+      "---\nstatus: [\n---\n\n## Overview\n\nMalformed metadata for test.\n",
+      "utf8",
+    );
+
+    const taskPath = await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-1-wrapup",
+      lane: "planned",
+      cwd: context.tempDir,
+      title: "Done task with malformed phase metadata",
+      discoveredFromTask: null,
+    });
+
+    const absoluteTaskPath = path.isAbsolute(taskPath)
+      ? taskPath
+      : path.join(context.tempDir, taskPath);
+    const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(absoluteTaskPath);
+    await writeMarkdownWithFrontmatter(
+      absoluteTaskPath,
+      {
+        ...parsed.data,
+        status: "done",
+      },
+      parsed.content,
+    );
+
+    const manifest = await loadPhaseManifest(context.tempDir);
+    await savePhaseManifest(
+      {
+        ...manifest,
+        activePhase: "phase-1",
+        activeMilestone: "milestone-1-setup",
+      },
+      context.tempDir,
+    );
+
+    const result = await runPolicyChecks(context.tempDir);
+    const conflict = result.conflicts.find(
+      (item) => item.ruleId === "TIMING_CONFLICT" && item.taskRef.startsWith("phase-2/"),
+    );
+    expect(conflict).toBeUndefined();
+  });
+
+  it("supports policy.json profile override for strict done timing", async () => {
+    await createPhase("phase-2", context.tempDir);
+    await createMilestone("phase-2", "milestone-1-wrapup", context.tempDir);
+
+    const phaseOverviewPath = path.join(
+      context.tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "overview.md",
+    );
+    const phaseOverview =
+      await readMarkdownWithFrontmatter<Record<string, unknown>>(phaseOverviewPath);
+    await writeMarkdownWithFrontmatter(
+      phaseOverviewPath,
+      {
+        ...phaseOverview.data,
+        status: "completed",
+      },
+      phaseOverview.content,
+    );
+
+    await writeJsonDeterministic(path.join(context.tempDir, "roadmap", "policy.json"), {
+      schemaVersion: "1.0",
+      defaultProfile: "strict",
+      profiles: {
+        strict: {
+          timing: {
+            phase: {
+              enforceStatuses: ["in_progress", "done"],
+              skipDoneIfCompletedContainer: false,
+              completionMode: "metadata_or_all_tasks_done",
+            },
+            milestone: {
+              enforceStatuses: ["in_progress", "done"],
+              skipDoneIfCompletedContainer: false,
+              completionMode: "metadata_or_all_tasks_done",
+            },
+          },
+        },
+      },
+    });
+
+    const taskPath = await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-1-wrapup",
+      lane: "planned",
+      cwd: context.tempDir,
+      title: "Strict policy done task",
+      discoveredFromTask: null,
+    });
+
+    const absoluteTaskPath = path.isAbsolute(taskPath)
+      ? taskPath
+      : path.join(context.tempDir, taskPath);
+    const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(absoluteTaskPath);
+    await writeMarkdownWithFrontmatter(
+      absoluteTaskPath,
+      {
+        ...parsed.data,
+        status: "done",
+      },
+      parsed.content,
+    );
+
+    const manifest = await loadPhaseManifest(context.tempDir);
+    await savePhaseManifest(
+      {
+        ...manifest,
+        activePhase: "phase-1",
+        activeMilestone: "milestone-1-setup",
+      },
+      context.tempDir,
+    );
+
+    const result = await runPolicyChecks(context.tempDir);
+    expect(
+      result.conflicts.some(
+        (item) => item.ruleId === "TIMING_CONFLICT" && item.taskRef.startsWith("phase-2/"),
+      ),
+    ).toBe(true);
   });
 });

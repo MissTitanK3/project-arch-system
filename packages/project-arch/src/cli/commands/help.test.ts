@@ -95,6 +95,10 @@ describe("cli/commands/help", () => {
       const output = consoleSpy.mock.calls.map((call: unknown[]) => call[0]).join("\n");
       expect(output).toContain("Common Workflows");
       expect(output).toContain("Feature Development");
+      expect(output).toContain("pa lint frontmatter --fix");
+      expect(output).toContain("pnpm lint:md");
+      expect(output).toContain("pa check");
+      expect(output).toContain("pa doctor");
     });
 
     it("should show lanes topic content when requested", async () => {

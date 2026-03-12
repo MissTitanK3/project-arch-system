@@ -311,7 +311,7 @@ describe("createMilestone", () => {
     });
 
     await expect(
-      completeMilestone("phase-2", "milestone-complete-blocked", tempDir),
+      completeMilestone("phase-2", "milestone-complete-blocked", {}, tempDir),
     ).rejects.toThrow("replan-checkpoint.md");
   });
 
@@ -348,7 +348,119 @@ describe("createMilestone", () => {
     );
 
     await expect(
-      completeMilestone("phase-2", "milestone-complete-ready", tempDir),
-    ).resolves.toBeUndefined();
+      completeMilestone("phase-2", "milestone-complete-ready", {}, tempDir),
+    ).resolves.toMatchObject({ warnings: [], overrideLogPath: null });
+  });
+
+  it("blocks completion when a task has reconciliation required and no complete report", async () => {
+    await createMilestone("phase-2", "milestone-reconcile-blocked", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-reconcile-blocked",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+
+    const reconcileDir = path.join(tempDir, ".project-arch", "reconcile");
+    await fs.ensureDir(reconcileDir);
+    await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-001-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation required",
+      taskId: "001",
+      date: "2026-03-12",
+      changedFiles: [],
+      affectedAreas: [],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: [],
+    });
+
+    await expect(
+      completeMilestone("phase-2", "milestone-reconcile-blocked", {}, tempDir),
+    ).rejects.toThrow("reconciliation requirements");
+  });
+
+  it("emits warnings (non-blocking) when only reconciliation suggested tasks exist", async () => {
+    await createMilestone("phase-2", "milestone-reconcile-warning", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-reconcile-warning",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+
+    const reconcileDir = path.join(tempDir, ".project-arch", "reconcile");
+    await fs.ensureDir(reconcileDir);
+    await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-001-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation suggested",
+      taskId: "001",
+      date: "2026-03-12",
+      changedFiles: [],
+      affectedAreas: [],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: [],
+    });
+
+    const result = await completeMilestone("phase-2", "milestone-reconcile-warning", {}, tempDir);
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings[0]).toContain("reconciliation suggested");
+  });
+
+  it("allows --force bypass with reason and logs override", async () => {
+    await createMilestone("phase-2", "milestone-reconcile-force", tempDir);
+    await createTask({
+      phaseId: "phase-2",
+      milestoneId: "milestone-reconcile-force",
+      lane: "planned",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+
+    const reconcileDir = path.join(tempDir, ".project-arch", "reconcile");
+    await fs.ensureDir(reconcileDir);
+    await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-001-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation required",
+      taskId: "001",
+      date: "2026-03-12",
+      changedFiles: [],
+      affectedAreas: [],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: [],
+    });
+
+    const result = await completeMilestone(
+      "phase-2",
+      "milestone-reconcile-force",
+      { forceReason: "Emergency release hotfix" },
+      tempDir,
+    );
+
+    expect(result.overrideLogPath).toBeTruthy();
+    const overrides = await fs.readJson(result.overrideLogPath!);
+    expect(Array.isArray(overrides.overrides)).toBe(true);
+    expect(overrides.overrides[overrides.overrides.length - 1].reason).toBe(
+      "Emergency release hotfix",
+    );
   });
 });

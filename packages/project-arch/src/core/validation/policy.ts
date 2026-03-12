@@ -3,6 +3,12 @@ import { collectDecisionRecords } from "./decisions";
 import { collectTaskRecords } from "./tasks";
 import { loadPhaseManifest } from "../manifests";
 import { pathExists, readJson } from "../../fs";
+import {
+  resolvePolicyProfile,
+  type CompletionMode,
+  type TimingScopePolicy,
+} from "../governance/policy";
+import { readMarkdownWithFrontmatter } from "../../utils/fs";
 
 export type PolicySeverity = "error" | "warning";
 export type PolicyConfidence = "high" | "medium" | "low";
@@ -46,6 +52,7 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
   const taskRecords = await collectTaskRecords(cwd);
   const decisionRecords = await collectDecisionRecords(cwd);
   const manifest = await loadPhaseManifest(cwd);
+  const policyProfile = await resolvePolicyProfile(cwd);
 
   const declaredModules = await loadDeclaredModules(cwd);
   const domains = await loadDomains(cwd);
@@ -64,6 +71,10 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
   );
 
   const conflicts: PolicyConflict[] = [];
+  const completionCache = {
+    phases: new Map<string, boolean>(),
+    milestones: new Map<string, boolean>(),
+  };
 
   for (const task of taskRecords) {
     const taskRef = `${task.phaseId}/${task.milestoneId}/${task.frontmatter.id}`;
@@ -205,7 +216,17 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
 
     if (
       manifest.activePhase &&
-      (task.frontmatter.status === "in_progress" || task.frontmatter.status === "done") &&
+      shouldEnforceTiming(
+        task.frontmatter.status,
+        policyProfile.timing.phase,
+        await isCompletedPhase(
+          task.phaseId,
+          taskRecords,
+          cwd,
+          policyProfile.timing.phase.completionMode,
+          completionCache.phases,
+        ),
+      ) &&
       task.phaseId !== manifest.activePhase
     ) {
       conflicts.push({
@@ -217,7 +238,7 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
         claimA: `Task status is '${task.frontmatter.status}' in phase '${task.phaseId}'`,
         claimB: `Active phase is '${manifest.activePhase}'`,
         rationale:
-          "Execution timing policy expects in-progress/done work to align with the active phase unless explicitly staged.",
+          "Execution timing policy expects configured in-scope work to align with the active phase unless explicitly staged.",
         remediation:
           "Activate the matching phase or move the task to the currently active phase before continuing execution.",
       });
@@ -226,7 +247,18 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
     if (
       manifest.activePhase === task.phaseId &&
       manifest.activeMilestone &&
-      (task.frontmatter.status === "in_progress" || task.frontmatter.status === "done") &&
+      shouldEnforceTiming(
+        task.frontmatter.status,
+        policyProfile.timing.milestone,
+        await isCompletedMilestone(
+          task.phaseId,
+          task.milestoneId,
+          taskRecords,
+          cwd,
+          policyProfile.timing.milestone.completionMode,
+          completionCache.milestones,
+        ),
+      ) &&
       task.milestoneId !== manifest.activeMilestone
     ) {
       conflicts.push({
@@ -238,7 +270,7 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
         claimA: `Task status is '${task.frontmatter.status}' in milestone '${task.milestoneId}'`,
         claimB: `Active milestone is '${manifest.activeMilestone}'`,
         rationale:
-          "Execution timing policy expects in-progress/done work to align with the active milestone to preserve deterministic sequencing.",
+          "Execution timing policy expects configured in-scope work to align with the active milestone to preserve deterministic sequencing.",
         remediation:
           "Activate the matching milestone or return task status to 'todo' until the milestone becomes active.",
       });
@@ -250,6 +282,107 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
     ok: deduped.length === 0,
     conflicts: deduped,
   };
+}
+
+function shouldEnforceTiming(
+  status: string,
+  scopePolicy: TimingScopePolicy,
+  isCompletedContainer: boolean,
+): boolean {
+  if (
+    !scopePolicy.enforceStatuses.includes(status as TimingScopePolicy["enforceStatuses"][number])
+  ) {
+    return false;
+  }
+
+  if (status === "done" && scopePolicy.skipDoneIfCompletedContainer && isCompletedContainer) {
+    return false;
+  }
+
+  return true;
+}
+
+async function isCompletedPhase(
+  phaseId: string,
+  taskRecords: Array<{ phaseId: string; frontmatter: { status: string } }>,
+  cwd: string,
+  completionMode: CompletionMode,
+  cache: Map<string, boolean>,
+): Promise<boolean> {
+  if (cache.has(phaseId)) {
+    return cache.get(phaseId) ?? false;
+  }
+
+  const metadataComplete = await isOverviewCompleted(
+    path.join(cwd, "roadmap", "phases", phaseId, "overview.md"),
+  );
+  const tasksComplete = areAllTasksDone(taskRecords.filter((task) => task.phaseId === phaseId));
+  const completed = evaluateCompletionMode(completionMode, metadataComplete, tasksComplete);
+  cache.set(phaseId, completed);
+  return completed;
+}
+
+async function isCompletedMilestone(
+  phaseId: string,
+  milestoneId: string,
+  taskRecords: Array<{
+    phaseId: string;
+    milestoneId: string;
+    frontmatter: { status: string };
+  }>,
+  cwd: string,
+  completionMode: CompletionMode,
+  cache: Map<string, boolean>,
+): Promise<boolean> {
+  const key = `${phaseId}/${milestoneId}`;
+  if (cache.has(key)) {
+    return cache.get(key) ?? false;
+  }
+
+  const metadataComplete = await isOverviewCompleted(
+    path.join(cwd, "roadmap", "phases", phaseId, "milestones", milestoneId, "overview.md"),
+  );
+  const tasksComplete = areAllTasksDone(
+    taskRecords.filter((task) => task.phaseId === phaseId && task.milestoneId === milestoneId),
+  );
+  const completed = evaluateCompletionMode(completionMode, metadataComplete, tasksComplete);
+  cache.set(key, completed);
+  return completed;
+}
+
+async function isOverviewCompleted(filePath: string): Promise<boolean> {
+  if (!(await pathExists(filePath))) {
+    return false;
+  }
+
+  try {
+    const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(filePath);
+    return parsed.data.status === "completed";
+  } catch {
+    return false;
+  }
+}
+
+function areAllTasksDone(tasks: Array<{ frontmatter: { status: string } }>): boolean {
+  if (tasks.length === 0) {
+    return false;
+  }
+
+  return tasks.every((task) => task.frontmatter.status === "done");
+}
+
+function evaluateCompletionMode(
+  completionMode: CompletionMode,
+  metadataComplete: boolean,
+  allTasksDone: boolean,
+): boolean {
+  if (completionMode === "metadata_only") {
+    return metadataComplete;
+  }
+  if (completionMode === "all_tasks_done") {
+    return allTasksDone;
+  }
+  return metadataComplete || allTasksDone;
 }
 
 export function renderPolicyExplanation(conflicts: PolicyConflict[]): string {

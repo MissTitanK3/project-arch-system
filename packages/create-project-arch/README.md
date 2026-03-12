@@ -223,9 +223,11 @@ Scaffolded projects include closure report artifacts under `architecture/referen
 Recommended workflow:
 
 1. Complete milestone tasks and decision updates.
-2. Run `pa check` and `pa report`.
-3. Record closure outcomes in milestone closure report.
-4. Track remaining gaps as follow-on tasks/decisions.
+2. Run `pa lint frontmatter --fix`.
+3. Run `pnpm lint:md`.
+4. Run `pa check` and `pa report`.
+5. Record closure outcomes in milestone closure report.
+6. Track remaining gaps as follow-on tasks/decisions.
 
 ### Local Validation Hook Scaffold
 

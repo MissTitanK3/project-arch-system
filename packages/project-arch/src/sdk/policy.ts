@@ -1,4 +1,10 @@
 import { runPolicyChecks, renderPolicyExplanation } from "../core/validation/policy";
+import {
+  resolveEffectivePolicyProfile,
+  setupPolicyFile,
+  type PolicySetupResult,
+  type ResolvedPolicyProfile,
+} from "../core/governance/policy";
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
 
@@ -21,4 +27,16 @@ export async function policyExplain(input: { cwd?: string } = {}): Promise<
       conflicts: result.conflicts,
     };
   });
+}
+
+export async function policyResolved(
+  input: { cwd?: string } = {},
+): Promise<OperationResult<ResolvedPolicyProfile>> {
+  return wrap(async () => resolveEffectivePolicyProfile(input.cwd));
+}
+
+export async function policySetup(
+  input: { cwd?: string } = {},
+): Promise<OperationResult<PolicySetupResult>> {
+  return wrap(async () => setupPolicyFile(input.cwd));
 }

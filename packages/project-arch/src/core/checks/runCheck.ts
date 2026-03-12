@@ -1,6 +1,13 @@
 import { runRepositoryChecks } from "../../core/validation/check";
 
-export async function runCheck(cwd = process.cwd()): Promise<{
+export interface RunCheckOptions {
+  failFast?: boolean;
+}
+
+export async function runCheck(
+  cwd = process.cwd(),
+  options: RunCheckOptions = {},
+): Promise<{
   ok: boolean;
   errors: string[];
   warnings: string[];
@@ -12,5 +19,5 @@ export async function runCheck(cwd = process.cwd()): Promise<{
     hint: string | null;
   }>;
 }> {
-  return runRepositoryChecks(cwd);
+  return runRepositoryChecks(cwd, { failFast: options.failFast });
 }

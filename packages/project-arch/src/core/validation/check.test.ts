@@ -285,6 +285,7 @@ This task references a missing code target.
         d.message.includes("Missing code target"),
       );
       expect(missingTargetDiagnostic).toBeDefined();
+      expect(missingTargetDiagnostic?.code).toBe("MISSING_TASK_CODE_TARGET");
       expect(missingTargetDiagnostic?.severity).toBe("error");
       expect(missingTargetDiagnostic?.path).toBe("apps/nonexistent/src/missing.ts");
     }, 60_000);
@@ -396,6 +397,7 @@ This task references an undeclared module.
         d.message.includes("undeclared module"),
       );
       expect(undeclaredModuleDiagnostic).toBeDefined();
+      expect(undeclaredModuleDiagnostic?.code).toBe("TASK_UNDECLARED_MODULE");
       expect(undeclaredModuleDiagnostic?.hint).toContain("Declare it in arch-model/modules.json");
     }, 60_000);
 
@@ -546,6 +548,10 @@ This decision has an invalid task link format.
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Invalid decision task link"))).toBe(true);
+      const invalidDecisionTaskLinkDiagnostic = result.diagnostics.find((d) =>
+        d.message.includes("Invalid decision task link"),
+      );
+      expect(invalidDecisionTaskLinkDiagnostic?.code).toBe("INVALID_DECISION_TASK_LINK");
     }, 60_000);
 
     it("should detect missing code targets referenced by decisions", async () => {
@@ -594,6 +600,11 @@ This decision references a missing code target.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Missing code target"))).toBe(true);
       expect(result.errors.some((e) => e.includes("packages/nonexistent/index.ts"))).toBe(true);
+      const missingDecisionTargetDiagnostic = result.diagnostics.find(
+        (d) =>
+          d.message.includes("Missing code target") && d.message.includes("referenced by decision"),
+      );
+      expect(missingDecisionTargetDiagnostic?.code).toBe("MISSING_DECISION_CODE_TARGET");
     }, 60_000);
 
     it("should detect missing superseded decisions", async () => {
@@ -745,6 +756,64 @@ Multiple validation errors.
 
       expect(result.ok).toBe(false);
       expect(result.errors.length).toBeGreaterThan(1);
+    }, 60_000);
+
+    it("should stop at first actionable issue when failFast is enabled", async () => {
+      await createPhase("fail-fast-phase", tempDir);
+      await createMilestone("fail-fast-phase", "fail-fast-milestone", tempDir);
+
+      const taskPath = await createTask({
+        phaseId: "fail-fast-phase",
+        milestoneId: "fail-fast-milestone",
+        lane: "planned",
+        title: "Task with Multiple Failures",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      const taskFilename = path.basename(taskPath);
+      const taskIdMatch = taskFilename.match(/^(\d{3})/);
+      const taskId = taskIdMatch ? taskIdMatch[1] : "001";
+
+      await writeFile(
+        taskPath,
+        `---
+schemaVersion: "1.0"
+id: "${taskId}"
+slug: task-with-multiple-failures
+lane: planned
+title: Task with Multiple Failures
+status: todo
+createdAt: "2026-03-07"
+updatedAt: "2026-03-07"
+discoveredFromTask: null
+publicDocs:
+  - architecture/missing-doc.md
+codeTargets:
+  - apps/missing-module/src/index.ts
+tags:
+  - domain:undeclared-domain
+decisions: []
+completionCriteria: []
+---
+
+# Task with Multiple Failures
+
+Multiple validation failures for fail-fast test.
+`,
+      );
+
+      const fullResult = await runRepositoryChecks(tempDir);
+      const failFastResult = await runRepositoryChecks(tempDir, { failFast: true });
+
+      expect(fullResult.ok).toBe(false);
+      expect(fullResult.errors.length).toBeGreaterThan(1);
+
+      expect(failFastResult.ok).toBe(false);
+      expect(failFastResult.errors).toHaveLength(1);
+      expect(failFastResult.diagnostics).toHaveLength(1);
+      expect(failFastResult.diagnostics[0]?.code).toBe("MISSING_TASK_CODE_TARGET");
+      expect(failFastResult.diagnostics[0]?.path).toBe("apps/missing-module/src/index.ts");
     }, 60_000);
 
     it("should handle empty codeTargets array", async () => {
@@ -931,6 +1000,67 @@ Empty public docs should be valid.
           error.includes("Project decision index references missing decision"),
         ),
       ).toBe(true);
+    }, 60_000);
+
+    it("should fail with clear diagnostic when reconcile config is invalid", async () => {
+      const configPath = path.join(tempDir, ".project-arch", "reconcile.config.json");
+      await fs.ensureDir(path.dirname(configPath));
+
+      await writeJsonDeterministic(configPath, {
+        schemaVersion: "1.0",
+        extends: "default",
+        triggers: {
+          include: [{ status: "required" }],
+        },
+      });
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.ok).toBe(false);
+      expect(
+        result.errors.some((error) => error.includes("Invalid reconcile config schema at")),
+      ).toBe(true);
+
+      const diagnostic = result.diagnostics.find((item) =>
+        item.message.includes("Invalid reconcile config schema at"),
+      );
+      expect(diagnostic?.code).toBe("INVALID_RECONCILE_CONFIG_SCHEMA");
+      expect(diagnostic?.severity).toBe("error");
+      expect(diagnostic?.path?.startsWith(".project-arch/reconcile.config.json")).toBe(true);
+    }, 60_000);
+
+    it("should surface warning count for outstanding tooling-feedback reports", async () => {
+      const feedbackDir = path.join(tempDir, ".project-arch", "feedback");
+      await fs.ensureDir(feedbackDir);
+
+      await writeJsonDeterministic(path.join(feedbackDir, "tooling-feedback-001.json"), {
+        schemaVersion: "1.0",
+        id: "tooling-feedback-001-01",
+        type: "tooling-feedback",
+        status: "reconciliation suggested",
+        taskId: "001",
+        date: "2026-03-12",
+        changedFiles: [],
+        affectedAreas: ["project-arch/cli"],
+        missingUpdates: [],
+        missingTraceLinks: [],
+        decisionCandidates: [],
+        standardsGaps: [],
+        proposedActions: ["Add summary command"],
+        feedbackCandidates: ["Add summary command"],
+      });
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.ok).toBe(true);
+      expect(
+        result.warnings.some((warning) =>
+          warning.includes("Outstanding tooling-feedback reports: 1"),
+        ),
+      ).toBe(true);
+      expect(result.diagnostics.some((item) => item.code === "OUTSTANDING_TOOLING_FEEDBACK")).toBe(
+        true,
+      );
     }, 60_000);
 
     it("should validate decision links with valid code targets", async () => {

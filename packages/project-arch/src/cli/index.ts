@@ -11,6 +11,9 @@ import { registerPolicyCommand } from "./commands/policy";
 import { registerHelpCommand } from "./commands/help";
 import { registerLintCommand } from "./commands/lint";
 import { registerFeedbackCommand } from "./commands/feedback";
+import { registerDoctorCommand } from "./commands/doctor";
+import { registerReconcileCommand } from "./commands/reconcile";
+import { registerBackfillCommand } from "./commands/backfill";
 import {
   getArchDir,
   getCommandPathFromCommander,
@@ -53,10 +56,13 @@ export async function runCli(argv = process.argv): Promise<void> {
   registerDecisionCommand(program);
   registerDocsCommand(program);
   registerCheckCommand(program);
+  registerDoctorCommand(program);
   registerLintCommand(program);
   registerReportCommand(program);
   registerPolicyCommand(program);
   registerFeedbackCommand(program);
+  registerReconcileCommand(program);
+  registerBackfillCommand(program);
   registerHelpCommand(program);
 
   try {

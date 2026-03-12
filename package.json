@@ -6,8 +6,8 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "sandbox:init": "node packages/create-project-arch/dist/cli.js testProject --force && cd testProject && pnpm install",
-    "sandbox:dev": "cd testProject && pnpm dev",
+    "sandbox:init": "node packages/create-project-arch/dist/cli.js test-project --force && cd test-project && pnpm install",
+    "sandbox:dev": "cd test-project && pnpm dev",
     "sandbox:sync": "node scripts/sync-templates.mjs"
   },
   "devDependencies": {

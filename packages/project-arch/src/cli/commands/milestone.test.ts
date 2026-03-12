@@ -4,6 +4,7 @@ import { registerMilestoneCommand } from "./milestone";
 import { createPhase } from "../../core/phases/createPhase";
 import { createMilestone } from "../../core/milestones/createMilestone";
 import { createTask } from "../../core/tasks/createTask";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
 import { createTestProject, consoleAssertions, type TestProjectContext } from "../../test/helpers";
 
 describe("cli/commands/milestone", () => {
@@ -31,11 +32,13 @@ describe("cli/commands/milestone", () => {
 
       const newCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "new");
       const listCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "list");
+      const statusCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "status");
       const activateCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "activate");
       const completeCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "complete");
 
       expect(newCmd).toBeDefined();
       expect(listCmd).toBeDefined();
+      expect(statusCmd).toBeDefined();
       expect(activateCmd).toBeDefined();
       expect(completeCmd).toBeDefined();
     });
@@ -52,6 +55,7 @@ describe("cli/commands/milestone", () => {
       const milestoneCommand = program.commands.find((cmd) => cmd.name() === "milestone");
       const newCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "new");
       const listCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "list");
+      const statusCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "status");
       const activateCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "activate");
       const completeCmd = milestoneCommand?.commands.find((cmd) => cmd.name() === "complete");
 
@@ -61,6 +65,10 @@ describe("cli/commands/milestone", () => {
 
       listCmd?.outputHelp();
       const listHelp = output.join("");
+      output.length = 0;
+
+      statusCmd?.outputHelp();
+      const statusHelp = output.join("");
       output.length = 0;
 
       activateCmd?.outputHelp();
@@ -73,6 +81,7 @@ describe("cli/commands/milestone", () => {
       expect(newHelp).toContain("pa milestone new");
       expect(newHelp).toContain("milestoneId");
       expect(listHelp).toContain("pa milestone list");
+      expect(statusHelp).toContain("pa milestone status");
       expect(activateHelp).toContain("pa milestone activate");
       expect(completeHelp).toContain("pa milestone complete");
     });
@@ -256,6 +265,71 @@ describe("cli/commands/milestone", () => {
     });
   });
 
+  describe("milestone status", () => {
+    it("should report dependency-blocked tasks with unresolved ids", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerMilestoneCommand(program);
+
+      await createMilestone(phaseId, "m-status-dependencies");
+      const taskAPath = await createTask({
+        phaseId,
+        milestoneId: "m-status-dependencies",
+        lane: "planned",
+        discoveredFromTask: null,
+      });
+      const taskBPath = await createTask({
+        phaseId,
+        milestoneId: "m-status-dependencies",
+        lane: "discovered",
+        discoveredFromTask: "001",
+      });
+
+      const taskA = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskAPath);
+      const taskB = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskBPath);
+      const dependencyId = String(taskA.data.id);
+
+      await writeMarkdownWithFrontmatter(
+        taskAPath,
+        {
+          ...(taskA.data as Record<string, unknown>),
+          status: "todo",
+        },
+        taskA.content,
+      );
+
+      await writeMarkdownWithFrontmatter(
+        taskBPath,
+        {
+          ...(taskB.data as Record<string, unknown>),
+          status: "in_progress",
+          dependsOn: [dependencyId],
+        },
+        taskB.content,
+      );
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "milestone",
+        "status",
+        phaseId,
+        "m-status-dependencies",
+      ]);
+
+      const output = logSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(output).toContain("blocked");
+      expect(output).toContain(`unresolved dependencies: ${dependencyId}`);
+      expect(output).toContain("Resolve prerequisite tasks and mark them done");
+      expect(process.exitCode).toBe(1);
+
+      process.exitCode = undefined;
+      logSpy.mockRestore();
+    });
+  });
+
   describe("milestone complete", () => {
     it("should block completion when threshold is breached and checkpoint is missing", async () => {
       const program = new Command();
@@ -337,6 +411,118 @@ describe("cli/commands/milestone", () => {
       consoleAssertions.assertConsoleContains(consoleSpy, "Completed milestone");
       consoleAssertions.assertConsoleContains(consoleSpy, `${phaseId}/m-complete-ready`);
       consoleSpy.mockRestore();
+    });
+
+    it("should emit warning and continue when reconciliation is suggested", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerMilestoneCommand(program);
+
+      await createMilestone(phaseId, "m-complete-reconcile-warning");
+      await createTask({
+        phaseId,
+        milestoneId: "m-complete-reconcile-warning",
+        lane: "planned",
+        discoveredFromTask: null,
+      });
+
+      const fs = await import("fs-extra");
+      const path = await import("path");
+      const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+      await fs.ensureDir(reconcileDir);
+      await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
+        schemaVersion: "1.0",
+        id: "reconcile-001-2026-03-12",
+        type: "local-reconciliation",
+        status: "reconciliation suggested",
+        taskId: "001",
+        date: "2026-03-12",
+        changedFiles: [],
+        affectedAreas: [],
+        missingUpdates: [],
+        missingTraceLinks: [],
+        decisionCandidates: [],
+        standardsGaps: [],
+        proposedActions: [],
+        feedbackCandidates: [],
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "milestone",
+        "complete",
+        phaseId,
+        "m-complete-reconcile-warning",
+      ]);
+
+      const warnOutput = warnSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(warnOutput).toContain("WARNING:");
+      expect(warnOutput).toContain("reconciliation suggested");
+      consoleAssertions.assertConsoleContains(logSpy, "Completed milestone");
+
+      warnSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it("should allow forced completion with override reason and log path", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerMilestoneCommand(program);
+
+      await createMilestone(phaseId, "m-complete-reconcile-force");
+      await createTask({
+        phaseId,
+        milestoneId: "m-complete-reconcile-force",
+        lane: "planned",
+        discoveredFromTask: null,
+      });
+
+      const fs = await import("fs-extra");
+      const path = await import("path");
+      const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+      await fs.ensureDir(reconcileDir);
+      await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
+        schemaVersion: "1.0",
+        id: "reconcile-001-2026-03-12",
+        type: "local-reconciliation",
+        status: "reconciliation required",
+        taskId: "001",
+        date: "2026-03-12",
+        changedFiles: [],
+        affectedAreas: [],
+        missingUpdates: [],
+        missingTraceLinks: [],
+        decisionCandidates: [],
+        standardsGaps: [],
+        proposedActions: [],
+        feedbackCandidates: [],
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "milestone",
+        "complete",
+        phaseId,
+        "m-complete-reconcile-force",
+        "--force",
+        "hotfix exception",
+      ]);
+
+      const output = logSpy.mock.calls.map((call) => String(call[0])).join("\n");
+      expect(output).toContain("Reconciliation override logged");
+      expect(output).toContain("Completed milestone");
+
+      const overridesPath = path.join(reconcileDir, "overrides.json");
+      expect(await fs.pathExists(overridesPath)).toBe(true);
+
+      logSpy.mockRestore();
     });
   });
 });

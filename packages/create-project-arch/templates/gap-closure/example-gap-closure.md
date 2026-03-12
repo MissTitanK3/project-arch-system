@@ -19,6 +19,8 @@ Milestone scope is complete, critical architecture artifacts are synchronized, a
 
 - [x] Architecture docs updated
 - [x] Roadmap tasks/decisions synchronized
+- [x] Frontmatter preflight lint passes (`pa lint frontmatter --fix`)
+- [x] Markdown lint passes (`pnpm lint:md`)
 - [x] Graph/parity checks pass (`pa check`)
 - [x] Report diagnostics reviewed (`pa report`)
 

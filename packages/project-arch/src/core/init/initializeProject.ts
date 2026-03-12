@@ -19,6 +19,7 @@ import {
   rebuildArchitectureGraph,
   savePhaseManifest,
 } from "../../core/manifests";
+import { defaultPolicyFileDocument } from "../../core/governance/policy";
 import { ObservationStore } from "../../feedback/observation-store";
 import { IssueStore } from "../../feedback/issue-store";
 import { defaultTaskFrontmatter } from "../../core/templates/task";
@@ -86,6 +87,14 @@ function generateStandardsContent(fileName: string, title: string, description: 
         "```bash",
         "pnpm lint:md",
         "```",
+        "",
+        "Canonical preflight order for architecture docs:",
+        "",
+        "1. `pa lint frontmatter --fix`",
+        "2. `pnpm lint:md`",
+        "3. `pa check` (or `pa doctor` for one-command preflight)",
+        "",
+        "For command details, use `pa help validation` and `pa help workflows`.",
         "",
       );
       break;
@@ -186,7 +195,7 @@ function generateStandardsContent(fileName: string, title: string, description: 
       content.push(
         "## Directory Layout",
         "",
-        "```",
+        "```text",
         "├── apps/                 # Applications",
         "│   ├── web/             # Main web app",
         "│   └── docs/            # Documentation site",
@@ -233,7 +242,7 @@ function generateStandardsContent(fileName: string, title: string, description: 
         "",
         "## File Organization",
         "",
-        "```",
+        "```text",
         "ComponentName/",
         "  ├── ComponentName.tsx",
         "  ├── ComponentName.test.tsx",
@@ -295,6 +304,7 @@ interface PlannedBootstrapTask {
   slug: string;
   title: string;
   tags: string[];
+  dependsOn?: string[];
   completionCriteria: string[];
   objective: string;
   questions: string[];
@@ -363,7 +373,7 @@ function milestoneTargetsTemplate(): string {
     "",
     "Example task:",
     "",
-    "- `005-complete-architecture-foundation.md`",
+    "- `005-finalize-architecture-foundation.md`",
     "",
     "Expected changes:",
     "",
@@ -518,11 +528,14 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
   },
   {
     id: "005",
-    slug: "complete-architecture-foundation",
-    title: "Complete architecture foundation readiness",
+    slug: "finalize-architecture-foundation",
+    title: "Finalize architecture foundation readiness",
     tags: ["setup", "architecture"],
+    dependsOn: ["001", "002", "003", "004", "006", "007", "008"],
     completionCriteria: [
       "All architecture/foundation documents are completed with project-specific content.",
+      "Tasks 006, 007, and 008 are completed before this task is marked done.",
+      "All architecture/architecture stub files have non-placeholder content.",
       "architecture documents are internally consistent across overview, goals, journey, and scope.",
       "Architecture/standards/reference and arch-domains doc areas include initial context for upcoming milestones.",
       "pa check passes after docs foundation setup.",
@@ -546,7 +559,130 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     verification: [
       "Confirm architecture/foundation has no placeholder lines left for required sections.",
       "Confirm architecture/architecture, standards, reference, and arch-domains each include initial documentation.",
+      "Confirm system-boundaries.md, module-model.md, and runtime-architecture.md are non-placeholder and aligned with foundation docs.",
       "Confirm a new contributor can answer core project questions using architecture only.",
+      "Run node packages/project-arch/dist/cli.js check and verify OK.",
+    ],
+  },
+  {
+    id: "006",
+    slug: "define-system-boundaries",
+    title: "Define system boundaries in architecture",
+    tags: ["setup", "architecture", "system-boundaries", "discover", "greenfield"],
+    completionCriteria: [
+      "architecture/architecture/system-boundaries.md contains explicit domain ownership sections.",
+      "Each domain boundary maps to at least one apps/ or packages/ module.",
+      "Interaction constraints between domains are stated.",
+      "If the project already has a codebase: boundaries are derived from observed module structure.",
+      "If the project is greenfield: boundaries are derived from architecture/foundation docs.",
+      "pa check passes after file is populated.",
+    ],
+    objective:
+      "Establish canonical system boundary definitions so agents and contributors know which domain owns which module and what cross-domain interaction is explicitly permitted or forbidden.",
+    questions: [
+      "Does an existing application codebase already define implicit module or package boundaries?",
+      "What are the top-level problem-space domains for this product?",
+      "Which apps/ and packages/ directories map to each domain?",
+      "What cross-domain interactions must be explicitly constrained?",
+      "Are any domain boundaries ambiguous or overlapping?",
+    ],
+    implementationPlan: [
+      "**Discover mode (existing codebase):**",
+      "Inspect apps/, packages/, and arch-model files to identify existing module responsibilities.",
+      "Group modules into problem-space domains derived from the current codebase and ownership hints.",
+      "Write domain ownership and interaction rules in architecture/architecture/system-boundaries.md.",
+      "**Define mode (greenfield):**",
+      "Read architecture/foundation/prompt.md, project-overview.md, goals.md, and scope.md.",
+      "Derive intended domains and map each to planned apps/ and packages/ modules.",
+      "Draft boundary ownership and constraints with explicit TBD markers for unknowns.",
+      "Architecture Decisions: Use architecture/decisions/ (not roadmap/decisions/) for architecture-scope decision records created during this task.",
+    ],
+    verification: [
+      "Confirm system-boundaries.md names at least two distinct domain sections.",
+      "Confirm each domain section lists at least one owned module.",
+      "Confirm at least one interaction constraint or boundary rule is stated.",
+      "Run node packages/project-arch/dist/cli.js check and verify OK.",
+    ],
+  },
+  {
+    id: "007",
+    slug: "define-module-model",
+    title: "Define module model in architecture",
+    tags: ["setup", "architecture", "module-model", "discover", "greenfield"],
+    completionCriteria: [
+      "architecture/architecture/module-model.md describes each module responsibility and composition role.",
+      "All modules listed in arch-model/modules.json appear in the document.",
+      "Composition rules and dependency direction are stated.",
+      "If codebase exists: module descriptions come from observed implementation.",
+      "If greenfield: module descriptions are derived from foundation and arch-domains.",
+      "pa check passes after file is populated.",
+    ],
+    objective:
+      "Create a human-readable module model that complements arch-model/modules.json so agents understand what each module owns and where new code belongs.",
+    questions: [
+      "What does each packages/ module currently do or intend to do?",
+      "Which modules are consumed by multiple apps versus used by only one?",
+      "What dependency rules exist between modules?",
+      "Are any modules planned but not yet scaffolded?",
+      "Are there modules in the codebase not yet listed in arch-model/modules.json?",
+    ],
+    implementationPlan: [
+      "**Discover mode (existing codebase):**",
+      "Read arch-model/modules.json, ownership.json, and dependencies.json as starting points.",
+      "Inspect each module public surface (for example src/index.ts) to confirm actual responsibility.",
+      "Draft module-model.md with one section per module describing purpose and dependency rules.",
+      "Reconcile gaps between arch-model data and observed module behavior.",
+      "**Define mode (greenfield):**",
+      "Read architecture/foundation docs and derive intended module responsibilities.",
+      "Use arch-model/modules.json as the initial module inventory.",
+      "Draft module sections with intended public surface and allowed dependencies, marking unknowns as TBD with reason.",
+      "Align module responsibilities with domain ownership in arch-domains/domains.json.",
+    ],
+    verification: [
+      "Confirm every module in arch-model/modules.json has a section in module-model.md.",
+      "Confirm each module section states the primary responsibility.",
+      "Confirm dependency rules are stated for each module set.",
+      "Run node packages/project-arch/dist/cli.js check and verify OK.",
+    ],
+  },
+  {
+    id: "008",
+    slug: "define-runtime-architecture",
+    title: "Define runtime architecture in architecture",
+    tags: ["setup", "architecture", "runtime-architecture", "discover", "greenfield"],
+    completionCriteria: [
+      "architecture/architecture/runtime-architecture.md documents critical runtime paths.",
+      "Deployment topology or runtime environment constraints are documented.",
+      "At least one critical user-facing path is described end to end.",
+      "If codebase exists: runtime paths are validated against observed routing and API structure.",
+      "If greenfield: runtime architecture is derived from user journey and scope docs.",
+      "pa check passes after file is populated.",
+    ],
+    objective:
+      "Establish the canonical runtime architecture description so agents know deployment model, critical execution paths, and runtime constraints before implementation.",
+    questions: [
+      "What is the deployment model for each app (for example serverless, containerized, static export)?",
+      "What are the critical paths that must work for the product to function?",
+      "Where do authentication, session, and data-fetching boundaries fall at runtime?",
+      "Are there asynchronous or background processing flows that must be documented?",
+      "What performance or latency constraints must architecture respect?",
+    ],
+    implementationPlan: [
+      "**Discover mode (existing codebase):**",
+      "Inspect app routing and data-fetching patterns in runtime surfaces.",
+      "Audit API boundaries and identify where runtime concerns cross module boundaries.",
+      "Map observed authentication, session, and request/response critical paths.",
+      "Draft runtime-architecture.md with topology, critical paths, and constraints from observed behavior.",
+      "**Define mode (greenfield):**",
+      "Read architecture/foundation/user-journey.md and scope.md to derive required runtime flows.",
+      "Draft expected deployment topology for each planned app surface.",
+      "Describe anticipated critical paths from user entry to successful outcome.",
+      "Record unresolved runtime choices as open questions or decision candidates.",
+    ],
+    verification: [
+      "Confirm runtime-architecture.md names the deployment model for planned app surfaces.",
+      "Confirm at least one critical path is described with entry, processing steps, and response.",
+      "Confirm unresolved runtime decisions are logged as open questions or decision candidates.",
       "Run node packages/project-arch/dist/cli.js check and verify OK.",
     ],
   },
@@ -652,6 +788,8 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     cwd,
   );
 
+  await writeJsonDeterministic(path.join(docsRoot, "policy.json"), defaultPolicyFileDocument());
+
   const phasePath = phaseDir(phaseId, cwd);
   await ensureDir(path.join(phasePath, "milestones"));
   await ensureDir(phaseDecisionsRoot(phaseId, cwd));
@@ -667,15 +805,18 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       updatedAt: now,
     },
     [
-      "## Overview",
+      "# Overview",
       "",
-      "Phase 1 establishes architecture as the source of truth before feature milestones begin.",
+      "Phase 1 establishes architecture before feature milestones begin.",
       "",
       "## Focus",
       "",
-      "- Add the project setup prompt to architecture/foundation/prompt.md as the canonical source.",
-      "- Complete architecture/foundation with project overview, goals, journey, and scope details derived from prompt.md.",
-      "- Ensure agents can plan implementation from architecture without missing context.",
+      "- Add the project setup prompt to architecture/foundation/prompt.md",
+      "  as the canonical source.",
+      "- Complete architecture/foundation with project overview, goals,",
+      "  journey, and scope details derived from prompt.md.",
+      "- Ensure agents can plan implementation from architecture",
+      "  without missing context.",
       "",
     ].join("\n"),
   );
@@ -706,7 +847,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       updatedAt: now,
     },
     [
-      "## Overview",
+      "# Overview",
       "",
       "This milestone creates the baseline project architecture and workflow assets.",
       "",
@@ -729,6 +870,9 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
 
     frontmatter.tags = task.tags;
     frontmatter.completionCriteria = task.completionCriteria;
+    if (task.dependsOn) {
+      frontmatter.dependsOn = task.dependsOn;
+    }
 
     await writeMarkdownWithFrontmatter(
       path.join(
@@ -1237,7 +1381,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "## Summary Matrix",
       "",
       "| Template | Frequency | Trigger Event |",
-      "|----------|-----------|---------------|",
+      "| -------- | --------- | ------------- |",
       "| Task | Per work item | Creating new task |",
       "| Decision | As needed | Architectural choice required |",
       "| Domain Spec | 1-5 per phase | New domain introduced |",
@@ -2051,6 +2195,12 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "- `discovered/` tasks must be documented before execution",
       "- `backlog/` tasks are not part of the active milestone",
       "",
+      "Operational references:",
+      "- Planned lane creation: `pa task new {phase} {milestone}`",
+      "- Discovered lane creation: `pa task discover {phase} {milestone} --from <taskId>`",
+      "- Backlog lane creation: `pa task idea {phase} {milestone}`",
+      "- Lane guidance: `pa help lanes`",
+      "",
       "---",
       "",
       "### Step 3 - Implement Work",
@@ -2080,6 +2230,12 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "Decision",
       "Code",
       "Documentation",
+      "",
+      "Operational references:",
+      "- Workflow guidance: `pa help workflows`",
+      "- Validation guidance: `pa help validation`",
+      "- Canonical preflight: `pa doctor`",
+      "- Feedback queue and triage: `pa feedback list`, `pa feedback show <issueId>`, `pa feedback review <issueId> [--dismiss|--mitigated-locally|--defer|--escalate] [--yes]` (see `pa feedback --help`)",
       "",
       "**Milestone Completion**: When all tasks in a milestone reach 'done' status, ",
       "create a Gap Closure Report using `architecture/reference/GAP_CLOSURE_REPORT_TEMPLATE.md`.",
@@ -2112,6 +2268,8 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "7. `architecture/reference`",
       "",
       "`architecture/reference` is informational only and must not override architecture or standards.",
+      "",
+      "For operational command discovery, use `pa help workflows`, `pa help validation`, and `pa help lanes`.",
       "",
       "---",
       "",
@@ -2192,6 +2350,35 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "2. deterministic structure",
       "3. documentation alignment",
       "4. minimal architectural drift",
+      "",
+      "---",
+      "",
+      "## 6. Operational Command Reference",
+      "",
+      "This appendix provides command-level operational guidance and does not change documentation authority or governance rules above.",
+      "",
+      "### Workflow & Preflight",
+      "",
+      "- `pa help workflows`",
+      "- `pa help validation`",
+      "- `pa doctor`",
+      "",
+      "### Task Lane Commands",
+      "",
+      "- `pa task new {phase} {milestone}`",
+      "- `pa task discover {phase} {milestone} --from <taskId>`",
+      "- `pa task idea {phase} {milestone}`",
+      "- `pa help lanes`",
+      "",
+      "### Feedback Operations",
+      "",
+      "- `pa feedback list`",
+      "- `pa feedback show <issueId>`",
+      "- `pa feedback review <issueId> [--dismiss|--mitigated-locally|--defer|--escalate] [--yes]`",
+      "- `pa feedback export <issueId> [--format md|json]`",
+      "- `pa feedback refresh`",
+      "- `pa feedback rebuild`",
+      "- `pa feedback prune [--dry-run]`",
       "",
     ].join("\n");
     await fs.writeFile(agentsDocPath, `${agentsDoc}\n`, "utf8");

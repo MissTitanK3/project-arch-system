@@ -30,7 +30,7 @@ pa check --json
   },
   "diagnostics": [
     {
-      "code": "CHECK_ERROR | CHECK_WARNING | <DRIFT_CODE>",
+      "code": "<STABLE_CODE>",
       "severity": "error | warning",
       "message": "string",
       "path": "string | null",
@@ -48,7 +48,7 @@ pa check --json
 - `summary.warningCount`: number of warning diagnostics.
 - `summary.diagnosticCount`: total diagnostics count.
 - `diagnostics`: ordered list of all diagnostics emitted by `check`.
-- `diagnostics[].code`: stable machine-friendly identifier when available.
+- `diagnostics[].code`: stable machine-friendly identifier.
 - `diagnostics[].severity`: one of `error` or `warning`.
 - `diagnostics[].message`: human-readable diagnostic text.
 - `diagnostics[].path`: extracted repository-relative path when detectable; otherwise `null`.
@@ -59,6 +59,24 @@ pa check --json
 - Treat unknown `code` values as valid and forward-compatible.
 - Do not parse business logic from `message` text when `code` is available.
 - Use `summary` fields for aggregate CI gates; use `diagnostics` for remediation workflows.
+
+## Stable Diagnostic Code Coverage
+
+`pa check --json` emits stable code values for key repository validation classes, including:
+
+- `DUPLICATE_TASK_ID`
+- `MISSING_TASK_CODE_TARGET`, `MISSING_DECISION_CODE_TARGET`
+- `MISSING_TASK_PUBLIC_DOC`, `MISSING_DECISION_PUBLIC_DOC`
+- `TASK_UNDECLARED_MODULE`, `DECISION_UNDECLARED_MODULE`
+- `TASK_UNDECLARED_DOMAIN`
+- `INVALID_DECISION_TASK_LINK`, `MISSING_LINKED_TASK`, `MISSING_SUPERSEDED_DECISION`
+- `PROJECT_DECISION_INDEX_MISSING_ENTRY`, `PHASE_DECISION_INDEX_MISSING_ENTRY`, `MILESTONE_DECISION_INDEX_MISSING_ENTRY`
+- `MISSING_LANE_DIRECTORY`, `MISSING_GRAPH_ARTIFACT`, `GRAPH_PARITY_MISMATCH`
+- `INVALID_CONCEPT_MAP_SCHEMA`
+- `INVALID_RECONCILE_CONFIG_SCHEMA`
+
+For diagnostics emitted by other subsystems (for example drift checks), producer-specific stable codes are preserved.
+If a diagnostic is not mapped to a specific stable code, fallback values are `CHECK_ERROR` or `CHECK_WARNING`.
 
 ## Example
 

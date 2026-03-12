@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-12
+
+### Added
+
+#### **Init Bootstrap Task Expansion (RFC-INIT-002)**
+
+- Three new bootstrap architecture tasks generated during `pa init`:
+  - `006-define-system-boundaries.md` — canonical domain ownership and cross-domain interaction constraints
+  - `007-define-module-model.md` — human-readable module model complementing `arch-model/modules.json`
+  - `008-define-runtime-architecture.md` — deployment topology, critical paths, and runtime constraints
+- Tasks 006, 007, and 008 include `discover` and `greenfield` tags to signal dual-mode authoring intent
+- Each of tasks 006–008 contains separate **Discover mode** and **Define mode** implementation plan sections
+- `dependsOn` support in bootstrap task frontmatter generation — task 005 now declares `dependsOn: [001, 002, 003, 004, 006, 007, 008]`
+
+#### **Milestone Dependency Enforcement**
+
+- `pa milestone status <phaseId> <milestoneId>` — new CLI subcommand listing all tasks with effective status; blocked tasks show unresolved dependency IDs and a remediation hint; exits with code 1 when any blocked tasks exist
+- `milestoneStatus()` SDK function wrapping the new core helper in `OperationResult`
+- `getMilestoneStatus()` core function in `createMilestone.ts`
+- `getMilestoneDependencyStatuses()` shared resolver in new `core/tasks/dependencyStatus.ts` module — computes `unresolvedDependsOn` and `effectiveStatus` for all tasks in a milestone
+- `updateTaskStatus` now enforces `dependsOn` gating: marking a task `done` throws when any declared prerequisite task is not yet `done`
+
+### Changed
+
+- Bootstrap task 005 slug renamed from `review-architecture-foundation` to `finalize-architecture-foundation`
+- `pa init` now generates 8 bootstrap tasks (previously 5) to fully scaffold architecture fill coverage
+
+### Test Coverage
+
+- 8 new regression tests in `init.test.ts` (`bootstrap task generation (RFC-INIT-002)` describe block) covering task filenames, slugs, tags, and `dependsOn` propagation
+- 2 new unit tests in `updateTask.test.ts` covering blocked and unblocked `done`-marking flows
+- Extended `milestone.test.ts` with `pa milestone status` blocked-dependency scenario
+
+---
+
 ## [1.4.0] - 2026-03-10
 
 ### Added

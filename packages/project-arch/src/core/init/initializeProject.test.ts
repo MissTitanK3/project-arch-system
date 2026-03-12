@@ -66,6 +66,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     const mdContent = await fs.readFile(path.join(standardsDir, "markdown-standards.md"), "utf8");
     expect(mdContent).toContain("markdownlint");
     expect(mdContent).toContain("Formatting Rules");
+    expect(mdContent).toContain("pa lint frontmatter --fix");
+    expect(mdContent).toContain("pa doctor");
+    expect(mdContent).toContain("pa help validation");
 
     // Check Testing standards
     const testContent = await fs.readFile(path.join(standardsDir, "testing-standards.md"), "utf8");
@@ -124,6 +127,81 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(agentsContent).toContain("testing-standards.md");
     expect(agentsContent).toContain("naming-conventions.md");
     expect(agentsContent).toContain("turborepo-standards.md");
+
+    // Operational additions from merged template spec
+    expect(agentsContent).toContain("## 6. Operational Command Reference");
+    expect(agentsContent).toContain("pa help workflows");
+    expect(agentsContent).toContain("pa help validation");
+    expect(agentsContent).toContain("pa doctor");
+    expect(agentsContent).toContain("pa help lanes");
+    expect(agentsContent).toContain("pa feedback list");
+    expect(agentsContent).toContain("pa feedback review <issueId>");
+
+    // Governance hierarchy remains explicit
+    expect(agentsContent).toContain("Documentation Authority");
+    expect(agentsContent).toContain("architecture/reference` is informational only");
+  });
+
+  it("agents.md preserves required governance section order", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const agentsPath = path.join(tempDir, "agents.md");
+    const agentsContent = await fs.readFile(agentsPath, "utf8");
+
+    const requiredSections = [
+      "## 1. Read Order",
+      "## 2. Topic Map",
+      "## 3. Agent Execution Workflow",
+      "## 4. Operating Rules",
+      "## 5. Agent Philosophy",
+      "## 6. Operational Command Reference",
+    ];
+
+    const positions = requiredSections.map((section) => agentsContent.indexOf(section));
+    for (let i = 0; i < positions.length; i++) {
+      expect(positions[i]).toBeGreaterThanOrEqual(0);
+      if (i > 0) {
+        expect(positions[i]).toBeGreaterThan(positions[i - 1]);
+      }
+    }
+  });
+
+  it("agents.md includes operational command groups and feedback lifecycle references", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const agentsPath = path.join(tempDir, "agents.md");
+    const agentsContent = await fs.readFile(agentsPath, "utf8");
+
+    expect(agentsContent).toContain("### Workflow & Preflight");
+    expect(agentsContent).toContain("### Task Lane Commands");
+    expect(agentsContent).toContain("### Feedback Operations");
+    expect(agentsContent).toContain("`pa help validation`");
+
+    expect(agentsContent).toContain("`pa task new {phase} {milestone}`");
+    expect(agentsContent).toContain("`pa task discover {phase} {milestone} --from <taskId>`");
+    expect(agentsContent).toContain("`pa task idea {phase} {milestone}`");
+
+    expect(agentsContent).toContain("`pa feedback list`");
+    expect(agentsContent).toContain("`pa feedback show <issueId>`");
+    expect(agentsContent).toContain(
+      "`pa feedback review <issueId> [--dismiss|--mitigated-locally|--defer|--escalate] [--yes]`",
+    );
+    expect(agentsContent).toContain("`pa feedback export <issueId> [--format md|json]`");
+    expect(agentsContent).toContain("`pa feedback refresh`");
+    expect(agentsContent).toContain("`pa feedback rebuild`");
+    expect(agentsContent).toContain("`pa feedback prune [--dry-run]`");
   });
 
   it("standards files pass basic markdown lint rules", async () => {
@@ -376,5 +454,23 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(manifest.phases).toBeDefined();
     expect(manifest.phases.length).toBeGreaterThan(0);
     expect(manifest.activePhase).toBe("phase-1");
+  });
+
+  it("creates roadmap policy.json with default profile", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const policyPath = path.join(tempDir, "roadmap", "policy.json");
+    expect(await fs.pathExists(policyPath)).toBe(true);
+
+    const policy = await fs.readJson(policyPath);
+    expect(policy.schemaVersion).toBe("1.0");
+    expect(policy.defaultProfile).toBe("default");
+    expect(policy.profiles?.default?.timing?.phase?.skipDoneIfCompletedContainer).toBe(true);
   });
 });

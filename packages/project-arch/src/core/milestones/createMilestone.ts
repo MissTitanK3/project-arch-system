@@ -4,9 +4,13 @@ import fs from "fs-extra";
 import {
   ensureDir,
   pathExists,
+  readMarkdownWithFrontmatter,
   writeJsonDeterministic,
   writeMarkdownWithFrontmatter,
 } from "../../fs";
+import { taskSchema } from "../../schemas/task";
+import { detectReconciliationTriggers } from "../reconciliation/triggerDetection";
+import { reconciliationReportSchema } from "../../schemas/reconciliationReport";
 import { currentDateISO } from "../../utils/date";
 import { milestoneDir, phaseDir, projectDocsRoot } from "../../utils/paths";
 import {
@@ -21,6 +25,10 @@ import {
   rebuildArchitectureGraph,
   savePhaseManifest,
 } from "../../graph/manifests";
+import {
+  getMilestoneDependencyStatuses,
+  type MilestoneTaskDependencyStatus,
+} from "../tasks/dependencyStatus";
 
 async function assertInitialized(cwd = process.cwd()): Promise<void> {
   if (!(await pathExists(projectDocsRoot(cwd)))) {
@@ -162,13 +170,37 @@ export async function activateMilestone(
 export async function completeMilestone(
   phaseId: string,
   milestoneId: string,
+  options: { forceReason?: string } = {},
   cwd = process.cwd(),
-): Promise<void> {
+): Promise<{ warnings: string[]; overrideLogPath: string | null }> {
   await assertInitialized(cwd);
 
   const mDir = milestoneDir(phaseId, milestoneId, cwd);
   if (!(await pathExists(mDir))) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
+  }
+
+  const reconciliationGate = await evaluateMilestoneReconciliationGate(phaseId, milestoneId, cwd);
+
+  let overrideLogPath: string | null = null;
+  if (reconciliationGate.blockers.length > 0) {
+    if (!options.forceReason) {
+      throw new Error(
+        [
+          `Milestone completion blocked for '${phaseId}/${milestoneId}' due to reconciliation requirements:`,
+          ...reconciliationGate.blockers.map((item) => `- ${item}`),
+          'Use --force "<reason>" to bypass and record an override.',
+        ].join("\n"),
+      );
+    }
+
+    overrideLogPath = await appendReconciliationOverrideLog({
+      phaseId,
+      milestoneId,
+      reason: options.forceReason,
+      blockers: reconciliationGate.blockers,
+      cwd,
+    });
   }
 
   const plannedTasks = await fg(
@@ -212,6 +244,222 @@ export async function completeMilestone(
   }
 
   await rebuildArchitectureGraph(cwd);
+
+  return {
+    warnings: reconciliationGate.warnings,
+    overrideLogPath,
+  };
+}
+
+export async function getMilestoneStatus(
+  phaseId: string,
+  milestoneId: string,
+  cwd = process.cwd(),
+): Promise<MilestoneTaskDependencyStatus[]> {
+  await assertInitialized(cwd);
+
+  const mDir = milestoneDir(phaseId, milestoneId, cwd);
+  if (!(await pathExists(mDir))) {
+    throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
+  }
+
+  return getMilestoneDependencyStatuses(phaseId, milestoneId, cwd);
+}
+
+interface TaskReconciliationState {
+  taskId: string;
+  title: string;
+  status:
+    | "no reconciliation needed"
+    | "reconciliation suggested"
+    | "reconciliation required"
+    | "reconciliation complete";
+}
+
+interface MilestoneReconciliationGateResult {
+  blockers: string[];
+  warnings: string[];
+}
+
+async function evaluateMilestoneReconciliationGate(
+  phaseId: string,
+  milestoneId: string,
+  cwd: string,
+): Promise<MilestoneReconciliationGateResult> {
+  const taskFiles = await fg(`roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/*/*.md`, {
+    cwd,
+    absolute: true,
+    onlyFiles: true,
+  });
+
+  const latestReportByTask = await loadLatestReconciliationReportStatus(cwd);
+  const taskStates: TaskReconciliationState[] = [];
+
+  for (const taskFile of taskFiles.sort()) {
+    const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskFile);
+    const task = taskSchema.parse(data);
+
+    const reportStatus = latestReportByTask.get(task.id);
+    if (reportStatus) {
+      taskStates.push({
+        taskId: task.id,
+        title: task.title,
+        status: reportStatus,
+      });
+      continue;
+    }
+
+    const detection = await detectReconciliationTriggers(
+      {
+        changedFiles: task.codeTargets,
+        taskStatus: task.status,
+        codeTargets: task.codeTargets,
+        traceLinks: task.traceLinks ?? [],
+        evidence: task.evidence ?? [],
+        tags: task.tags,
+      },
+      cwd,
+    );
+
+    taskStates.push({
+      taskId: task.id,
+      title: task.title,
+      status: detection.status,
+    });
+  }
+
+  const blockers = taskStates
+    .filter((item) => item.status === "reconciliation required")
+    .map((item) => `Task ${item.taskId} (${item.title}) requires reconciliation completion.`);
+
+  const warnings = taskStates
+    .filter((item) => item.status === "reconciliation suggested")
+    .map((item) => `Task ${item.taskId} (${item.title}) has reconciliation suggested.`);
+
+  return { blockers, warnings };
+}
+
+async function loadLatestReconciliationReportStatus(
+  cwd: string,
+): Promise<
+  Map<
+    string,
+    | "no reconciliation needed"
+    | "reconciliation suggested"
+    | "reconciliation required"
+    | "reconciliation complete"
+  >
+> {
+  const reportFiles = await fg(".project-arch/reconcile/*.json", {
+    cwd,
+    absolute: true,
+    onlyFiles: true,
+  });
+
+  const statusByTask = new Map<
+    string,
+    {
+      status:
+        | "no reconciliation needed"
+        | "reconciliation suggested"
+        | "reconciliation required"
+        | "reconciliation complete";
+      date: string;
+      path: string;
+    }
+  >();
+
+  for (const reportFile of reportFiles.sort()) {
+    try {
+      const raw = await fs.readJson(reportFile);
+      const parsed = reconciliationReportSchema.safeParse(raw);
+      if (!parsed.success || parsed.data.type !== "local-reconciliation") {
+        continue;
+      }
+
+      const existing = statusByTask.get(parsed.data.taskId);
+      const relativePath = path.relative(cwd, reportFile);
+      if (!existing) {
+        statusByTask.set(parsed.data.taskId, {
+          status: parsed.data.status,
+          date: parsed.data.date,
+          path: relativePath,
+        });
+      } else {
+        const shouldReplace =
+          parsed.data.date > existing.date ||
+          (parsed.data.date === existing.date && relativePath > existing.path);
+
+        if (shouldReplace) {
+          statusByTask.set(parsed.data.taskId, {
+            status: parsed.data.status,
+            date: parsed.data.date,
+            path: relativePath,
+          });
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  const reduced = new Map<
+    string,
+    | "no reconciliation needed"
+    | "reconciliation suggested"
+    | "reconciliation required"
+    | "reconciliation complete"
+  >();
+
+  for (const [taskId, entry] of statusByTask.entries()) {
+    reduced.set(taskId, entry.status);
+  }
+
+  return reduced;
+}
+
+async function appendReconciliationOverrideLog(input: {
+  phaseId: string;
+  milestoneId: string;
+  reason: string;
+  blockers: string[];
+  cwd: string;
+}): Promise<string> {
+  const overridesPath = path.join(input.cwd, ".project-arch", "reconcile", "overrides.json");
+  await fs.ensureDir(path.dirname(overridesPath));
+
+  const payload = {
+    schemaVersion: "1.0",
+    overrides: [] as Array<{
+      date: string;
+      phaseId: string;
+      milestoneId: string;
+      reason: string;
+      blockers: string[];
+    }>,
+  };
+
+  if (await pathExists(overridesPath)) {
+    try {
+      const existing = await fs.readJson(overridesPath);
+      if (existing && typeof existing === "object" && Array.isArray(existing.overrides)) {
+        payload.overrides = existing.overrides;
+      }
+    } catch {
+      // If override log is invalid JSON, rewrite with fresh valid payload.
+    }
+  }
+
+  payload.overrides.push({
+    date: currentDateISO(),
+    phaseId: input.phaseId,
+    milestoneId: input.milestoneId,
+    reason: input.reason,
+    blockers: input.blockers,
+  });
+
+  await fs.writeJson(overridesPath, payload, { spaces: 2 });
+  return overridesPath;
 }
 
 function hasSuccessCriteriaOrChecklist(content: string): boolean {

@@ -81,6 +81,10 @@ Validation & Reporting:
     Output: Validation errors and warnings
     --json: Machine-readable diagnostics with file paths
 
+  pa doctor                             Run canonical preflight pipeline
+    Order: pa lint frontmatter --fix -> pnpm lint:md -> pa check --json
+    Output: Step-attributed results; exits on first failing step
+
   pa lint frontmatter [--fix]          Preflight lint for YAML frontmatter
     Output: File+line diagnostics for tabs, missing keys, and schema/type issues
     --fix: Safe whitespace normalization only (no scalar rewrite)
@@ -171,16 +175,23 @@ Decision Recording:
      pa decision supersede 002 001
 
 Validation & Review:
-  1. Check for consistency issues:
-     pa check
+  1. Run frontmatter preflight lint:
+    pa lint frontmatter --fix
 
-  2. Run frontmatter preflight lint:
-     pa lint frontmatter
-     
-  3. Generate architecture report:
-     pa report
-     
-  4. List all documentation:
+  2. Run markdown lint:
+    pnpm lint:md
+
+  3. Check for consistency issues:
+    pa check
+
+  Shortcut: Run canonical preflight pipeline
+    pa doctor
+    # Equivalent to lint frontmatter --fix -> lint:md -> check --json
+
+  4. Generate architecture report:
+    pa report
+
+  5. List all documentation:
      pa docs
 `,
 
@@ -407,15 +418,19 @@ Validation Workflow:
     pa lint frontmatter --fix
     # Fixes tabs automatically, flags other issues
 
-  Step 2: Full validation check
+  Step 2: Markdown lint
+    pnpm lint:md
+    # Verifies markdown formatting and structure rules
+
+  Step 3: Full validation check
     pa check
     # Verifies all consistency rules
 
-  Step 3: Policy conflict detection
+  Step 4: Policy conflict detection
     pa policy check
     # Checks for architectural conflicts
 
-  Step 4: Generate report for review
+  Step 5: Generate report for review
     pa report -v
     # Comprehensive status summary
 
@@ -444,6 +459,8 @@ Common Issues and Solutions:
 Best Practices:
 
   - Run 'pa lint frontmatter --fix' before every commit
+  - Run 'pnpm lint:md' before 'pa check'
+  - Use 'pa doctor' for canonical preflight when preparing closeout
   - Include 'pa check' in CI/CD pipeline
   - Check 'pa policy check' when adding new decisions
   - Use '--json' options for automated tooling

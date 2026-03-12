@@ -59,6 +59,12 @@ type GraphCanvasProps = {
 
 export { type GraphFilter, type InspectorNode } from "./graph/graph-types";
 
+const VIEW_CANONICAL_TYPES: Record<GraphCanvasViewMode, string[]> = {
+  "architecture-map": ["arch_folder", "domain_doc", "architecture_doc", "architecture_model"],
+  tasks: ["roadmap_folder", "roadmap_epic", "roadmap_story", "roadmap_task"],
+  project: ["project_folder", "app", "package", "module", "component"],
+};
+
 export function GraphCanvas({
   data,
   viewMode,
@@ -124,11 +130,6 @@ export function GraphCanvas({
   }, [nodes]);
 
   const behavior = GRAPH_VIEW_BEHAVIOR[viewMode];
-  const viewCanonicalTypes: Record<GraphCanvasViewMode, string[]> = {
-    "architecture-map": ["arch_folder", "domain_doc", "architecture_doc", "architecture_model"],
-    tasks: ["roadmap_folder", "roadmap_epic", "roadmap_story", "roadmap_task"],
-    project: ["project_folder", "app", "package", "module", "component"],
-  };
   const effectiveHopDepth = useMemo(() => {
     const min = Math.min(...behavior.allowedHopDepths);
     const max = Math.max(...behavior.allowedHopDepths);
@@ -507,7 +508,7 @@ export function GraphCanvas({
     if (!stored) return;
     if (selectedNodeId) return;
     const selected = nodes.find((node) => node.id === stored);
-    if (selected && viewCanonicalTypes[viewMode].includes(selected.data.canonicalType ?? "")) {
+    if (selected && VIEW_CANONICAL_TYPES[viewMode].includes(selected.data.canonicalType ?? "")) {
       setSelectedNodeId(stored);
       return;
     }
@@ -516,7 +517,7 @@ export function GraphCanvas({
     const candidateId = mapped.source === stored ? mapped.target : mapped.source;
     const candidateNode = nodes.find((node) => node.id === candidateId);
     if (!candidateNode) return;
-    if (!viewCanonicalTypes[viewMode].includes(candidateNode.data.canonicalType ?? "")) return;
+    if (!VIEW_CANONICAL_TYPES[viewMode].includes(candidateNode.data.canonicalType ?? "")) return;
     setSelectedNodeId(candidateId);
   }, [edges, nodes, selectedNodeId, viewMode]);
 
