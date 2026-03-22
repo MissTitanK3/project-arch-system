@@ -5,10 +5,12 @@
   "scripts": {
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "release:prepare": "pnpm --filter project-arch release:prepare",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "sandbox:init": "node packages/create-project-arch/dist/cli.js test-project --force && cd test-project && pnpm install",
+    "sandbox:init": "pnpm --filter project-arch build && tmp=\"$(mktemp -d /tmp/project-arch-sandbox-XXXXXX)\" && echo \"Sandbox: $tmp\" && mkdir -p .sandbox && ln -sfn \"$tmp\" .sandbox/current && (command -v code >/dev/null 2>&1 && code \"$tmp\" || true) && cd \"$tmp\" && node /home/misstitank3/project-arch-system/packages/project-arch/dist/cli.js init && node /home/misstitank3/project-arch-system/packages/project-arch/dist/cli.js check && echo \"Sandbox ready at $tmp\"",
+    "sandbox:smoke": "pnpm --filter project-arch build && tmp=\"$(mktemp -d /tmp/project-arch-sandbox-XXXXXX)\" && echo \"Sandbox smoke: $tmp\" && mkdir -p .sandbox && ln -sfn \"$tmp\" .sandbox/current && cd \"$tmp\" && node /home/misstitank3/project-arch-system/packages/project-arch/dist/cli.js init && node /home/misstitank3/project-arch-system/packages/project-arch/dist/cli.js check && echo \"Sandbox smoke passed at $tmp\"",
     "sandbox:dev": "cd test-project && pnpm dev",
-    "sandbox:sync": "node scripts/sync-templates.mjs"
+    "sandbox:clean": "find /tmp -maxdepth 1 -type d -name 'project-arch-sandbox-*' -exec rm -rf {} +"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

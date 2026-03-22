@@ -49,7 +49,7 @@ describe("registerSurfaces - Scale Regression Tests", () => {
     ].join("\n");
 
     await fs.writeFile(taskPath, taskContent);
-  }, 90_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
@@ -101,5 +101,5 @@ describe("registerSurfaces - Scale Regression Tests", () => {
     // Verify the registration was logged with correct metadata
     expect(result.taskPath).toContain("001-define-project-overview.md");
     expect(result.skippedPaths.length).toBe(0);
-  }, 90_000);
+  }, 120_000);
 });

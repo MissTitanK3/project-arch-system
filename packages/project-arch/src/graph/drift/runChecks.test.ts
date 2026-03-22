@@ -8,7 +8,11 @@ import { runDriftChecks } from "./runChecks";
 import { TaskRecord } from "../../core/validation/tasks";
 import { DecisionRecord } from "../../core/validation/decisions";
 
-function taskRecord(codeTargets: string[], tags: string[] = []): TaskRecord {
+function taskRecord(
+  codeTargets: string[],
+  tags: string[] = [],
+  decisions: string[] = [],
+): TaskRecord {
   return {
     phaseId: "phase-1",
     milestoneId: "milestone-1",
@@ -27,7 +31,7 @@ function taskRecord(codeTargets: string[], tags: string[] = []): TaskRecord {
       tags,
       codeTargets,
       publicDocs: [],
-      decisions: [],
+      decisions,
       completionCriteria: [],
     },
   };
@@ -66,14 +70,17 @@ describe("graph/drift/runChecks", () => {
   it("should aggregate findings from all drift checks", async () => {
     await writeFile(path.join(tempDir, "packages", "lib", "src", "index.ts"), "export {};\n");
 
-    const findings = await runDriftChecks({
+    const result = await runDriftChecks({
       cwd: tempDir,
       taskRecords: [taskRecord([])],
       decisionRecords: [decisionRecord([])],
+      completenessThreshold: 100,
     });
+    const findings = result.findings;
 
     expect(findings.some((f) => f.code === "ARCH_MAP_MISSING")).toBe(true);
     expect(findings.some((f) => f.code === "ARCH_DOMAINS_MISSING")).toBe(true);
+    expect(result.graphCompleteness.summary.totalDecisionNodes).toBeGreaterThanOrEqual(0);
   });
 
   it("should include layer violations from import checks", async () => {
@@ -86,11 +93,13 @@ describe("graph/drift/runChecks", () => {
       domains: [],
     });
 
-    const findings = await runDriftChecks({
+    const result = await runDriftChecks({
       cwd: tempDir,
       taskRecords: [taskRecord(["packages/lib"])],
       decisionRecords: [decisionRecord(["packages/lib"])],
+      completenessThreshold: 100,
     });
+    const findings = result.findings;
 
     expect(findings.some((f) => f.code === "LAYER_VIOLATION")).toBe(true);
   });
@@ -103,13 +112,27 @@ describe("graph/drift/runChecks", () => {
     await writeJsonDeterministic(path.join(tempDir, "arch-domains", "domains.json"), {
       domains: [{ name: "payments", ownedPackages: ["packages/payments"] }],
     });
-
-    const findings = await runDriftChecks({
-      cwd: tempDir,
-      taskRecords: [taskRecord(["packages/payments"], ["domain:payments"])],
-      decisionRecords: [decisionRecord(["packages/payments"])],
+    await writeJsonDeterministic(path.join(tempDir, ".arch", "nodes", "decisions.json"), {
+      decisions: [{ id: "project:20260307:test" }],
+    });
+    await writeJsonDeterministic(path.join(tempDir, ".arch", "nodes", "domains.json"), {
+      domains: [{ name: "payments" }],
+    });
+    await writeJsonDeterministic(path.join(tempDir, ".arch", "edges", "decision_to_domain.json"), {
+      edges: [{ decision: "project:20260307:test", domain: "payments" }],
     });
 
+    const decisionId = "project:20260307:test";
+
+    const result = await runDriftChecks({
+      cwd: tempDir,
+      taskRecords: [taskRecord(["packages/payments"], ["domain:payments"], [decisionId])],
+      decisionRecords: [decisionRecord(["packages/payments"])],
+      completenessThreshold: 100,
+    });
+    const findings = result.findings;
+
     expect(findings).toEqual([]);
+    expect(result.graphCompleteness.summary.sufficient).toBe(true);
   });
 });

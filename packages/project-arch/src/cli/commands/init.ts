@@ -8,6 +8,7 @@ export function registerInitCommand(program: Command): void {
   program
     .command("init")
     .description("Create base repository structure")
+    .option("--force", "overwrite managed files on re-init", false)
     .option("--template <name>", "template", "nextjs-turbo")
     .option("--apps <items>", "comma-separated apps", "web,docs")
     .option("--pm <name>", "package manager", "pnpm")
@@ -18,6 +19,11 @@ export function registerInitCommand(program: Command): void {
         usage: "pa init [options]",
         description: "Initialize a new project with architecture management structure.",
         options: [
+          {
+            flag: "--force",
+            description:
+              "Overwrite managed files on re-init (default: skip existing conflicting files)",
+          },
           { flag: "--template <name>", description: "Project template (default: nextjs-turbo)" },
           { flag: "--apps <items>", description: "Comma-separated app names (default: web,docs)" },
           { flag: "--pm <name>", description: "Package manager (default: pnpm)" },
@@ -26,6 +32,10 @@ export function registerInitCommand(program: Command): void {
         ],
         examples: [
           { description: "Initialize with defaults", command: "pa init" },
+          {
+            description: "Re-initialize and overwrite managed files",
+            command: "pa init --force",
+          },
           {
             description: "Initialize with custom apps",
             command: "pa init --apps web,admin,mobile",

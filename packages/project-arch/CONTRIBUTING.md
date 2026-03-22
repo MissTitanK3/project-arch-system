@@ -52,7 +52,6 @@ pnpm test --coverage
 This is a monorepo with the following packages:
 
 - `packages/project-arch` - Core CLI and SDK
-- `packages/create-project-arch` - Scaffolding tool
 
 ## Development Workflow
 

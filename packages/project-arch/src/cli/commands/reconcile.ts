@@ -1,10 +1,38 @@
 import path from "path";
 import { Command } from "commander";
 import { runReconcile } from "../../core/reconciliation/runReconcile";
+import {
+  compactReconciliationArtifacts,
+  listLatestReconciliationArtifacts,
+  pruneReconciliationArtifacts,
+} from "../../core/reconciliation/lifecycle";
 import { formatEnhancedHelp } from "../help/format";
 
 export function registerReconcileCommand(program: Command): void {
-  const command = program.command("reconcile").description("Run reconciliation workflows");
+  const command = program
+    .command("reconcile")
+    .description("Run reconciliation workflows")
+    .option("--latest", "Emit only the latest reconciliation record per task");
+
+  command.action(async (options: { latest?: boolean }) => {
+    if (!options.latest) {
+      command.outputHelp();
+      return;
+    }
+
+    const latest = await listLatestReconciliationArtifacts();
+    if (latest.length === 0) {
+      console.log("No local reconciliation artifacts found in .project-arch/reconcile/");
+      return;
+    }
+
+    console.log(`latest records: ${latest.length}`);
+    for (const entry of latest) {
+      console.log(
+        `- task ${entry.report.taskId}: ${entry.report.status} (${entry.report.date}) -> ${entry.relativeJsonPath}`,
+      );
+    }
+  });
 
   command
     .command("task")
@@ -75,6 +103,45 @@ export function registerReconcileCommand(program: Command): void {
 
       if (report.status === "reconciliation required") {
         process.exitCode = 1;
+      }
+    });
+
+  command
+    .command("prune")
+    .description("Prune stale dated reconciliation artifacts (dry-run by default)")
+    .option("--apply", "Apply deletions (default is dry-run)")
+    .action(async (options: { apply?: boolean }) => {
+      const result = await pruneReconciliationArtifacts({ apply: options.apply === true });
+
+      console.log(`mode:               ${result.dryRun ? "dry-run" : "apply"}`);
+      console.log(`tasks kept:         ${result.kept}`);
+      console.log(`stale records:      ${result.staleRecords}`);
+
+      if (result.removedFiles.length > 0) {
+        console.log(result.dryRun ? "planned removals:" : "removed files:");
+        for (const filePath of result.removedFiles) {
+          console.log(`- ${filePath}`);
+        }
+      }
+    });
+
+  command
+    .command("compact")
+    .description("Archive stale dated reconciliation artifacts (dry-run by default)")
+    .option("--apply", "Apply archive moves (default is dry-run)")
+    .action(async (options: { apply?: boolean }) => {
+      const result = await compactReconciliationArtifacts({ apply: options.apply === true });
+
+      console.log(`mode:               ${result.dryRun ? "dry-run" : "apply"}`);
+      console.log(`archive date:       ${result.archiveDate}`);
+      console.log(`archive directory:  ${result.archiveDir}`);
+      console.log(`archived records:   ${result.movedRecords}`);
+
+      if (result.movedFiles.length > 0) {
+        console.log(result.dryRun ? "planned moves:" : "moved files:");
+        for (const move of result.movedFiles) {
+          console.log(`- ${move.from} -> ${move.to}`);
+        }
       }
     });
 }

@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { phases } from "../../sdk";
 import { unwrap } from "../../sdk/_utils";
+import { assertSafeId } from "../../utils/safeId";
 import { formatEnhancedHelp } from "../help/format";
 
 export function registerPhaseCommand(program: Command): void {
@@ -32,6 +33,16 @@ export function registerPhaseCommand(program: Command): void {
       }),
     )
     .action(async (id: string) => {
+      try {
+        assertSafeId(id, "phaseId");
+      } catch (error) {
+        console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(
+          "Hint: phase ids must be lowercase alphanumeric with single hyphens, e.g. phase-1",
+        );
+        process.exitCode = 1;
+        return;
+      }
       unwrap(await phases.phaseCreate({ id }));
       console.log(`Created phase ${id}`);
     });

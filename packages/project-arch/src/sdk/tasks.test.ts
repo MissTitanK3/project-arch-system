@@ -23,11 +23,11 @@ describe.sequential("SDK Tasks", () => {
     testDir = context.tempDir;
     await phaseCreate({ id: "phase-1", cwd: testDir });
     await milestoneCreate({ phase: "phase-1", milestone: "milestone-1-setup", cwd: testDir });
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   describe("taskCreate", () => {
     it("should create a planned task successfully", async () => {

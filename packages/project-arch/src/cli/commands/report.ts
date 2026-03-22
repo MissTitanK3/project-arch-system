@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { report } from "../../sdk";
 import { unwrap } from "../../sdk/_utils";
 import { formatEnhancedHelp } from "../help/format";
+import { sanitizeTerminalText } from "../../utils/outputSafety";
 
 export function registerReportCommand(program: Command): void {
   program
@@ -36,6 +37,7 @@ export function registerReportCommand(program: Command): void {
       }),
     )
     .action(async (options: { verbose?: boolean }) => {
-      console.log(unwrap(await report.reportGenerate({ verbose: options.verbose })).text);
+      const output = unwrap(await report.reportGenerate({ verbose: options.verbose })).text;
+      console.log(sanitizeTerminalText(output, { allowNewlines: true, allowTabs: true }));
     });
 }

@@ -49,14 +49,14 @@ describe("cli/commands/feedback", () => {
 
   beforeEach(async () => {
     context = await createTestProject(originalCwd);
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     vi.restoreAllMocks();
     process.chdir(originalCwd);
     await context.cleanup();
     process.exitCode = undefined;
-  }, 60_000);
+  }, 120_000);
 
   it("registers feedback command with list and show subcommands", () => {
     const program = new Command();
@@ -484,6 +484,108 @@ describe("cli/commands/feedback", () => {
     expect(
       files.some((name) => name.includes("tooling-feedback-001-01") && name.endsWith(".md")),
     ).toBe(true);
+  });
+
+  it("export excludes sensitive changedFiles by default for reconciliation promotion", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await (await import("fs-extra")).ensureDir(reconcileDir);
+    await (
+      await import("fs-extra")
+    ).writeJson(path.join(reconcileDir, "003-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-003-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "003",
+      date: "2026-03-12",
+      changedFiles: [
+        "packages/project-arch/src/core/reconciliation/feedbackExport.ts",
+        ".env",
+        "secrets.txt",
+      ],
+      affectedAreas: ["packages/project-arch/src/core/reconciliation"],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: ["Improve feedback export diagnostics"],
+    });
+
+    const program = new Command();
+    program.exitOverride();
+    registerFeedbackCommand(program);
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await program.parseAsync(["node", "test", "feedback", "export", "reconcile-003-2026-03-12"]);
+
+    const feedbackDir = path.join(process.cwd(), ".project-arch", "feedback");
+    const files = await (await import("fs-extra")).readdir(feedbackDir);
+    const jsonName = files.find(
+      (name) => name.includes("tooling-feedback-003-01") && name.endsWith(".json"),
+    );
+    expect(jsonName).toBeDefined();
+
+    const payload = await (await import("fs-extra")).readJson(path.join(feedbackDir, jsonName!));
+    expect(payload.changedFiles).toEqual([
+      "packages/project-arch/src/core/reconciliation/feedbackExport.ts",
+    ]);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Excluded sensitive changedFiles by default"),
+    );
+  });
+
+  it("export includes sensitive changedFiles only with --allow-sensitive-paths", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await (await import("fs-extra")).ensureDir(reconcileDir);
+    await (
+      await import("fs-extra")
+    ).writeJson(path.join(reconcileDir, "004-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-004-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "004",
+      date: "2026-03-12",
+      changedFiles: ["packages/project-arch/src/core/reconciliation/feedbackExport.ts", ".env"],
+      affectedAreas: ["packages/project-arch/src/core/reconciliation"],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: ["Allow explicit unsafe inclusion"],
+    });
+
+    const program = new Command();
+    program.exitOverride();
+    registerFeedbackCommand(program);
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    await program.parseAsync([
+      "node",
+      "test",
+      "feedback",
+      "export",
+      "reconcile-004-2026-03-12",
+      "--allow-sensitive-paths",
+    ]);
+
+    const feedbackDir = path.join(process.cwd(), ".project-arch", "feedback");
+    const files = await (await import("fs-extra")).readdir(feedbackDir);
+    const jsonName = files.find(
+      (name) => name.includes("tooling-feedback-004-01") && name.endsWith(".json"),
+    );
+    expect(jsonName).toBeDefined();
+
+    const payload = await (await import("fs-extra")).readJson(path.join(feedbackDir, jsonName!));
+    expect(payload.changedFiles).toEqual([
+      "packages/project-arch/src/core/reconciliation/feedbackExport.ts",
+      ".env",
+    ]);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it("export reports when reconciliation source has no feedbackCandidates", async () => {

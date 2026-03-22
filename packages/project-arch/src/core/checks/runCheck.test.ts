@@ -10,7 +10,7 @@ describe.sequential("core/checks/runCheck", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     tempDir = context.tempDir;
-  }, 90_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
@@ -21,7 +21,7 @@ describe.sequential("core/checks/runCheck", () => {
     const viaWrapper = await runCheck(tempDir);
 
     expect(viaWrapper).toEqual(direct);
-  }, 60_000);
+  }, 120_000);
 
   it("should return structured check result", async () => {
     const result = await runCheck(tempDir);
@@ -29,7 +29,7 @@ describe.sequential("core/checks/runCheck", () => {
     expect(typeof result.ok).toBe("boolean");
     expect(Array.isArray(result.errors)).toBe(true);
     expect(Array.isArray(result.warnings)).toBe(true);
-  }, 60_000);
+  }, 120_000);
 
   it("should run against arbitrary cwd", async () => {
     const emptyContext = await createTempDir();

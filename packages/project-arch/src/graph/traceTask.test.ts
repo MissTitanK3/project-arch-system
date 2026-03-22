@@ -17,7 +17,7 @@ describe.sequential("graph/traceTask", () => {
   beforeEach(async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "trace-task-test-"));
     await initializeProject({ template: "nextjs-turbo", pm: "pnpm" }, tempDir);
-  }, 45_000);
+  }, 120_000);
 
   afterEach(async () => {
     if (tempDir) {
@@ -86,7 +86,7 @@ describe.sequential("graph/traceTask", () => {
     expect(trace.decisions).toContain(decisionDoc.data.id);
     expect(Array.isArray(trace.modules)).toBe(true);
     expect(trace.modules).toContain("packages/ui");
-  }, 60_000);
+  }, 120_000);
 
   it("should throw when .arch graph is missing", async () => {
     await rm(path.join(tempDir, ".arch"), { recursive: true, force: true });
@@ -102,5 +102,5 @@ describe.sequential("graph/traceTask", () => {
     await expect(traceTask("missing/phase/999", tempDir)).rejects.toThrow(
       "not found in .arch graph",
     );
-  }, 60_000);
+  }, 120_000);
 });

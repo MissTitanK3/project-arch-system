@@ -1,20 +1,19 @@
 # project-arch-system
 
-Welcome to the `project-arch-system` monorepo. This repository contains the source code for the `project-arch` deterministic architecture CLI and its associated scaffolding tool.
+Welcome to the `project-arch-system` monorepo. This repository contains the source code for the `project-arch` deterministic architecture CLI.
 
 This monorepo is managed using Turborepo and pnpm workspaces.
 
 ## Packages
 
 - **[`project-arch`](./packages/project-arch/README.md):** The core deterministic repository-native architecture CLI.
-- **[`create-project-arch`](./packages/create-project-arch/README.md):** The scaffolding tool used to bootstrap a new Turborepo monorepo with `project-arch` pre-configured.
 
-## Quick Start (Scaffolding a new project)
+## Quick Start
 
-If you want to generate a new architecture-enabled project, use the scaffolder:
+Initialize architecture artifacts in an existing repository:
 
 ```bash
-npx create-project-arch@latest my-new-architecture
+npx project-arch@latest init
 ```
 
 ## Local Development
@@ -22,7 +21,7 @@ npx create-project-arch@latest my-new-architecture
 ### Prerequisites
 
 - Node.js 20+
-- pnpm 9+
+- pnpm 10+
 
 ### Install Dependencies
 
@@ -50,17 +49,28 @@ Runs ESLint and Prettier across the workspace.
 ### Test
 
 ```bash
-pnpm test
+pnpm --filter project-arch test
 ```
 
-Runs the Vitest test suites across the workspace.
+Runs the Vitest test suite for the `project-arch` package.
 
 **Current Test Metrics:**
 
-- **Test Files**: 94 (all passing)
-- **Tests**: 945 (all passing)
-- **Duration**: ~35 seconds
+- **Test Files**: 114 (all passing)
+- **Tests**: 1090 (all passing)
+- **Duration**: ~48 seconds
+- **Coverage (latest run)**: Statements 89.31%, Branches 76.20%, Functions 93.63%, Lines 89.38%
 - **Coverage Target**: >80% for critical modules (SDK, core, CLI)
+
+### Smoke Test (Fresh Sandbox)
+
+```bash
+pnpm sandbox:smoke
+```
+
+Builds `project-arch`, creates a fresh temp sandbox, runs `pa init`, then runs `pa check`.
+
+**Latest smoke result:** passing (March 22, 2026).
 
 See [TESTING.md](./TESTING.md) for detailed testing documentation.
 
@@ -68,107 +78,42 @@ See [TESTING.md](./TESTING.md) for detailed testing documentation.
 
 ```bash
 pnpm --filter project-arch typecheck
-pnpm --filter create-project-arch typecheck
+```
+
+### Task Setup
+
+Install Task runner:
+
+```bash
+npm install -g @go-task/cli
+```
+
+First run:
+
+```bash
+task release:check
 ```
 
 ## Publish To npm
 
-Publish in this order so `create-project-arch` references a released `project-arch` version:
+Package to publish:
 
 1. `project-arch`
-2. `create-project-arch`
 
-### One-time setup
+Release hardening baseline:
 
-```bash
-npm login
-```
+- Release from protected `main` only.
+- Create `v*` tags from the current `main` commit only.
+- Use lockfile-enforced install and clean build/test validation before publish.
+- Verify publish payload with `npm pack --dry-run` before publish.
 
-### Update npm access tokens
-
-For local publishing, refresh auth in your user npm config:
+Key commands:
 
 ```bash
-npm logout
-npm login
+task release:check
+task release:prepare
+pnpm release:prepare
+pnpm --filter project-arch publish --access public
 ```
 
-For CI publishing, rotate `NPM_TOKEN` and update the secret in your CI provider:
-
-```bash
-npm token list
-npm token revoke <token-id>
-npm token create --read-only=false
-```
-
-Then set the new token in CI as `NPM_TOKEN` and ensure `.npmrc` uses:
-
-```ini
-//registry.npmjs.org/:_authToken=${NPM_TOKEN}
-```
-
-Check this and restart terminal
-
-```bash
-code ~/.npmrc
-```
-
-Set `NPM_TOKEN` locally (current shell):
-
-```bash
-export NPM_TOKEN="<new-token>"
-```
-
-Persist `NPM_TOKEN` for future shells (zsh):
-
-```bash
-echo 'export NPM_TOKEN="<new-token>"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Pre-publish checks
-
-```bash
-pnpm install
-pnpm build
-pnpm lint
-pnpm --filter project-arch test
-pnpm --filter create-project-arch test
-```
-
-### Bump versions
-
-```bash
-pnpm --filter project-arch exec npm version <new-version> --no-git-tag-version
-pnpm --filter create-project-arch exec npm version <new-version> --no-git-tag-version
-```
-
-### Check versions
-
-Check local workspace package versions:
-
-```bash
-pnpm --filter project-arch exec node -p "require('./package.json').version"
-pnpm --filter create-project-arch exec node -p "require('./package.json').version"
-```
-
-Check currently published npm versions:
-
-```bash
-npm view project-arch version
-npm view create-project-arch version
-```
-
-### Dry run (recommended)
-
-```bash
-pnpm --filter project-arch publish --access public --dry-run --no-git-checks
-pnpm --filter create-project-arch publish --access public --dry-run --no-git-checks
-```
-
-### Publish
-
-```bash
-pnpm --filter project-arch publish --access public --no-git-checks
-pnpm --filter create-project-arch publish --access public --no-git-checks
-```
+For full publish governance (token scope, maintainer review/rotation, and branch/tag policy), see [PUBLISHING-GUIDE.md](./PUBLISHING-GUIDE.md).

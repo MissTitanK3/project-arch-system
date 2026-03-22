@@ -1,6 +1,8 @@
 import path from "path";
 import { ensureDir, pathExists, writeMarkdownWithFrontmatter } from "../../fs";
 import { currentDateISO } from "../../utils/date";
+import { assertSafeId } from "../../utils/safeId";
+import { assertWithinRoot } from "../../utils/assertWithinRoot";
 import { phaseDir, projectDocsRoot } from "../../utils/paths";
 import {
   ensureDecisionIndex,
@@ -18,6 +20,7 @@ async function assertInitialized(cwd = process.cwd()): Promise<void> {
 }
 
 export async function createPhase(id: string, cwd = process.cwd()): Promise<void> {
+  assertSafeId(id, "phaseId");
   await assertInitialized(cwd);
 
   const manifest = await loadPhaseManifest(cwd);
@@ -34,6 +37,7 @@ export async function createPhase(id: string, cwd = process.cwd()): Promise<void
   await savePhaseManifest(manifest, cwd);
 
   const pDir = phaseDir(id, cwd);
+  assertWithinRoot(pDir, cwd, "phase directory");
   await ensureDir(path.join(pDir, "milestones"));
   await ensureDir(path.join(pDir, "decisions"));
   await ensureDecisionIndex(path.join(pDir, "decisions"));

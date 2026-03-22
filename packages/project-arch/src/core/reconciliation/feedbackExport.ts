@@ -7,12 +7,18 @@ import {
 } from "../../schemas/reconciliationReport";
 import { currentDateISO } from "../../utils/date";
 import { renderReconciliationReportMarkdown } from "./reportMarkdown";
+import {
+  assertRealpathWithinRoot,
+  filterGlobPathsBySymlinkPolicy,
+} from "../../utils/symlinkPolicy";
+import { filterSensitivePaths } from "../../utils/sensitivePaths";
 
 export interface ToolingFeedbackExportResult {
   sourceReportPath: string;
   generatedCount: number;
   jsonPaths: string[];
   markdownPaths: string[];
+  excludedSensitivePaths: string[];
 }
 
 function inferProjectArchAreas(candidate: string): string[] {
@@ -57,9 +63,13 @@ async function findReconciliationReportFile(input: string, cwd: string): Promise
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
+  });
+  const safeReportFiles = await filterGlobPathsBySymlinkPolicy(reportFiles, cwd, {
+    pathsAreAbsolute: true,
   });
 
-  for (const reportFile of reportFiles.sort()) {
+  for (const reportFile of safeReportFiles.sort()) {
     try {
       const payload = await fs.readJson(reportFile);
       const parsed = reconciliationReportSchema.safeParse(payload);
@@ -84,6 +94,7 @@ function buildToolingFeedbackReport(
   candidate: string,
   index: number,
   date: string,
+  changedFiles: string[],
 ): ReconciliationReport {
   return reconciliationReportSchema.parse({
     schemaVersion: "1.0",
@@ -94,7 +105,7 @@ function buildToolingFeedbackReport(
     date,
     author: "pa feedback export",
     summary: `Tooling feedback exported from reconciliation report ${source.id}.`,
-    changedFiles: source.changedFiles,
+    changedFiles,
     affectedAreas: inferProjectArchAreas(candidate),
     missingUpdates: [],
     missingTraceLinks: [],
@@ -110,6 +121,7 @@ function buildToolingFeedbackReport(
 export async function exportToolingFeedbackFromReconciliation(input: {
   reconciliationId: string;
   cwd?: string;
+  includeSensitivePaths?: boolean;
 }): Promise<ToolingFeedbackExportResult> {
   const cwd = input.cwd ?? process.cwd();
   const sourcePath = await findReconciliationReportFile(input.reconciliationId, cwd);
@@ -127,8 +139,15 @@ export async function exportToolingFeedbackFromReconciliation(input: {
       generatedCount: 0,
       jsonPaths: [],
       markdownPaths: [],
+      excludedSensitivePaths: [],
     };
   }
+
+  const includeSensitivePaths = input.includeSensitivePaths === true;
+  const sensitivePathFilter = filterSensitivePaths(sourceReport.changedFiles);
+  const changedFilesForExport = includeSensitivePaths
+    ? sourceReport.changedFiles
+    : sensitivePathFilter.kept;
 
   const date = currentDateISO();
   const outputDir = path.join(cwd, ".project-arch", "feedback");
@@ -138,11 +157,20 @@ export async function exportToolingFeedbackFromReconciliation(input: {
   const markdownPaths: string[] = [];
 
   for (const [index, candidate] of sourceReport.feedbackCandidates.entries()) {
-    const report = buildToolingFeedbackReport(sourceReport, candidate, index, date);
+    const report = buildToolingFeedbackReport(
+      sourceReport,
+      candidate,
+      index,
+      date,
+      changedFilesForExport,
+    );
     const fileBase = `${report.id}-${date}`;
 
     const jsonPath = path.join(outputDir, `${fileBase}.json`);
     const markdownPath = path.join(outputDir, `${fileBase}.md`);
+
+    await assertRealpathWithinRoot(jsonPath, cwd, "tooling feedback report json");
+    await assertRealpathWithinRoot(markdownPath, cwd, "tooling feedback report markdown");
 
     await fs.writeJson(jsonPath, report, { spaces: 2 });
     await fs.writeFile(
@@ -160,5 +188,6 @@ export async function exportToolingFeedbackFromReconciliation(input: {
     generatedCount: jsonPaths.length,
     jsonPaths,
     markdownPaths,
+    excludedSensitivePaths: includeSensitivePaths ? [] : sensitivePathFilter.excluded,
   };
 }

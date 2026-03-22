@@ -13,6 +13,7 @@ import { defaultDecisionBody, defaultDecisionFrontmatter } from "../../core/temp
 import { decisionStatusSchema, decisionSchema } from "../../schemas/decision";
 import { pathExists, readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
 import { projectDocsRoot } from "../../utils/paths";
+import { assertSafeId } from "../../utils/safeId";
 
 export interface NewDecisionOptions {
   scope?: "project" | "phase" | "milestone";
@@ -47,11 +48,14 @@ function parseScopeFromOptions(options: NewDecisionOptions): DecisionScope {
     if (!options.phase) {
       throw new Error("--phase is required when --scope phase");
     }
+    assertSafeId(options.phase, "phaseId");
     return { kind: "phase", phaseId: options.phase };
   }
   if (!options.phase || !options.milestone) {
     throw new Error("--phase and --milestone are required when --scope milestone");
   }
+  assertSafeId(options.phase, "phaseId");
+  assertSafeId(options.milestone, "milestoneId");
   return { kind: "milestone", phaseId: options.phase, milestoneId: options.milestone };
 }
 

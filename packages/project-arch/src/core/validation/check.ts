@@ -1,5 +1,6 @@
 import path from "path";
 import fg from "fast-glob";
+import fs from "fs-extra";
 import { collectDecisionRecords } from "./decisions";
 import { collectTaskRecords } from "./tasks";
 import { loadDecisionIndex, loadMilestoneManifest, loadPhaseManifest } from "../manifests";
@@ -8,13 +9,18 @@ import { pathExists, readJson } from "../../utils/fs";
 import { runDriftChecks } from "../../graph/drift/runChecks";
 import { conceptMapSchema } from "../../schemas/conceptMap";
 import { reconciliationReportSchema } from "../../schemas/reconciliationReport";
+import { validationContractSchema } from "../../schemas/validationContract";
 import { findReconcileConfigPath, loadReconcileConfig } from "../reconciliation/triggerDetection";
+import { classifyModuleTarget, loadModuleGraphConfig } from "../../graph/moduleClassification";
+import { findDuplicateReconciliationOverrides } from "../reconciliation/lifecycle";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
 export interface CheckResult {
   ok: boolean;
   errors: string[];
   warnings: string[];
   diagnostics: CheckDiagnostic[];
+  graphDiagnostics?: CheckGraphDiagnostics;
 }
 
 export type CheckDiagnosticSeverity = "error" | "warning";
@@ -36,6 +42,7 @@ export interface CheckDiagnosticsPayload {
     diagnosticCount: number;
   };
   diagnostics: CheckDiagnostic[];
+  graphDiagnostics: CheckGraphDiagnostics;
 }
 
 export interface CheckDiagnosticFilters {
@@ -46,9 +53,30 @@ export interface CheckDiagnosticFilters {
 
 export interface RunRepositoryChecksOptions {
   failFast?: boolean;
+  completenessThreshold?: number;
+  coverageMode?: "warning" | "error";
+}
+
+export interface CheckGraphDiagnostics {
+  built: boolean;
+  completeness: {
+    score: number;
+    threshold: number;
+    sufficient: boolean;
+    connectedDecisionNodes: number;
+    totalDecisionNodes: number;
+  };
+  disconnectedNodes: {
+    decisionsWithoutDomain: string[];
+    decisionsWithoutTaskBackReferences: string[];
+    domainsWithoutDecisions: string[];
+    taskReferencesToMissingDecisions: Array<{ task: string; decision: string }>;
+  };
 }
 
 export const CHECK_DIAGNOSTICS_SCHEMA_VERSION = "1.0";
+const DEFAULT_COMPLETENESS_THRESHOLD = 0;
+const DEFAULT_COVERAGE_MODE: "warning" | "error" = "warning";
 
 const STABLE_DIAGNOSTIC_CODE_MAPPINGS: Array<{ pattern: RegExp; code: string }> = [
   { pattern: /^Duplicate task id in milestone scope:/, code: "DUPLICATE_TASK_ID" },
@@ -68,6 +96,15 @@ const STABLE_DIAGNOSTIC_CODE_MAPPINGS: Array<{ pattern: RegExp; code: string }> 
   {
     pattern: /^Task .* references undeclared module '.*' via '.*'\./,
     code: "TASK_UNDECLARED_MODULE",
+  },
+  {
+    pattern: /^Task .* codeTarget '.*' resolves to non-module artifact layer '.*'\./,
+    code: "TASK_NON_MODULE_CODE_TARGET",
+  },
+  {
+    pattern:
+      /^Duplicate reconciliation override entries for task '.*' in \.project-arch\/reconcile\//,
+    code: "DUPLICATE_RECONCILIATION_OVERRIDE",
   },
   {
     pattern: /^Decision .* references undeclared module '.*' via '.*'\./,
@@ -104,6 +141,12 @@ const STABLE_DIAGNOSTIC_CODE_MAPPINGS: Array<{ pattern: RegExp; code: string }> 
       /^Invalid reconcile config schema at \.project-arch\/(?:reconcile\.config\.json|reconcile-config\.json):/,
     code: "INVALID_RECONCILE_CONFIG_SCHEMA",
   },
+  { pattern: /^Malformed task file '/, code: "MALFORMED_TASK_FILE" },
+  { pattern: /^Validation contract not found for phase '/, code: "PAV_CONTRACT_MISSING" },
+  {
+    pattern: /^Invalid validation contract schema for phase '/,
+    code: "PAV_CONTRACT_INVALID_SCHEMA",
+  },
 ];
 
 interface GraphSummary {
@@ -130,6 +173,15 @@ export async function runRepositoryChecks(
   const errors: string[] = [];
   const warnings: string[] = [];
   const failFast = options.failFast === true;
+  const completenessThreshold = normalizeCompletenessThreshold(options.completenessThreshold);
+  const coverageMode = normalizeCoverageMode(options.coverageMode);
+  let graphDiagnostics: CheckGraphDiagnostics = {
+    ...buildDefaultGraphDiagnostics(),
+    completeness: {
+      ...buildDefaultGraphDiagnostics().completeness,
+      threshold: completenessThreshold,
+    },
+  };
 
   const addError = (message: string): boolean => {
     errors.push(message);
@@ -144,12 +196,28 @@ export async function runRepositoryChecks(
       ...errors.map((message) => toDiagnostic(message, "error")),
       ...warnings.map((message) => toDiagnostic(message, "warning")),
     ],
+    graphDiagnostics,
   });
 
-  const taskRecords = await collectTaskRecords(cwd);
+  const taskParseErrors: Array<{ filePath: string; error: Error }> = [];
+  const taskRecords = await collectTaskRecords(cwd, {
+    onError: (filePath, error) => taskParseErrors.push({ filePath, error }),
+  });
+
+  // Emit per-file parse errors as first-class diagnostics before any other checks.
+  // We continue past these so that well-formed files still get validated.
+  for (const { filePath, error } of taskParseErrors) {
+    const relative = path.relative(cwd, filePath);
+    const detail = error.message.split("\n")[0]; // first line only – keep messages compact
+    if (addError(`Malformed task file '${relative}': ${detail}`)) {
+      return toResult();
+    }
+  }
+
   const decisionRecords = await collectDecisionRecords(cwd);
   const declaredModules = await loadDeclaredModules(cwd);
   const declaredDomains = await loadDeclaredDomains(cwd);
+  const moduleGraphConfig = await loadModuleGraphConfig(cwd);
 
   const conceptMapPath = path.join(cwd, "arch-model", "concept-map.json");
   if (await pathExists(conceptMapPath)) {
@@ -177,6 +245,31 @@ export async function runRepositoryChecks(
     }
   }
 
+  const duplicateOverrides = await findDuplicateReconciliationOverrides(cwd);
+  for (const duplicate of duplicateOverrides) {
+    if (
+      addError(
+        `Duplicate reconciliation override entries for task '${duplicate.taskId}' in .project-arch/reconcile/: ${duplicate.files.join(", ")}. Run 'pa reconcile prune --apply' to retain only the current-state record.`,
+      )
+    ) {
+      return toResult();
+    }
+  }
+
+  const coverageDiagnostics = await collectPlanningCoverageDiagnostics(cwd, taskRecords, {
+    mode: coverageMode,
+  });
+  for (const diagnostic of coverageDiagnostics) {
+    const rendered = `[${diagnostic.code}] ${diagnostic.message}`;
+    if (diagnostic.severity === "error") {
+      if (addError(rendered)) {
+        return toResult();
+      }
+    } else {
+      warnings.push(rendered);
+    }
+  }
+
   const seenTaskKeys = new Set<string>();
   for (const task of taskRecords) {
     const key = `${task.phaseId}/${task.milestoneId}/${task.frontmatter.id}`;
@@ -195,7 +288,13 @@ export async function runRepositoryChecks(
           return toResult();
         }
       }
-      const runtimeModule = toRuntimeModule(target);
+      const classification = classifyModuleTarget(target, moduleGraphConfig);
+      const runtimeModule = classification.isRuntime ? classification.module : null;
+      if (!classification.suppressed && !classification.isRuntime) {
+        warnings.push(
+          `Task ${key} codeTarget '${target}' resolves to non-module artifact layer '${classification.layer}'. Use runtime module paths or suppress/classify it in .project-arch/graph.config.json.`,
+        );
+      }
       if (runtimeModule && !declaredModules.has(runtimeModule)) {
         if (
           addError(
@@ -265,7 +364,8 @@ export async function runRepositoryChecks(
           return toResult();
         }
       }
-      const runtimeModule = toRuntimeModule(target);
+      const classification = classifyModuleTarget(target, moduleGraphConfig);
+      const runtimeModule = classification.isRuntime ? classification.module : null;
       if (runtimeModule && !declaredModules.has(runtimeModule)) {
         if (
           addError(
@@ -299,8 +399,22 @@ export async function runRepositoryChecks(
   const manifest = await loadPhaseManifest(cwd);
   const phaseIdsFromManifest = new Set(manifest.phases.map((p) => p.id));
 
-  const phaseDirs = await fg("roadmap/phases/*", { cwd, onlyDirectories: true });
-  for (const phasePath of phaseDirs) {
+  const contractDiagnostics = await collectValidationContractDiagnostics(cwd, manifest);
+  for (const diagnostic of contractDiagnostics) {
+    const rendered = `[${diagnostic.code}] ${diagnostic.message}`;
+    if (addError(rendered)) {
+      return toResult();
+    }
+  }
+
+  const phaseDirs = await fg("roadmap/phases/*", {
+    cwd,
+    onlyDirectories: true,
+    absolute: false,
+    followSymbolicLinks: false,
+  });
+  const safePhaseDirs = await filterGlobPathsBySymlinkPolicy(phaseDirs, cwd);
+  for (const phasePath of safePhaseDirs) {
     const phaseId = path.basename(phasePath);
     if (!phaseIdsFromManifest.has(phaseId)) {
       if (addError(`Phase directory '${phaseId}' is missing in roadmap/manifest.json`)) {
@@ -312,9 +426,11 @@ export async function runRepositoryChecks(
       cwd,
       onlyDirectories: true,
       absolute: false,
+      followSymbolicLinks: false,
     });
+    const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd);
 
-    for (const milestonePath of milestones.sort()) {
+    for (const milestonePath of safeMilestones.sort()) {
       const parts = milestonePath.split("/");
       const pId = phaseId;
       const mId = parts[4];
@@ -367,8 +483,11 @@ export async function runRepositoryChecks(
     const milestones = await fg(`roadmap/phases/${phaseId}/milestones/*`, {
       cwd,
       onlyDirectories: true,
+      absolute: false,
+      followSymbolicLinks: false,
     });
-    for (const milestonePath of milestones.sort()) {
+    const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd);
+    for (const milestonePath of safeMilestones.sort()) {
       const mId = path.basename(milestonePath);
       const mIndex = await loadDecisionIndex(
         path.join(milestoneDir(phaseId, mId, cwd), "decisions"),
@@ -394,8 +513,25 @@ export async function runRepositoryChecks(
     }
   }
 
-  const driftFindings = await runDriftChecks({ cwd, taskRecords, decisionRecords });
-  for (const finding of driftFindings) {
+  const driftResult = await runDriftChecks({
+    cwd,
+    taskRecords,
+    decisionRecords,
+    completenessThreshold,
+  });
+  graphDiagnostics = {
+    built: true,
+    completeness: {
+      score: driftResult.graphCompleteness.summary.score,
+      threshold: driftResult.graphCompleteness.summary.threshold,
+      sufficient: driftResult.graphCompleteness.summary.sufficient,
+      connectedDecisionNodes: driftResult.graphCompleteness.summary.connectedDecisionNodes,
+      totalDecisionNodes: driftResult.graphCompleteness.summary.totalDecisionNodes,
+    },
+    disconnectedNodes: driftResult.graphCompleteness.disconnected,
+  };
+
+  for (const finding of driftResult.findings) {
     const rendered = `[${finding.code}] ${finding.message}`;
     if (finding.severity === "error") {
       if (addError(rendered)) {
@@ -421,10 +557,14 @@ async function countOutstandingToolingFeedbackReports(cwd: string): Promise<numb
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
+  });
+  const safeFeedbackReportFiles = await filterGlobPathsBySymlinkPolicy(feedbackReportFiles, cwd, {
+    pathsAreAbsolute: true,
   });
 
   let count = 0;
-  for (const reportFile of feedbackReportFiles) {
+  for (const reportFile of safeFeedbackReportFiles) {
     try {
       const payload = await readJson<unknown>(reportFile);
       const parsed = reconciliationReportSchema.safeParse(payload);
@@ -448,6 +588,7 @@ async function countOutstandingToolingFeedbackReports(cwd: string): Promise<numb
 }
 
 export function toCheckDiagnosticsPayload(result: CheckResult): CheckDiagnosticsPayload {
+  const graphDiagnostics = result.graphDiagnostics ?? buildDefaultGraphDiagnostics();
   return {
     schemaVersion: CHECK_DIAGNOSTICS_SCHEMA_VERSION,
     status: result.ok ? "ok" : "invalid",
@@ -457,6 +598,7 @@ export function toCheckDiagnosticsPayload(result: CheckResult): CheckDiagnostics
       diagnosticCount: result.diagnostics.length,
     },
     diagnostics: result.diagnostics,
+    graphDiagnostics,
   };
 }
 
@@ -464,13 +606,15 @@ export function filterCheckResult(
   result: CheckResult,
   filters: CheckDiagnosticFilters,
 ): CheckResult {
-  const normalizedCodes = new Set((filters.only ?? []).map((code) => code.trim().toUpperCase()));
+  const onlyFilters = Array.isArray(filters.only) ? filters.only : [];
+  const severityFilters = Array.isArray(filters.severity) ? filters.severity : [];
+  const pathFilters = Array.isArray(filters.paths) ? filters.paths : [];
+
+  const normalizedCodes = new Set(onlyFilters.map((code) => code.trim().toUpperCase()));
   const normalizedSeverities = new Set(
-    (filters.severity ?? []).map(
-      (severity) => severity.trim().toLowerCase() as CheckDiagnosticSeverity,
-    ),
+    severityFilters.map((severity) => severity.trim().toLowerCase() as CheckDiagnosticSeverity),
   );
-  const pathPatterns = (filters.paths ?? []).map((pattern) => pattern.trim()).filter(Boolean);
+  const pathPatterns = pathFilters.map((pattern) => pattern.trim()).filter(Boolean);
 
   const diagnostics = result.diagnostics.filter((diagnostic) => {
     if (normalizedCodes.size > 0 && !normalizedCodes.has(diagnostic.code.toUpperCase())) {
@@ -506,6 +650,245 @@ export function filterCheckResult(
     errors,
     warnings,
     diagnostics,
+    graphDiagnostics: result.graphDiagnostics,
+  };
+}
+
+function normalizeCompletenessThreshold(value: number | undefined): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return DEFAULT_COMPLETENESS_THRESHOLD;
+  }
+  if (value < 0) {
+    return 0;
+  }
+  if (value > 100) {
+    return 100;
+  }
+  return Number(value.toFixed(2));
+}
+
+function normalizeCoverageMode(value: "warning" | "error" | undefined): "warning" | "error" {
+  if (value === "warning" || value === "error") {
+    return value;
+  }
+  return DEFAULT_COVERAGE_MODE;
+}
+
+interface PlanningCoverageDiagnostic {
+  code: string;
+  severity: "error" | "warning";
+  message: string;
+}
+
+async function collectPlanningCoverageDiagnostics(
+  cwd: string,
+  taskRecords: Awaited<ReturnType<typeof collectTaskRecords>>,
+  input: { mode: "warning" | "error" },
+): Promise<PlanningCoverageDiagnostic[]> {
+  const severity = input.mode;
+  const diagnostics: PlanningCoverageDiagnostic[] = [];
+
+  const plannedTasks = taskRecords
+    .filter((task) => task.lane === "planned")
+    .sort((left, right) => {
+      const leftRef = `${left.phaseId}/${left.milestoneId}/${left.frontmatter.id}`;
+      const rightRef = `${right.phaseId}/${right.milestoneId}/${right.frontmatter.id}`;
+      return leftRef.localeCompare(rightRef);
+    });
+
+  const milestoneGroups = new Map<string, typeof plannedTasks>();
+  for (const task of plannedTasks) {
+    const key = `${task.phaseId}/${task.milestoneId}`;
+    const group = milestoneGroups.get(key);
+    if (group) {
+      group.push(task);
+    } else {
+      milestoneGroups.set(key, [task]);
+    }
+  }
+
+  for (const [milestoneRef, tasks] of [...milestoneGroups.entries()].sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  )) {
+    const [phaseId, milestoneId] = milestoneRef.split("/");
+    const targetAreas = await loadDeclaredTargetAreas(cwd, phaseId, milestoneId);
+
+    for (const targetArea of targetAreas) {
+      const covered = tasks.some((task) => taskLinksTargetArea(task.frontmatter, targetArea));
+      if (!covered) {
+        diagnostics.push({
+          code: "PAC_TARGET_UNCOVERED",
+          severity,
+          message:
+            `Coverage gap: milestone ${milestoneRef} target area '${targetArea}' has no planned task linkage. ` +
+            "Add a planned task with matching codeTargets/publicDocs/traceLinks.",
+        });
+      }
+    }
+
+    for (const task of tasks) {
+      const taskRef = `${task.phaseId}/${task.milestoneId}/${task.frontmatter.id}`;
+      if (
+        !taskHasObjectiveTrace(task.phaseId, task.milestoneId, task.frontmatter.traceLinks ?? [])
+      ) {
+        diagnostics.push({
+          code: "PAC_TASK_MISSING_OBJECTIVE_TRACE",
+          severity,
+          message:
+            `Coverage gap: planned task ${taskRef} has no phase/milestone objective trace link. ` +
+            "Add traceLinks pointing to phase overview, milestone overview, or milestone targets.",
+        });
+      }
+    }
+  }
+
+  diagnostics.sort((left, right) => {
+    if (left.code !== right.code) {
+      return left.code.localeCompare(right.code);
+    }
+    return left.message.localeCompare(right.message);
+  });
+
+  return diagnostics;
+}
+
+function normalizeRepoRef(value: string): string {
+  const normalized = value.trim().replace(/\\/g, "/").replace(/^\.\//, "");
+  const withoutGlob = normalized.replace(/\/*\*+$/g, "");
+  if (withoutGlob.endsWith("/")) {
+    return withoutGlob.slice(0, -1);
+  }
+  return withoutGlob;
+}
+
+function taskLinksTargetArea(
+  frontmatter: { codeTargets: string[]; publicDocs: string[]; traceLinks?: string[] },
+  targetArea: string,
+): boolean {
+  const normalizedTarget = normalizeRepoRef(targetArea);
+  if (normalizedTarget.length === 0) {
+    return true;
+  }
+
+  const links = [
+    ...frontmatter.codeTargets,
+    ...frontmatter.publicDocs,
+    ...(frontmatter.traceLinks ?? []),
+  ].map(normalizeRepoRef);
+
+  return links.some(
+    (link) =>
+      link === normalizedTarget ||
+      link.startsWith(`${normalizedTarget}/`) ||
+      (normalizedTarget === "packages" && link.startsWith("packages/")),
+  );
+}
+
+function taskHasObjectiveTrace(
+  phaseId: string,
+  milestoneId: string,
+  traceLinks: string[],
+): boolean {
+  const normalizedLinks = traceLinks.map(normalizeRepoRef);
+  const accepted = [
+    `roadmap/phases/${phaseId}/overview.md`,
+    `roadmap/phases/${phaseId}/milestones/${milestoneId}/overview.md`,
+    `roadmap/phases/${phaseId}/milestones/${milestoneId}/targets.md`,
+  ];
+
+  return normalizedLinks.some((link) => accepted.includes(link));
+}
+
+interface ValidationContractDiagnostic {
+  code: string;
+  message: string;
+}
+
+async function collectValidationContractDiagnostics(
+  cwd: string,
+  manifest: Awaited<ReturnType<typeof loadPhaseManifest>>,
+): Promise<ValidationContractDiagnostic[]> {
+  const diagnostics: ValidationContractDiagnostic[] = [];
+  const phaseIds = manifest.phases.map((p) => p.id).sort();
+
+  for (const phaseId of phaseIds) {
+    const contractPath = path.join(cwd, "roadmap", "phases", phaseId, "validation-contract.json");
+
+    if (!(await pathExists(contractPath))) {
+      diagnostics.push({
+        code: "PAV_CONTRACT_MISSING",
+        message: `Validation contract not found for phase '${phaseId}' at roadmap/phases/${phaseId}/validation-contract.json`,
+      });
+      continue;
+    }
+
+    try {
+      const contractRaw = await readJson<unknown>(contractPath);
+      validationContractSchema.parse(contractRaw);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      diagnostics.push({
+        code: "PAV_CONTRACT_INVALID_SCHEMA",
+        message: `Invalid validation contract schema for phase '${phaseId}': ${detail}`,
+      });
+    }
+  }
+
+  diagnostics.sort((left, right) => {
+    if (left.code !== right.code) {
+      return left.code.localeCompare(right.code);
+    }
+    return left.message.localeCompare(right.message);
+  });
+
+  return diagnostics;
+}
+
+async function loadDeclaredTargetAreas(
+  cwd: string,
+  phaseId: string,
+  milestoneId: string,
+): Promise<string[]> {
+  const targetsPath = path.join(
+    cwd,
+    "roadmap",
+    "phases",
+    phaseId,
+    "milestones",
+    milestoneId,
+    "targets.md",
+  );
+
+  if (!(await pathExists(targetsPath))) {
+    return [];
+  }
+
+  const content = await fs.readFile(targetsPath, "utf8");
+  const matches = [...content.matchAll(/`([^`]+)`/g)]
+    .map((match) => normalizeRepoRef(match[1] ?? ""))
+    .filter((value) =>
+      /^(apps|packages|architecture|arch-model|arch-domains|roadmap)\//.test(value),
+    );
+
+  return [...new Set(matches)].sort((a, b) => a.localeCompare(b));
+}
+
+function buildDefaultGraphDiagnostics(): CheckGraphDiagnostics {
+  return {
+    built: false,
+    completeness: {
+      score: 100,
+      threshold: DEFAULT_COMPLETENESS_THRESHOLD,
+      sufficient: true,
+      connectedDecisionNodes: 0,
+      totalDecisionNodes: 0,
+    },
+    disconnectedNodes: {
+      decisionsWithoutDomain: [],
+      decisionsWithoutTaskBackReferences: [],
+      domainsWithoutDecisions: [],
+      taskReferencesToMissingDecisions: [],
+    },
   };
 }
 
@@ -625,18 +1008,6 @@ async function runTaskGraphParityChecks(
   }
 
   return errors;
-}
-
-function toRuntimeModule(target: string): string | null {
-  const normalized = target.replace(/\\/g, "/");
-  if (!normalized.startsWith("apps/") && !normalized.startsWith("packages/")) {
-    return null;
-  }
-  const parts = normalized.split("/").filter(Boolean);
-  if (parts.length < 2) {
-    return null;
-  }
-  return `${parts[0]}/${parts[1]}`;
 }
 
 function parseDomainTag(tag: string): string | null {

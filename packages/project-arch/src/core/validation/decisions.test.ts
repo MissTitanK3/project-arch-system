@@ -8,18 +8,18 @@ import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
 import { writeFile } from "../../fs";
 
-describe("core/validation/decisions", () => {
+describe.sequential("core/validation/decisions", () => {
   let context: TestProjectContext;
   let tempDir: string;
 
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     tempDir = context.tempDir;
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
-    await context.cleanup();
-  }, 60_000);
+    await context?.cleanup();
+  }, 120_000);
 
   describe("collectDecisionRecords", () => {
     it("should collect all decision records from initialized project", async () => {

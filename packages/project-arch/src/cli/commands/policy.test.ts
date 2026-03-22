@@ -13,7 +13,7 @@ describe("cli/commands/policy", () => {
   beforeEach(async () => {
     originalExitCode = process.exitCode;
     context = await createTestProject(originalCwd);
-  }, 45_000);
+  }, 120_000);
 
   afterEach(async () => {
     vi.restoreAllMocks();

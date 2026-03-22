@@ -18,4 +18,26 @@ describe("graph/manifests re-exports", () => {
     expect(typeof manifestsApi.saveMilestoneManifest).toBe("function");
     expect(typeof manifestsApi.savePhaseManifest).toBe("function");
   });
+
+  it("exposes stable export keys", () => {
+    const keys = Object.keys(manifestsApi);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "appendDecisionToIndex",
+        "decisionMarkdownPath",
+        "ensureDecisionIndex",
+        "loadDecisionIndex",
+        "loadMilestoneManifest",
+        "loadPhaseManifest",
+        "milestoneDecisionIndexDir",
+        "milestoneOverviewPath",
+        "phaseDecisionIndexDir",
+        "phaseOverviewPath",
+        "projectDecisionIndexDir",
+        "rebuildArchitectureGraph",
+        "saveMilestoneManifest",
+        "savePhaseManifest",
+      ]),
+    );
+  });
 });

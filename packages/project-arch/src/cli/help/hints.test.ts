@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { addHintToError, VALIDATION_HINTS, withErrorHints } from "./hints";
+import { addHintToError, formatErrorWithHint, VALIDATION_HINTS, withErrorHints } from "./hints";
 
 describe("Validation Hints", () => {
   describe("VALIDATION_HINTS", () => {
@@ -151,7 +151,8 @@ describe("withErrorHints", () => {
 
     await wrappedHandler();
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith("ERROR:", "string error");
+    expect(consoleErrorSpy).toHaveBeenCalledWith("ERROR:", expect.stringContaining("string error"));
+    expect(consoleErrorSpy).toHaveBeenCalledWith("ERROR:", expect.stringContaining("Hint:"));
     expect(process.exitCode).toBe(1);
   });
 
@@ -183,5 +184,22 @@ describe("withErrorHints", () => {
       "ERROR:",
       expect.stringContaining("pa milestone new"),
     );
+  });
+});
+
+describe("formatErrorWithHint", () => {
+  it("sanitizes escape characters from error output", () => {
+    const output = formatErrorWithHint(new Error("phase not found\x1b[31m"));
+    expect(output).toContain("phase not found");
+    expect(output).not.toContain("\x1b");
+  });
+
+  it("supports optional stack output in debug mode", () => {
+    const previous = process.env.PA_DEBUG;
+    process.env.PA_DEBUG = "1";
+    const error = new Error("boom");
+    const output = formatErrorWithHint(error, { includeStack: true });
+    expect(output).toContain("Error: boom");
+    process.env.PA_DEBUG = previous;
   });
 });

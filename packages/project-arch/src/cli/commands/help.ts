@@ -8,7 +8,7 @@ export function registerHelpCommand(program: Command): void {
     .description("Get detailed help on specific topics")
     .argument(
       "[topic]",
-      "help topic (commands, workflows, lanes, decisions, architecture, standards, validation, remediation)",
+      "help topic (commands, agents, workflows, lanes, decisions, architecture, standards, validation, remediation, operations)",
     )
     .action((topic?: string) => {
       if (!topic) {

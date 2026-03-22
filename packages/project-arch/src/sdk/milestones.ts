@@ -6,6 +6,7 @@ import {
   listMilestones,
 } from "../core/milestones/createMilestone";
 import { OperationResult } from "../types/result";
+import { assertSafeId } from "../utils/safeId";
 import { wrap } from "./_utils";
 
 export async function milestoneCreate(input: {
@@ -14,6 +15,8 @@ export async function milestoneCreate(input: {
   cwd?: string;
 }): Promise<OperationResult<{ phase: string; milestone: string }>> {
   return wrap(async () => {
+    assertSafeId(input.phase, "phaseId");
+    assertSafeId(input.milestone, "milestoneId");
     await createMilestone(input.phase, input.milestone, input.cwd);
     return { phase: input.phase, milestone: input.milestone };
   });
@@ -58,6 +61,8 @@ export async function milestoneActivate(input: {
   cwd?: string;
 }): Promise<OperationResult<{ phase: string; milestone: string }>> {
   return wrap(async () => {
+    assertSafeId(input.phase, "phaseId");
+    assertSafeId(input.milestone, "milestoneId");
     await activateMilestone(input.phase, input.milestone, input.cwd);
     return { phase: input.phase, milestone: input.milestone };
   });
@@ -77,6 +82,8 @@ export async function milestoneComplete(input: {
   }>
 > {
   return wrap(async () => {
+    assertSafeId(input.phase, "phaseId");
+    assertSafeId(input.milestone, "milestoneId");
     const result = await completeMilestone(
       input.phase,
       input.milestone,

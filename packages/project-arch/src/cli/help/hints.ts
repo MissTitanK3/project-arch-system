@@ -1,3 +1,9 @@
+import {
+  formatErrorForTerminal,
+  isDebugOutputEnabled,
+  sanitizeTerminalText,
+} from "../../utils/outputSafety";
+
 /**
  * Validation hint utilities for CLI error messages
  */
@@ -5,6 +11,10 @@
 export interface ValidationHint {
   pattern: RegExp;
   hint: string;
+}
+
+export interface ErrorHintOptions {
+  includeStack?: boolean;
 }
 
 /**
@@ -45,16 +55,33 @@ export const VALIDATION_HINTS: ValidationHint[] = [
  * Add a helpful hint to an error message if applicable
  */
 export function addHintToError(error: Error): string {
-  const message = error.message;
+  const message = formatErrorForTerminal(error, { includeStack: false });
 
   for (const { pattern, hint } of VALIDATION_HINTS) {
     if (pattern.test(message)) {
-      return `${message}\n\nHint: ${hint}`;
+      return `${message}\n\nHint: ${sanitizeTerminalText(hint, { allowNewlines: false, allowTabs: false })}`;
     }
   }
 
   // Default hint
   return `${message}\n\nHint: Try 'pa help' for more information`;
+}
+
+export function formatErrorWithHint(error: unknown, options: ErrorHintOptions = {}): string {
+  const includeStack = options.includeStack === true && isDebugOutputEnabled();
+
+  if (error instanceof Error) {
+    const sanitizedMessage = formatErrorForTerminal(error, { includeStack });
+    for (const { pattern, hint } of VALIDATION_HINTS) {
+      if (pattern.test(sanitizedMessage)) {
+        return `${sanitizedMessage}\n\nHint: ${sanitizeTerminalText(hint, { allowNewlines: false, allowTabs: false })}`;
+      }
+    }
+    return `${sanitizedMessage}\n\nHint: Try 'pa help' for more information`;
+  }
+
+  const fallback = formatErrorForTerminal(error, { includeStack: false });
+  return `${fallback}\n\nHint: Try 'pa help' for more information`;
 }
 
 /**
@@ -68,11 +95,7 @@ export function withErrorHints<T extends any[]>(
     try {
       await handler(...args);
     } catch (error) {
-      if (error instanceof Error) {
-        console.error("ERROR:", addHintToError(error));
-      } else {
-        console.error("ERROR:", String(error));
-      }
+      console.error("ERROR:", formatErrorWithHint(error));
       process.exitCode = 1;
     }
   };

@@ -52,6 +52,7 @@ describe("cli/commands/help", () => {
       expect(output).toContain("decisions");
       expect(output).toContain("architecture");
       expect(output).toContain("standards");
+      expect(output).toContain("operations");
     });
 
     it('should show list of topics when topic argument is "topics"', async () => {
@@ -67,6 +68,7 @@ describe("cli/commands/help", () => {
       expect(output).toContain("Help Topics");
       expect(output).toContain("commands");
       expect(output).toContain("workflows");
+      expect(output).toContain("operations");
     });
 
     it("should show commands topic content when requested", async () => {

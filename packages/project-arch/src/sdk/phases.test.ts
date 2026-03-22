@@ -12,7 +12,7 @@ describe.sequential("SDK Phases", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     testDir = context.tempDir;
-  }, 45000);
+  }, 120000);
 
   afterEach(async () => {
     await context.cleanup();

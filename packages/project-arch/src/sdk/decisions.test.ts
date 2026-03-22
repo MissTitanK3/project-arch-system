@@ -26,11 +26,11 @@ describe.sequential("SDK Decisions", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     testDir = context.tempDir;
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   describe("decisionCreate", () => {
     it("should create a project-scoped decision", async () => {

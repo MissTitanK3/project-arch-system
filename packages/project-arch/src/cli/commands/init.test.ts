@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Command } from "commander";
 import path from "path";
-import { readdir } from "fs-extra";
+import fs, { readdir } from "fs-extra";
 import { registerInitCommand } from "./init";
 import { createTempDir, fileAssertions, type TestProjectContext } from "../../test/helpers";
 import { readMarkdownWithFrontmatter } from "../../fs";
@@ -45,6 +45,7 @@ describe("cli/commands/init", () => {
       const helpText = output.join("");
 
       expect(helpText).toContain("pa init");
+      expect(helpText).toContain("--force");
       expect(helpText).toContain("nextjs-turbo");
       expect(helpText).toContain("--with-ai");
     });
@@ -61,6 +62,8 @@ describe("cli/commands/init", () => {
       await fileAssertions.assertFileExists(context.tempDir, "architecture");
       await fileAssertions.assertFileExists(context.tempDir, "arch-domains");
       await fileAssertions.assertFileExists(context.tempDir, "arch-model");
+      await fileAssertions.assertFileExists(context.tempDir, ".arch/agents-of-arch/README.md");
+      await fileAssertions.assertFileExists(context.tempDir, ".arch/agents-of-arch/registry.json");
     });
 
     it("should execute init with custom template option", async () => {
@@ -137,6 +140,42 @@ describe("cli/commands/init", () => {
       await fileAssertions.assertFileExists(context.tempDir, "architecture");
       await fileAssertions.assertFileExists(context.tempDir, "arch-domains");
       await fileAssertions.assertFileExists(context.tempDir, "arch-model");
+    });
+
+    it("should pass --force through to re-init and overwrite managed files", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await program.parseAsync(["node", "test", "init"]);
+
+      const policyPath = path.join(context.tempDir, "roadmap", "policy.json");
+      await fs.writeFile(
+        policyPath,
+        `${JSON.stringify(
+          {
+            schemaVersion: "1.0",
+            defaultProfile: "custom",
+            profiles: {
+              custom: {
+                timing: {
+                  phase: {
+                    skipDoneIfCompletedContainer: false,
+                  },
+                },
+              },
+            },
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      await program.parseAsync(["node", "test", "init", "--force"]);
+
+      const policy = await fs.readJson(policyPath);
+      expect(policy.defaultProfile).toBe("default");
     });
   });
 

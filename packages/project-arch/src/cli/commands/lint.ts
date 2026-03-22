@@ -9,7 +9,7 @@ export function registerLintCommand(program: Command): void {
   command
     .command("frontmatter")
     .description("Lint YAML frontmatter in task and decision markdown files")
-    .option("--fix", "Apply safe whitespace-only fixes")
+    .option("--fix", "Apply safe automatic fixes (tabs, trailing whitespace, risky plain scalars)")
     .addHelpText("after", () =>
       formatEnhancedHelp({
         usage: "pa lint frontmatter [options]",
@@ -19,7 +19,7 @@ export function registerLintCommand(program: Command): void {
           {
             flag: "--fix",
             description:
-              "Normalize indentation tabs to spaces when safe. Does not rewrite scalar values.",
+              "Apply safe automatic fixes for tab indentation, trailing whitespace, and risky plain scalars.",
           },
         ],
         examples: [
@@ -66,6 +66,12 @@ export function registerLintCommand(program: Command): void {
       }
 
       if (!result.ok) {
+        console.error("");
+        console.error("Repair suggestions:");
+        console.error("- Run pa fix frontmatter for a dry-run repair preview.");
+        console.error("- Run pa fix frontmatter --yes to apply safe repairs.");
+        console.error("- Run pa normalize for canonical frontmatter ordering.");
+        console.error("- Run pa explain <code> for details on any diagnostic code above.");
         process.exitCode = 1;
       }
     });

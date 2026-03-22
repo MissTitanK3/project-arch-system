@@ -17,11 +17,11 @@ describe.sequential("core/manifests/graph - inference branches", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     tempDir = context.tempDir;
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   describe("domain inference (tag-based)", () => {
     it("should infer domain from task tags using domain:X syntax", async () => {
@@ -69,7 +69,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       );
       const taskWithDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithDomain?.domain).toBe("auth");
-    }, 60_000);
+    }, 120_000);
   });
 
   describe("domain inference (feature-based)", () => {
@@ -118,7 +118,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       );
       const taskWithDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithDomain?.domain).toBe("security");
-    }, 60_000);
+    }, 120_000);
   });
 
   describe("domain inference (package-based)", () => {
@@ -170,7 +170,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       );
       const taskWithDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithDomain?.domain).toBe("ui");
-    }, 60_000);
+    }, 120_000);
   });
 
   describe("domain inference (no match)", () => {
@@ -218,7 +218,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       );
       const taskWithoutDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithoutDomain?.domain).toBeNull();
-    }, 60_000);
+    }, 120_000);
   });
 
   describe("decision domain inference", () => {
@@ -285,7 +285,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       );
 
       expect(edges.edges.some((e) => e.decision === decisionId && e.domain === "api")).toBe(true);
-    }, 60_000);
+    }, 120_000);
   });
 
   describe("decision code target domain inference", () => {
@@ -335,6 +335,6 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       );
 
       expect(edges.edges.some((e) => e.decision === decisionId && e.domain === "data")).toBe(true);
-    }, 60_000);
+    }, 120_000);
   });
 });

@@ -75,4 +75,22 @@ describe("utils/fs", () => {
     const raw = await readFile(filePath, "utf8");
     expect(raw.endsWith("\n")).toBe(true);
   });
+
+  it("sanitizes unsafe control characters in frontmatter and body", async () => {
+    const filePath = path.join(tempDir, "docs", "sanitized.md");
+
+    await writeMarkdownWithFrontmatter(
+      filePath,
+      { title: "Skill\x1b[31m", nested: { note: "a\x00b" } },
+      "Body\x1b[32m\x00",
+    );
+
+    const parsed = await readMarkdownWithFrontmatter<{ title: string; nested: { note: string } }>(
+      filePath,
+    );
+    expect(parsed.data.title).toBe("Skill");
+    expect(parsed.data.nested.note).toBe("ab");
+    expect(parsed.content).toContain("Body");
+    expect(parsed.content).not.toContain("\x1b");
+  });
 });

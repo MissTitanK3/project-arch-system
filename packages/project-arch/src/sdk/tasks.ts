@@ -1,6 +1,7 @@
 import { createTask, getTaskStatus } from "../core/tasks/createTask";
 import { TaskLane } from "../schemas/task";
 import { OperationResult } from "../types/result";
+import { assertSafeId } from "../utils/safeId";
 import { wrap } from "./_utils";
 
 export async function taskCreate(input: {
@@ -9,17 +10,21 @@ export async function taskCreate(input: {
   title?: string;
   cwd?: string;
 }): Promise<OperationResult<{ path: string }>> {
-  return wrap(async () => ({
-    path: await createTask({
-      phaseId: input.phase,
-      milestoneId: input.milestone,
-      lane: "planned",
-      discoveredFromTask: null,
-      title: input.title,
-      slugBase: input.title,
-      cwd: input.cwd,
-    }),
-  }));
+  return wrap(async () => {
+    assertSafeId(input.phase, "phaseId");
+    assertSafeId(input.milestone, "milestoneId");
+    return {
+      path: await createTask({
+        phaseId: input.phase,
+        milestoneId: input.milestone,
+        lane: "planned",
+        discoveredFromTask: null,
+        title: input.title,
+        slugBase: input.title,
+        cwd: input.cwd,
+      }),
+    };
+  });
 }
 
 export async function taskDiscover(input: {
@@ -29,17 +34,21 @@ export async function taskDiscover(input: {
   title?: string;
   cwd?: string;
 }): Promise<OperationResult<{ path: string }>> {
-  return wrap(async () => ({
-    path: await createTask({
-      phaseId: input.phase,
-      milestoneId: input.milestone,
-      lane: "discovered",
-      discoveredFromTask: input.from,
-      title: input.title,
-      slugBase: input.title,
-      cwd: input.cwd,
-    }),
-  }));
+  return wrap(async () => {
+    assertSafeId(input.phase, "phaseId");
+    assertSafeId(input.milestone, "milestoneId");
+    return {
+      path: await createTask({
+        phaseId: input.phase,
+        milestoneId: input.milestone,
+        lane: "discovered",
+        discoveredFromTask: input.from,
+        title: input.title,
+        slugBase: input.title,
+        cwd: input.cwd,
+      }),
+    };
+  });
 }
 
 export async function taskIdea(input: {
@@ -48,17 +57,21 @@ export async function taskIdea(input: {
   title?: string;
   cwd?: string;
 }): Promise<OperationResult<{ path: string }>> {
-  return wrap(async () => ({
-    path: await createTask({
-      phaseId: input.phase,
-      milestoneId: input.milestone,
-      lane: "backlog",
-      discoveredFromTask: null,
-      title: input.title,
-      slugBase: input.title,
-      cwd: input.cwd,
-    }),
-  }));
+  return wrap(async () => {
+    assertSafeId(input.phase, "phaseId");
+    assertSafeId(input.milestone, "milestoneId");
+    return {
+      path: await createTask({
+        phaseId: input.phase,
+        milestoneId: input.milestone,
+        lane: "backlog",
+        discoveredFromTask: null,
+        title: input.title,
+        slugBase: input.title,
+        cwd: input.cwd,
+      }),
+    };
+  });
 }
 
 export async function taskStatus(input: {
@@ -81,7 +94,11 @@ export async function taskCreateInLane(input: {
   slugBase?: string;
   cwd?: string;
 }): Promise<OperationResult<{ path: string }>> {
-  return wrap(async () => ({
-    path: await createTask(input),
-  }));
+  return wrap(async () => {
+    assertSafeId(input.phaseId, "phaseId");
+    assertSafeId(input.milestoneId, "milestoneId");
+    return {
+      path: await createTask(input),
+    };
+  });
 }

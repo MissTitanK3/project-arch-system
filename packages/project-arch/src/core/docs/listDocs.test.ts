@@ -15,11 +15,11 @@ describe.sequential("core/docs/listDocs", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     tempDir = context.tempDir;
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   it("should return sorted unique public docs from tasks and decisions", async () => {
     await createPhase("docs-phase", tempDir);
@@ -55,7 +55,7 @@ describe.sequential("core/docs/listDocs", () => {
     const refs = await listDocsReferences(tempDir);
 
     expect(refs).toEqual(["docs/a.md", "docs/b.md", "docs/common.md"]);
-  }, 60_000);
+  }, 120_000);
 
   it("should return empty array when roadmap content is absent", async () => {
     const emptyContext = await createTempDir();

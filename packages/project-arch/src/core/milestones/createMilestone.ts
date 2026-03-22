@@ -12,6 +12,8 @@ import { taskSchema } from "../../schemas/task";
 import { detectReconciliationTriggers } from "../reconciliation/triggerDetection";
 import { reconciliationReportSchema } from "../../schemas/reconciliationReport";
 import { currentDateISO } from "../../utils/date";
+import { assertSafeId } from "../../utils/safeId";
+import { assertWithinRoot } from "../../utils/assertWithinRoot";
 import { milestoneDir, phaseDir, projectDocsRoot } from "../../utils/paths";
 import {
   calculateDiscoveredRatioPercent,
@@ -41,6 +43,8 @@ export async function createMilestone(
   milestoneId: string,
   cwd = process.cwd(),
 ): Promise<void> {
+  assertSafeId(phaseId, "phaseId");
+  assertSafeId(milestoneId, "milestoneId");
   await assertInitialized(cwd);
 
   const pDir = phaseDir(phaseId, cwd);
@@ -49,6 +53,7 @@ export async function createMilestone(
   }
 
   const mDir = milestoneDir(phaseId, milestoneId, cwd);
+  assertWithinRoot(mDir, cwd, "milestone directory");
   if (await pathExists(mDir)) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' already exists`);
   }

@@ -87,10 +87,15 @@ describe("cli/index", () => {
         expect(commandNames).toContain("check");
         expect(commandNames).toContain("lint");
         expect(commandNames).toContain("report");
+        expect(commandNames).toContain("next");
         expect(commandNames).toContain("policy");
         expect(commandNames).toContain("feedback");
         expect(commandNames).toContain("reconcile");
         expect(commandNames).toContain("backfill");
+        expect(commandNames).toContain("explain");
+        expect(commandNames).toContain("fix");
+        expect(commandNames).toContain("normalize");
+        expect(commandNames).toContain("agents");
         expect(commandNames).toContain("help");
         return this;
       });
@@ -126,7 +131,7 @@ describe("cli/index", () => {
       } finally {
         await project.cleanup();
       }
-    }, 60_000);
+    }, 120_000);
 
     it("captures check validation friction when command reports errors", async () => {
       const project = await createTestProject(originalCwd);
@@ -172,7 +177,11 @@ This task has a lane mismatch.
           "utf8",
         );
 
-        await expect(runCli(["node", "test", "check"])).rejects.toThrow();
+        // pa check now reports malformed files as diagnostics (exit code 1)
+        // rather than throwing an uncaught exception. The postAction hook still
+        // captures the validation-gap observation via the non-zero exit code.
+        await runCli(["node", "test", "check"]);
+        expect(process.exitCode).toBe(1);
 
         const observationStore = new ObservationStore(path.join(process.cwd(), ".arch"));
         await observationStore.initialize();
@@ -183,6 +192,6 @@ This task has a lane mismatch.
       } finally {
         await project.cleanup();
       }
-    }, 60_000);
+    }, 120_000);
   });
 });

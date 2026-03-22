@@ -2,831 +2,220 @@
 
 [![NPM Version](https://img.shields.io/npm/v/project-arch.svg)](https://www.npmjs.com/package/project-arch)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Test Coverage](https://img.shields.io/badge/coverage-96.84%25-brightgreen.svg)](coverage/index.html)
 
-`project-arch` is a deterministic repository-native architecture CLI and SDK designed to manage and validate architectural modules, decisions, and boundaries across your monorepo. It provides a structured approach to managing project phases, milestones, tasks, and architectural decision records (ADRs).
+Deterministic architecture CLI + SDK for monorepos.
 
-## Features
+`project-arch` helps teams keep roadmap intent, task execution, architecture decisions, and graph/check artifacts aligned in one repository-native workflow.
 
-✨ **Architecture-First Development** - Structure your project around phases, milestones, and tasks  
-📋 **Task Lane System** - Organize tasks into planned, discovered, and backlog lanes  
-📝 **Architecture Decision Records** - Document and track architectural decisions  
-✅ **Validation & Checks** - Ensure consistency across your architecture  
-📊 **Reporting & Documentation** - Generate comprehensive reports and docs  
-🔧 **TypeScript SDK** - Programmatic access to all functionality  
-🎯 **96.84% Test Coverage** - 592 tests ensuring reliability
+## Why teams use it
 
-## Installation
+- Deterministic task lanes (`planned`, `discovered`, `backlog`) with strict ID ranges
+- Architecture decision records linked to tasks, code targets, and docs
+- Machine-readable validation (`pa check --json`) for CI automation
+- Safety rails for repository mutations (safe IDs, path confinement, symlink policy)
+- Built-in workflow routing (`pa next`) and health diagnostics (`pa doctor health`)
+- SDK surface for integrating checks and workflows into custom tooling
 
-Install as a workspace dependency:
+## Use cases
+
+### Platform teams
+
+Use `project-arch` to standardize how cross-cutting changes are planned, validated, and traced across services, packages, and shared architecture decisions.
+
+### Monorepo maintainers
+
+Use it to keep roadmap structure, module boundaries, reconciliation artifacts, and graph-based checks aligned as the repository grows.
+
+### Architecture and governance owners
+
+Use it to make decisions, validation contracts, health diagnostics, and CI-facing JSON outputs part of a deterministic operating model instead of ad hoc documentation.
+
+## Install
+
+### Local project dependency
 
 ```bash
-# Using pnpm (recommended)
-pnpm install project-arch -w
-
-# Using npm
-npm install project-arch --save
-
-# Using yarn
+pnpm add project-arch
+# or
+npm install project-arch
+# or
 yarn add project-arch
 ```
 
-Or install globally:
+### Global CLI install
 
 ```bash
 npm install -g project-arch
 ```
 
-## Quick Start
+After install, the CLI is available as `pa`.
 
-Initialize a new architecture in your project:
+## Quick start
 
 ```bash
-# Initialize the architecture directory
+# 1) Initialize architecture scaffolding
 pa init
 
-# Create a new phase
+# 2) Create execution containers
 pa phase new phase-1
+pa milestone new phase-1 milestone-1-setup
 
-# Create a milestone within the phase
-pa milestone new phase-1 milestone-1
+# 3) Create a planned task
+pa task new phase-1 milestone-1-setup
 
-# Create a planned task
-pa task new phase-1 milestone-1
-
-# Run validations
+# 4) Run validation and next-action routing
 pa check
+pa next
 
-# Generate documentation
-pa docs
-```
-
-## CLI Commands Reference
-
-The primary command surface is `pa` (Project Arch).
-
-### Core Commands
-
-#### `pa init`
-
-Initialize the architecture directory structure in your project.
-
-```bash
-pa init
-
-# Creates:
-# arch-model/
-#   ├── phases/
-#   ├── decisions/
-#   └── docs/
-```
-
-#### `pa check`
-
-Run architectural validations to ensure consistency and compliance.
-
-```bash
-pa check
-pa check --json
-pa check --changed
-pa check --only UNTRACKED_IMPLEMENTATION
-pa check --severity warning
-pa check --paths "apps/web/**"
-pa doctor
-
-# Validates:
-# - Task ID ranges match lane directories
-# - Milestone and phase structure
-# - Decision record format
-# - Graph dependencies
-
-# --json output shape:
-# {
-#   "schemaVersion": "1.0",
-#   "status": "ok" | "invalid",
-#   "summary": {
-#     "errorCount": number,
-#     "warningCount": number,
-#     "diagnosticCount": number
-#   },
-#   "diagnostics": [
-#     {
-#       "code": string,
-#       "severity": "error" | "warning",
-#       "message": string,
-#       "path": string | null,
-#       "hint": string | null
-#     }
-#   ]
-# }
-
-# Triage filters:
-# --only <codes>       Filter by diagnostic code(s), comma-separated or repeatable
-# --severity <levels>  Filter by severity: error, warning
-# --paths <patterns>   Filter by diagnostic path glob(s), comma-separated or repeatable
-# --changed            Scope diagnostics to changed git paths (+ required dependency paths)
-#                      Falls back to full check with explicit warning if changed scope cannot be inferred
-#
-
-# Canonical preflight:
-# pa doctor runs (in order):
-# 1) pa lint frontmatter --fix
-# 2) pnpm lint:md
-# 3) pa check --json
-# Examples:
-# pa check --only UNTRACKED_IMPLEMENTATION --severity warning
-# pa check --paths "packages/**" --json
-```
-
-Schema contract: [docs/check-json-diagnostics-schema.md](docs/check-json-diagnostics-schema.md)
-
-Compatibility expectations for `pa check --json`:
-
-- `schemaVersion` is the machine contract version (current: `1.0`)
-- Additive payload changes are minor-version compatible
-- Breaking payload changes require a schema major version bump and release notes
-- Consumers should rely on `code` + `severity` for automation and treat unknown codes as forward-compatible
-
-#### `roadmap/policy.json`
-
-`pa init` now creates `roadmap/policy.json`, which controls policy-check behavior per profile.
-
-```json
-{
-  "schemaVersion": "1.0",
-  "defaultProfile": "default",
-  "profiles": {
-    "default": {
-      "timing": {
-        "phase": {
-          "enforceStatuses": ["in_progress", "done"],
-          "skipDoneIfCompletedContainer": true,
-          "completionMode": "metadata_or_all_tasks_done"
-        },
-        "milestone": {
-          "enforceStatuses": ["in_progress", "done"],
-          "skipDoneIfCompletedContainer": false,
-          "completionMode": "metadata_or_all_tasks_done"
-        }
-      }
-    }
-  }
-}
-```
-
-Profile selection:
-
-- Default profile uses `defaultProfile` from `roadmap/policy.json`.
-- Override at runtime with `PA_POLICY_PROFILE=<profile-name>`.
-
-Timing completion modes:
-
-- `metadata_only`: completion comes only from `overview.md` frontmatter `status: completed`.
-- `all_tasks_done`: completion comes only when all tasks in that phase/milestone are `done`.
-- `metadata_or_all_tasks_done`: either metadata or all tasks done marks completion.
-
-#### `pa lint frontmatter`
-
-Run preflight lint checks on task/decision YAML frontmatter and report each issue with file+line.
-
-```bash
-pa lint frontmatter
-pa lint frontmatter --fix
-
-# Lint rules include:
-# - Tab indentation detection
-# - Missing required keys by artifact type
-# - Scalar safety checks for risky unquoted values
-# - Key type and schema type checks
-
-# --fix behavior:
-# - Applies whitespace-only indentation normalization
-# - Does not rewrite scalar values or meaning
-```
-
-#### `pa report`
-
-Generate a comprehensive report of the current architecture state.
-
-```bash
+# 5) Generate a state report
 pa report
-
-# Outputs:
-# - Phase and milestone status
-# - Task completion statistics
-# - Decision count by status
-# - Graph metrics
 ```
 
-#### `pa docs`
+## Core commands
 
-Generate markdown documentation for the architecture graph.
+### Planning and execution
 
-```bash
-pa docs
+- `pa phase new <id>`, `pa phase list`
+- `pa milestone new <phaseId> <milestoneId>`, `pa milestone list`, `pa milestone status`, `pa milestone activate`, `pa milestone complete`
+- `pa task new|discover|idea <phaseId> <milestoneId>`
+- `pa task status <phaseId> <milestoneId> <taskId>`
+- `pa task lanes <phaseId> <milestoneId>`
+- `pa task register-surfaces <phaseId> <milestoneId> <taskId>`
 
-# Generates documentation in arch-model/docs/
-```
+### Architecture decisions
 
-#### `pa help [topic]`
+- `pa decision new --scope <project|phase|milestone> [--phase ...] [--milestone ...]`
+- `pa decision link <decisionId> [--task ...] [--code ...] [--doc ...]`
+- `pa decision status <decisionId> <status>`
+- `pa decision supersede <decisionId> <supersededDecisionId>`
+- `pa decision list`, `pa decision migrate`
 
-Display comprehensive help documentation on specific topics.
+### Validation and health
 
-```bash
-# List all available help topics
-pa help
+- `pa check [--json] [--changed] [--only ...] [--severity ...] [--paths ...]`
+- `pa check --profile <quality|balanced|budget>`
+- `pa check --completeness-threshold <0-100>`
+- `pa check --coverage-mode <warning|error>`
+- `pa doctor` (3-step sweep: frontmatter lint fix, markdown lint, check)
+- `pa doctor health [--repair] [--json]`
+- `pa next [--json]`
+- `pa explain <diagnostic-code>`
+- `pa lint frontmatter [--fix]`
+- `pa fix frontmatter [--yes] [--check]`
+- `pa normalize [--yes] [--check]`
 
-# View detailed topic documentation
-pa help commands      # Complete command reference
-pa help workflows     # Common task and decision workflows
-pa help lanes         # Task lane system explained
-pa help decisions     # Architecture decision management
-pa help architecture  # Repository structure
-pa help standards     # File naming and schema standards
-pa help validation    # Validation commands and workflows
-pa help remediation   # Fix common architecture issues
+### Agents skill system
 
-# Command-specific help using --help flag
-pa check --help
-pa task new --help
-pa milestone activate --help
-```
+- `pa agents list [--json]`
+- `pa agents show <id> [--json]`
+- `pa agents new <id> [--title ...] [--summary ...] [--override] [--tags ...]`
+- `pa agents sync [--check] [--json]`
+- `pa agents check [--json]`
 
-**Topics Available:**
+Skill schema reference: [docs/agents-skill-schema.md](docs/agents-skill-schema.md)
 
-- `commands`: Complete command reference for all available commands and options
-- `workflows`: Step-by-step workflows for common tasks
-- `lanes`: Understanding planned, discovered, and backlog task lanes
-- `decisions`: Architecture decision record management
-- `architecture`: Repository structure and validation overview
-- `standards`: File naming conventions and frontmatter schemas
-- `validation`: Using validation commands (check, lint, policy)
-- `remediation`: Solutions for common architecture issues
+### Reconciliation lifecycle
 
-### Phase Management
+- `pa reconcile task <taskId>`
+- `pa reconcile --latest`
+- `pa reconcile prune [--apply]`
+- `pa reconcile compact [--apply]`
 
-#### `pa phase new <phase-id>`
+Reconciliation report schema: [docs/reconciliation-report-schema.md](docs/reconciliation-report-schema.md)
 
-Create a new project phase.
+## JSON contracts for CI and automation
 
-```bash
-pa phase new phase-1
-pa phase new phase-2-refactor
-```
+- `pa check --json` emits a stable diagnostics envelope (`schemaVersion: "1.0"`)
+- `pa doctor health --json` emits structural health status + issue catalog (`PAH*`)
+- `pa next --json` emits deterministic routing decision
 
-#### `pa phase list`
+Schema docs:
 
-List all phases in the project.
+- [docs/check-json-diagnostics-schema.md](docs/check-json-diagnostics-schema.md)
+- [docs/security-operations-model.md](docs/security-operations-model.md)
 
-```bash
-pa phase list
-```
+## SDK usage (TypeScript)
 
-### Milestone Management
+```ts
+import { check, next, agents, type OperationResult } from "project-arch";
 
-#### `pa milestone new <phase-id> <milestone-id>`
+const checkResult = await check.checkRun({
+  completenessThreshold: 90,
+  coverageMode: "warning",
+});
 
-Create a new milestone within a phase.
-
-```bash
-pa milestone new phase-1 milestone-1
-pa milestone new phase-1 api-foundation
-```
-
-#### `pa milestone list <phase-id>`
-
-List all milestones in a phase.
-
-```bash
-pa milestone list phase-1
-```
-
-### Decision Management
-
-#### `pa decision new <decision-id>`
-
-Create a new Architecture Decision Record (ADR).
-
-```bash
-pa decision new use-typescript
-pa decision new adopt-microservices
-```
-
-#### `pa decision list`
-
-List all architecture decisions.
-
-```bash
-pa decision list
-```
-
-## Task Lanes
-
-Tasks are organized into three lanes with dedicated ID ranges:
-
-| Lane       | Range   | Purpose                                  |
-| ---------- | ------- | ---------------------------------------- |
-| planned    | 001-099 | Pre-planned tasks for milestone delivery |
-| discovered | 101-199 | Tasks discovered during implementation   |
-| backlog    | 901-999 | Ideas and future work not yet scheduled  |
-
-### Working with Task Lanes
-
-#### Create a Planned Task
-
-```bash
-# Create a planned task (IDs 001-099)
-pa task new phase-1 milestone-1
-
-# Prompts for:
-# - Task title
-# - Description
-# - Assigns next available ID in planned lane
-```
-
-#### Create a Discovered Task
-
-```bash
-# Create a discovered task (IDs 101-199)
-pa task discover phase-1 milestone-1 --from 005
-
-# Creates a task discovered during implementation of task 005
-# Tracks drift from original plan
-```
-
-#### Create a Backlog Idea
-
-```bash
-# Create a backlog idea (IDs 901-999)
-pa task idea phase-1 milestone-1
-
-# For future work not yet scheduled
-```
-
-#### View Lane Usage
-
-```bash
-# View lane usage and next available IDs
-pa task lanes phase-1 milestone-1
-
-# Output:
-# Planned Lane (001-099):
-#   Used: 001, 002, 005
-#   Next Available: 003
-#
-# Discovered Lane (101-199):
-#   Used: 101, 105
-#   Next Available: 102
-#
-# Backlog Lane (901-999):
-#   Used: 901
-#   Next Available: 902
-```
-
-#### Update Task Status
-
-```bash
-# Mark task as in progress
-pa task start phase-1 milestone-1 003
-
-# Complete a task
-pa task complete phase-1 milestone-1 003
-
-# Block a task
-pa task block phase-1 milestone-1 003 --reason "Waiting for API design"
-```
-
-#### Register Untracked Implementation Surfaces
-
-Bulk-register untracked files from `apps/` and `packages/` to a task's `codeTargets`.
-
-```bash
-# Register all untracked files detected by `pa check`
-pa task register-surfaces phase-1 milestone-1 003
-
-# Preview changes without modifying files (dry-run)
-pa task register-surfaces phase-1 milestone-1 003 --dry-run
-
-# Filter by include patterns (from check diagnostics)
-pa task register-surfaces phase-1 milestone-1 003 --include "apps/web/**"
-
-# Exclude certain patterns
-pa task register-surfaces phase-1 milestone-1 003 --exclude "**/*.test.ts"
-
-# Use explicit glob patterns instead of check diagnostics
-pa task register-surfaces phase-1 milestone-1 003 --no-from-check --include "apps/**/*.ts"
-
-# Combine filters for precise control
-pa task register-surfaces phase-1 milestone-1 003 \\
-  --include "apps/admin/**" \\
-  --exclude "**/*.test.ts" \\
-  --exclude "**/__tests__/**" \\
-  --dry-run
-```
-
-**Options:**
-
-- `--from-check`: Get untracked paths from `pa check` diagnostics (default: true)
-- `--no-from-check`: Use explicit `--include` patterns instead
-- `--include <glob...>`: Filter or specify paths to register (supports multiple)
-- `--exclude <glob...>`: Exclude paths matching these patterns (supports multiple)
-- `--dry-run`: Preview changes without modifying task file
-
-**Workflow:**
-
-1. Run `pa check` to see UNTRACKED_IMPLEMENTATION warnings
-2. Use `pa task register-surfaces` to bulk-register relevant files
-3. Review changes with `--dry-run` before committing
-4. Use `--include`/`--exclude` to filter specific packages or file types
-
-**Notes:**
-
-- Automatically skips paths already in `codeTargets` (no duplicates)
-- Updates task `updatedAt` timestamp
-- Rebuilds architecture graph after successful registration
-- Supports glob patterns: `**` (any depth), `*` (any chars), `?` (single char)
-
-### Task ID Validation
-
-Task IDs must match their lane directory:
-
-- Tasks in `tasks/planned/` must have IDs 001-099
-- Tasks in `tasks/discovered/` must have IDs 101-199
-- Tasks in `tasks/backlog/` must have IDs 901-999
-
-Invalid IDs will produce detailed error messages showing valid ranges.
-
-## SDK/Programmatic Usage
-
-`project-arch` exposes a TypeScript SDK for programmatic consumption of parsing and validation routines.
-
-### Basic Usage
-
-```typescript
-import { check, graph, tasks, phases } from "project-arch";
-
-// Execute checks programmatically
-const results = await check.runRepositoryChecks(process.cwd());
-console.log(`Passed: ${results.passed}, Failed: ${results.failed}`);
-
-// Parse the dependency graph
-const nodes = await graph.buildProjectGraph(process.cwd());
-console.log(`Found ${nodes.length} nodes in graph`);
-```
-
-### Graph Sync Write Modes
-
-```typescript
-import { graph } from "project-arch";
-
-// Default mode writes .arch graph artifacts only when content changes
-await graph.graphBuild({ cwd: process.cwd() });
-
-// Read-only mode computes graph state without writing .arch artifacts
-await graph.graphBuild({ cwd: process.cwd(), write: false });
-```
-
-### Working with Tasks
-
-```typescript
-import { tasks } from "project-arch";
-
-// Read all tasks in a milestone
-const allTasks = await tasks.readTasks(process.cwd(), "phase-1", "milestone-1");
-
-// Filter by lane
-const plannedTasks = allTasks.filter((t) => t.id >= 1 && t.id <= 99);
-const discoveredTasks = allTasks.filter((t) => t.id >= 101 && t.id <= 199);
-
-// Get task by ID
-const task005 = await tasks.readTask(process.cwd(), "phase-1", "milestone-1", "005");
-console.log(`Task: ${task005.title}, Status: ${task005.status}`);
-
-// Update task status
-await tasks.updateTaskStatus(process.cwd(), "phase-1", "milestone-1", "005", "complete");
-```
-
-### Working with Phases and Milestones
-
-```typescript
-import { phases, milestones } from "project-arch";
-
-// List all phases
-const allPhases = await phases.listPhases(process.cwd());
-console.log(`Found ${allPhases.length} phases`);
-
-// Get phase details
-const phase = await phases.readPhase(process.cwd(), "phase-1");
-console.log(`Phase: ${phase.title}, Status: ${phase.status}`);
-
-// List milestones in a phase
-const phaseMilestones = await milestones.listMilestones(process.cwd(), "phase-1");
-```
-
-### Working with Decisions
-
-```typescript
-import { decisions } from "project-arch";
-
-// List all decisions
-const allDecisions = await decisions.listDecisions(process.cwd());
-
-// Filter by status
-const accepted = allDecisions.filter((d) => d.status === "accepted");
-const proposed = allDecisions.filter((d) => d.status === "proposed");
-
-// Read decision details
-const decision = await decisions.readDecision(process.cwd(), "use-typescript");
-console.log(`Decision: ${decision.title}`);
-console.log(`Status: ${decision.status}`);
-console.log(`Context: ${decision.context}`);
-```
-
-### Running Validations
-
-```typescript
-import { check } from "project-arch";
-
-// Run all checks
-const results = await check.runRepositoryChecks(process.cwd());
-
-// Handle failures
-if (results.failed > 0) {
-  console.error("Validation failures:");
-  results.failures.forEach((failure) => {
-    console.error(`  - ${failure.check}: ${failure.message}`);
-  });
-  process.exit(1);
+if (checkResult.success && checkResult.data?.ok) {
+  console.log("Architecture checks passed");
 }
 
-// Run specific checks
-const taskValidation = await check.validateTasks(process.cwd());
-const phaseValidation = await check.validatePhases(process.cwd());
-```
+const route = await next.nextResolve();
+if (route.success) {
+  console.log(route.data?.recommendedCommand);
+}
 
-### Building the Graph
-
-```typescript
-import { graph } from "project-arch";
-
-// Build full dependency graph
-const nodes = await graph.buildProjectGraph(process.cwd());
-
-// Trace dependencies for a specific task
-const dependencies = await graph.traceTask(process.cwd(), "phase-1", "milestone-1", "005");
-
-console.log(`Task 005 depends on: ${dependencies.upstream.join(", ")}`);
-console.log(`Task 005 is required by: ${dependencies.downstream.join(", ")}`);
-
-// Check for circular dependencies
-const circularDeps = await graph.detectCircularDependencies(process.cwd());
-if (circularDeps.length > 0) {
-  console.warn("Warning: Circular dependencies detected");
-  circularDeps.forEach((cycle) => {
-    console.warn(`  Cycle: ${cycle.join(" -> ")}`);
-  });
+const skills = await agents.agentsList();
+if (skills.success) {
+  console.log(skills.data?.skills.map((skill) => skill.id));
 }
 ```
 
-## Configuration
+Published entrypoints:
 
-Project Arch uses a `.project-arch.json` configuration file at the root of your project:
+- Package API: `project-arch`
+- CLI runtime: `project-arch/cli`
+- Binary: `pa`
 
-```json
-{
-  "archModelDir": "arch-model",
-  "validation": {
-    "strictTaskIds": true,
-    "requireDecisionStatus": true,
-    "enforceTaskDependencies": true
-  },
-  "reporting": {
-    "includeBacklog": false,
-    "groupByPhase": true
-  }
-}
-```
+## Security and operations summary
 
-### Configuration Options
+Normal operation is repository-local and offline.
 
-- `archModelDir` - Directory for architecture files (default: `arch-model`)
-- `validation.strictTaskIds` - Enforce strict task ID ranges (default: `true`)
-- `validation.requireDecisionStatus` - Require status on all ADRs (default: `true`)
-- `validation.enforceTaskDependencies` - Validate task dependency graph (default: `true`)
-- `reporting.includeBacklog` - Include backlog items in reports (default: `false`)
-- `reporting.groupByPhase` - Group reports by phase (default: `true`)
+- No hidden HTTP(S) calls during standard CLI workflows
+- File mutations are scoped to project architecture surfaces
+- `pa check --changed` uses `git status --porcelain`
+- `pa doctor` runs `pnpm lint:md` in its sweep
 
-## Architecture Structure
+Full model: [docs/security-operations-model.md](docs/security-operations-model.md)
 
-Project Arch organizes your architecture into the following structure:
+## Release preparation (local)
+
+Run pre-push/pre-publish release gates:
 
 ```bash
-arch-model/
-├── phases/
-│   └── phase-1/
-│       ├── phase.md              # Phase description and goals
-│       └── milestones/
-│           └── milestone-1/
-│               ├── milestone.md  # Milestone description
-│               └── tasks/
-│                   ├── planned/
-│                   │   ├── 001-setup-project.md
-│                   │   └── 002-implement-auth.md
-│                   ├── discovered/
-│                   │   └── 101-fix-auth-bug.md
-│                   └── backlog/
-│                       └── 901-performance-optimization.md
-├── decisions/
-│   ├── 001-use-typescript.md
-│   └── 002-adopt-microservices.md
-└── docs/
-    └── graph.md                  # Generated documentation
+pnpm release:prepare
 ```
 
-### Task File Format
+Useful flags:
 
-Tasks are markdown files with YAML frontmatter:
+- `--version <semver>`
+- `--allow-dirty`
+- `--json`
+- `--dry-run`
+- `--no-tests`
 
-```markdown
----
-id: "005"
-title: "Implement user authentication"
-status: "in-progress"
-priority: "high"
-lane: "planned"
-dependencies:
-  - "003"
-  - "004"
-tags:
-  - "auth"
-  - "security"
----
+This writes `.project-arch/release/release-check.json` unless `--dry-run` is used.
 
-## Description
+## Changelog highlights
 
-Implement JWT-based authentication for the API.
+Recent releases added major workflow and safety capabilities:
 
-## Acceptance Criteria
+- **1.6.0**: `pa doctor health`, `pa next`, agents surface expansion, workflow profiles, graph completeness diagnostics, and hardening rails
+- **1.5.0**: bootstrap init expansion, milestone dependency enforcement, and blocked-task status signaling
 
-- [ ] JWT token generation
-- [ ] Token validation middleware
-- [ ] Refresh token mechanism
-- [ ] Password hashing with bcrypt
+See full details in [CHANGELOG.md](CHANGELOG.md).
 
-## Notes
+## Compatibility notes
 
-Consider using passport.js for flexibility.
-```
+- CLI and JSON output contracts are versioned; check `schemaVersion` in machine consumers
+- Prefer additive parsing for diagnostics (`code`, `severity`, `message`, `path`, `hint`)
+- Treat unknown diagnostics as forward-compatible
 
-### Decision File Format
+## Contributing and support
 
-Decisions follow the ADR format:
-
-```markdown
----
-id: "use-typescript"
-title: "Use TypeScript for all new code"
-status: "accepted"
-date: "2026-02-15"
----
-
-## Context
-
-We need to improve code quality and developer experience.
-
-## Decision
-
-We will use TypeScript for all new code in the project.
-
-## Consequences
-
-### Positive
-
-- Improved type safety
-- Better IDE support
-- Easier refactoring
-
-### Negative
-
-- Additional build step required
-- Learning curve for team members
-```
-
-## Testing
-
-Project Arch has comprehensive test coverage (96.84% statement coverage with 592 tests).
-
-Run tests:
-
-```bash
-# Run all tests
-pnpm test
-
-# Run with coverage
-pnpm test --coverage
-
-# Run specific test file
-pnpm test tasks.test.ts
-
-# Watch mode
-pnpm test --watch
-```
-
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/MissTitanK3/project-arch-system.git
-cd project-arch-system
-
-# Install dependencies
-pnpm install
-
-# Build the project
-pnpm build
-
-# Run tests
-pnpm test
-
-# Run linting
-pnpm lint
-```
-
-## Examples
-
-See the [examples/](examples/) directory for complete examples:
-
-- [Basic CLI Usage](examples/basic-cli/README.md) - Getting started with CLI commands
-- [SDK Integration](examples/sdk-integration/README.md) - Using the SDK programmatically
-- [Custom Commands](examples/custom-commands/README.md) - Extending with custom commands
-- [ADR Workflow](examples/adr-workflow/README.md) - Architecture decision record workflow
-
-## Migration Guide
-
-### From v1.0.0 to v1.1.0
-
-Version 1.1.0 introduces the task lane system. To migrate:
-
-1. Move existing tasks to appropriate lane directories:
-   - Tasks 001-099 → `tasks/planned/`
-   - Tasks 101-199 → `tasks/discovered/`
-   - Tasks 901-999 → `tasks/backlog/`
-
-2. Update task frontmatter to include `lane` field:
-
-   ```yaml
-   lane: "planned" # or "discovered" or "backlog"
-   ```
-
-3. Run validation to ensure proper migration:
-
-   ```bash
-   pa check
-   ```
-
-## Troubleshooting
-
-### Task ID validation errors
-
-**Error**: `Task ID 150 is invalid for lane 'planned'. Valid range: 001-099`
-
-**Solution**: Move the task to the correct lane directory or update its ID.
-
-### Circular dependency detected
-
-**Error**: `Circular dependency detected: task-001 -> task-002 -> task-001`
-
-**Solution**: Review task dependencies and break the cycle.
-
-### Missing phase or milestone
-
-**Error**: `Phase 'phase-1' not found`
-
-**Solution**: Create the phase first using `pa phase new phase-1`.
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history and migration guides.
+- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Issues: <https://github.com/MissTitanK3/project-arch-system/issues>
+- Discussions: <https://github.com/MissTitanK3/project-arch-system/discussions>
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Support
-
-- 📖 [Documentation](https://github.com/MissTitanK3/project-arch-system#readme)
-- 🐛 [Issue Tracker](https://github.com/MissTitanK3/project-arch-system/issues)
-- 💬 [Discussions](https://github.com/MissTitanK3/project-arch-system/discussions)
-
-## Acknowledgments
-
-Built with:
-
-- [Commander.js](https://github.com/tj/commander.js) - CLI framework
-- [Zod](https://github.com/colinhacks/zod) - Schema validation
-- [gray-matter](https://github.com/jonschlinkert/gray-matter) - Frontmatter parsing
-- [fast-glob](https://github.com/mrmlnc/fast-glob) - File system operations
+MIT — see [LICENSE](LICENSE).

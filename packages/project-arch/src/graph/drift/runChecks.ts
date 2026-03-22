@@ -4,6 +4,11 @@ import { checkModules } from "./checkModules";
 import { checkDomains } from "./checkDomains";
 import { checkImports } from "./checkImports";
 import { checkTasks } from "./checkTasks";
+import {
+  checkDecisionCompleteness,
+  DisconnectedNodeReport,
+  GraphCompletenessSummary,
+} from "./checkDecisionCompleteness";
 
 export type DriftSeverity = "warning" | "error";
 
@@ -13,11 +18,20 @@ export interface DriftFinding {
   message: string;
 }
 
+export interface DriftChecksResult {
+  findings: DriftFinding[];
+  graphCompleteness: {
+    summary: GraphCompletenessSummary;
+    disconnected: DisconnectedNodeReport;
+  };
+}
+
 export async function runDriftChecks(params: {
   cwd?: string;
   taskRecords: TaskRecord[];
   decisionRecords: DecisionRecord[];
-}): Promise<DriftFinding[]> {
+  completenessThreshold: number;
+}): Promise<DriftChecksResult> {
   const cwd = params.cwd ?? process.cwd();
 
   const findings: DriftFinding[] = [];
@@ -25,6 +39,19 @@ export async function runDriftChecks(params: {
   findings.push(...(await checkDomains(cwd, params.taskRecords)));
   findings.push(...(await checkImports(cwd)));
   findings.push(...(await checkTasks(cwd, params.taskRecords, params.decisionRecords)));
+  const decisionCompleteness = await checkDecisionCompleteness(
+    cwd,
+    params.taskRecords,
+    params.decisionRecords,
+    params.completenessThreshold,
+  );
+  findings.push(...decisionCompleteness.findings);
 
-  return findings;
+  return {
+    findings,
+    graphCompleteness: {
+      summary: decisionCompleteness.summary,
+      disconnected: decisionCompleteness.disconnected,
+    },
+  };
 }

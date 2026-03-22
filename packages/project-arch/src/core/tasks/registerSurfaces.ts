@@ -6,6 +6,7 @@ import { runRepositoryChecks } from "../validation/check";
 import { withAtomicTaskMutation } from "./atomicMutation";
 import * as graphManifests from "../../graph/manifests";
 import { currentDateISO } from "../../utils/date";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
 export interface RegisterSurfacesOptions {
   phase: string;
@@ -44,19 +45,27 @@ export async function registerSurfaces(
   // Build task file path
   const taskPattern = `roadmap/phases/${phase}/milestones/${milestone}/tasks/*/${taskId}-*.md`;
   const { default: fg } = await import("fast-glob");
-  const matches = await fg(taskPattern, { cwd, absolute: true });
+  const matches = await fg(taskPattern, {
+    cwd,
+    absolute: true,
+    onlyFiles: true,
+    followSymbolicLinks: false,
+  });
+  const safeMatches = await filterGlobPathsBySymlinkPolicy(matches, cwd, {
+    pathsAreAbsolute: true,
+  });
 
-  if (matches.length === 0) {
+  if (safeMatches.length === 0) {
     throw new Error(`Task not found: ${phase}/${milestone}/${taskId}`);
   }
 
-  if (matches.length > 1) {
+  if (safeMatches.length > 1) {
     throw new Error(
-      `Multiple tasks match ${phase}/${milestone}/${taskId}: ${matches.map((m) => path.basename(m)).join(", ")}`,
+      `Multiple tasks match ${phase}/${milestone}/${taskId}: ${safeMatches.map((m) => path.basename(m)).join(", ")}`,
     );
   }
 
-  const taskPath = matches[0];
+  const taskPath = safeMatches[0];
 
   // Load task
   const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskPath);
@@ -143,10 +152,12 @@ async function getPathsFromIncludePatterns(patterns: string[], cwd: string): Pro
     cwd,
     absolute: false,
     onlyFiles: true,
+    followSymbolicLinks: false,
     ignore: ["**/node_modules/**", "**/dist/**", "**/.next/**", "**/coverage/**"],
   });
+  const safeFiles = await filterGlobPathsBySymlinkPolicy(files, cwd);
 
-  return files.map((f) => f.replace(/\\/g, "/")).sort();
+  return safeFiles.map((f) => f.replace(/\\/g, "/")).sort();
 }
 
 function filterPaths(paths: string[], include: string[], exclude: string[]): string[] {

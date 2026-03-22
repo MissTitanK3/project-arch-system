@@ -27,28 +27,6 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@22.19.13)(yaml@2.8.2)
 
-  packages/create-project-arch:
-    dependencies:
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
-      fs-extra:
-        specifier: ^11.3.0
-        version: 11.3.4
-      project-arch:
-        specifier: workspace:^1.5.0
-        version: link:../project-arch
-    devDependencies:
-      '@types/fs-extra':
-        specifier: ^11.0.4
-        version: 11.0.4
-      '@types/node':
-        specifier: ^22.13.8
-        version: 22.19.13
-      typescript:
-        specifier: ^5.8.2
-        version: 5.9.3
-
   packages/project-arch:
     dependencies:
       commander:

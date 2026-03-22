@@ -5,8 +5,9 @@ import { z } from "zod";
 import { LineCounter, isMap, isScalar, isSeq, parseDocument } from "yaml";
 import { decisionSchema } from "../../schemas/decision";
 import { taskSchema } from "../../schemas/task";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
-type ArtifactKind = "task" | "decision";
+export type ArtifactKind = "task" | "decision";
 
 export type FrontmatterLintSeverity = "error" | "warning";
 
@@ -25,10 +26,16 @@ export interface FrontmatterLintResult {
   diagnostics: FrontmatterLintDiagnostic[];
 }
 
-interface FrontmatterBlock {
+export interface FrontmatterBlock {
   lines: string[];
   openDelimiterLineIndex: number;
   closeDelimiterLineIndex: number;
+}
+
+export interface FrontmatterAutoFixOutcome {
+  changed: boolean;
+  updatedContent: string;
+  appliedCodes: string[];
 }
 
 interface ParsedYaml {
@@ -58,6 +65,38 @@ const FRONTMATTER_IGNORE = [
 
 const RISKY_PLAIN_SCALAR = /^(?:[-+]?\d+(?:\.\d+)?|0\d+|true|false|null|~|\d{4}-\d{2}-\d{2})$/i;
 
+export const AUTO_FIXABLE_FRONTMATTER_CODES = [
+  "TAB_INDENTATION",
+  "TRAILING_WHITESPACE",
+  "SCALAR_SAFETY",
+] as const;
+
+const TASK_SCALAR_GUARD_KEYS = new Set([
+  "schemaVersion",
+  "id",
+  "slug",
+  "title",
+  "lane",
+  "status",
+  "createdAt",
+  "updatedAt",
+  "discoveredFromTask",
+]);
+
+const DECISION_SCALAR_GUARD_KEYS = new Set(["schemaVersion", "type", "id", "title", "status"]);
+
+export async function listFrontmatterFiles(cwd = process.cwd()): Promise<string[]> {
+  const files = await fg(FRONTMATTER_GLOBS, {
+    cwd,
+    absolute: true,
+    onlyFiles: true,
+    unique: true,
+    followSymbolicLinks: false,
+    ignore: FRONTMATTER_IGNORE,
+  });
+  return filterGlobPathsBySymlinkPolicy(files, cwd, { pathsAreAbsolute: true });
+}
+
 export async function lintFrontmatter(options?: {
   cwd?: string;
   fix?: boolean;
@@ -65,13 +104,7 @@ export async function lintFrontmatter(options?: {
   const cwd = options?.cwd ?? process.cwd();
   const fix = options?.fix === true;
 
-  const files = await fg(FRONTMATTER_GLOBS, {
-    cwd,
-    absolute: true,
-    onlyFiles: true,
-    unique: true,
-    ignore: FRONTMATTER_IGNORE,
-  });
+  const files = await listFrontmatterFiles(cwd);
 
   const diagnostics: FrontmatterLintDiagnostic[] = [];
   let fixedFiles = 0;
@@ -97,8 +130,8 @@ export async function lintFrontmatter(options?: {
     }
 
     if (fix) {
-      const fixOutcome = tryFixIndentationTabs(content, block);
-      if (fixOutcome.changed && fixOutcome.safeToApply) {
+      const fixOutcome = applySafeFrontmatterAutoFixes(content, artifactKind);
+      if (fixOutcome.changed) {
         await fs.writeFile(filePath, fixOutcome.updatedContent, "utf8");
         content = fixOutcome.updatedContent;
         block = extractFrontmatterBlock(content);
@@ -143,6 +176,9 @@ function lintFrontmatterBlock(context: LintRuleContext): FrontmatterLintDiagnost
     ...findTabIndentationDiagnostics(frontmatterLines, frontmatterStartLine, relativePath),
   );
   diagnostics.push(
+    ...findTrailingWhitespaceDiagnostics(frontmatterLines, frontmatterStartLine, relativePath),
+  );
+  diagnostics.push(
     ...findRiskyPlainScalars(frontmatterLines, frontmatterStartLine, relativePath, artifactKind),
   );
 
@@ -172,7 +208,7 @@ function lintFrontmatterBlock(context: LintRuleContext): FrontmatterLintDiagnost
   return diagnostics;
 }
 
-function inferArtifactKind(relativePath: string): ArtifactKind | null {
+export function inferArtifactKind(relativePath: string): ArtifactKind | null {
   if (/(^|\/)tasks\/.+\.md$/u.test(relativePath)) {
     return "task";
   }
@@ -182,11 +218,11 @@ function inferArtifactKind(relativePath: string): ArtifactKind | null {
   return null;
 }
 
-function normalizeRelativePath(cwd: string, absolutePath: string): string {
+export function normalizeRelativePath(cwd: string, absolutePath: string): string {
   return path.relative(cwd, absolutePath).split(path.sep).join("/");
 }
 
-function extractFrontmatterBlock(content: string): FrontmatterBlock | null {
+export function extractFrontmatterBlock(content: string): FrontmatterBlock | null {
   const lines = content.split(/\r?\n/u);
   if (!/^---\s*$/u.test(lines[0] ?? "")) {
     return null;
@@ -231,26 +267,38 @@ function findTabIndentationDiagnostics(
   return diagnostics;
 }
 
+function findTrailingWhitespaceDiagnostics(
+  frontmatterLines: string[],
+  frontmatterStartLine: number,
+  relativePath: string,
+): FrontmatterLintDiagnostic[] {
+  const diagnostics: FrontmatterLintDiagnostic[] = [];
+
+  for (let index = 0; index < frontmatterLines.length; index += 1) {
+    const line = frontmatterLines[index] ?? "";
+    if (!/[ \t]+$/u.test(line)) {
+      continue;
+    }
+
+    diagnostics.push({
+      code: "TRAILING_WHITESPACE",
+      severity: "warning",
+      message: "Trailing whitespace in YAML frontmatter will be removed by --fix.",
+      path: relativePath,
+      line: frontmatterStartLine + index,
+    });
+  }
+
+  return diagnostics;
+}
+
 function findRiskyPlainScalars(
   frontmatterLines: string[],
   frontmatterStartLine: number,
   relativePath: string,
   artifactKind: ArtifactKind,
 ): FrontmatterLintDiagnostic[] {
-  const keysToGuard =
-    artifactKind === "task"
-      ? new Set([
-          "schemaVersion",
-          "id",
-          "slug",
-          "title",
-          "lane",
-          "status",
-          "createdAt",
-          "updatedAt",
-          "discoveredFromTask",
-        ])
-      : new Set(["schemaVersion", "type", "id", "title", "status"]);
+  const keysToGuard = artifactKind === "task" ? TASK_SCALAR_GUARD_KEYS : DECISION_SCALAR_GUARD_KEYS;
 
   const diagnostics: FrontmatterLintDiagnostic[] = [];
 
@@ -511,34 +559,48 @@ function pathKey(parts: Array<string | number>): string {
   return JSON.stringify(parts);
 }
 
-function tryFixIndentationTabs(
+export function applySafeFrontmatterAutoFixes(
   content: string,
-  block: FrontmatterBlock,
-): {
-  changed: boolean;
-  safeToApply: boolean;
-  updatedContent: string;
-} {
+  artifactKind: ArtifactKind,
+): FrontmatterAutoFixOutcome {
+  const block = extractFrontmatterBlock(content);
+  if (!block) {
+    return { changed: false, updatedContent: content, appliedCodes: [] };
+  }
+
   const frontmatterLines = block.lines.slice(
     block.openDelimiterLineIndex + 1,
     block.closeDelimiterLineIndex,
   );
+  const appliedCodes = new Set<string>();
 
-  const normalized = frontmatterLines.map((line) =>
-    line.replace(/^[ \t]+/u, (leading) => leading.replace(/\t/g, "  ")),
-  );
+  const normalized = frontmatterLines.map((line) => {
+    let next = line;
+
+    const indentationFixed = next.replace(/^[ \t]+/u, (leading) => leading.replace(/\t/g, "  "));
+    if (indentationFixed !== next) {
+      appliedCodes.add("TAB_INDENTATION");
+      next = indentationFixed;
+    }
+
+    const trailingWhitespaceFixed = next.replace(/[ \t]+$/u, "");
+    if (trailingWhitespaceFixed !== next) {
+      appliedCodes.add("TRAILING_WHITESPACE");
+      next = trailingWhitespaceFixed;
+    }
+
+    const riskyScalarQuoted = quoteRiskyScalarLine(next, artifactKind);
+    if (riskyScalarQuoted !== next) {
+      appliedCodes.add("SCALAR_SAFETY");
+      next = riskyScalarQuoted;
+    }
+
+    return next;
+  });
 
   const changed = normalized.some((line, index) => line !== frontmatterLines[index]);
   if (!changed) {
-    return { changed: false, safeToApply: true, updatedContent: content };
-  }
-
-  const originalYaml = `${frontmatterLines.join("\n")}\n`;
-  const fixedYaml = `${normalized.join("\n")}\n`;
-
-  const safeToApply = canApplyWhitespaceFixSafely(originalYaml, fixedYaml);
-  if (!safeToApply) {
-    return { changed: true, safeToApply: false, updatedContent: content };
+    return { changed: false, updatedContent: content, appliedCodes: [] };
   }
 
   const updatedLines = [...block.lines];
@@ -550,20 +612,27 @@ function tryFixIndentationTabs(
 
   return {
     changed: true,
-    safeToApply: true,
     updatedContent: updatedLines.join("\n"),
+    appliedCodes: [...appliedCodes],
   };
 }
 
-function canApplyWhitespaceFixSafely(originalYaml: string, fixedYaml: string): boolean {
-  const original = parseDocument(originalYaml, { strict: false });
-  const fixed = parseDocument(fixedYaml, { strict: false });
-
-  if (original.errors.length > 0 || fixed.errors.length > 0) {
-    return true;
+function quoteRiskyScalarLine(line: string, artifactKind: ArtifactKind): string {
+  const match = line.match(/^([ \t]*)([A-Za-z_][\w-]*)(\s*:\s*)([^"'[{#].*?)(\s*(?:#.*)?)$/u);
+  if (!match) {
+    return line;
   }
 
-  const originalData = JSON.stringify(original.toJS());
-  const fixedData = JSON.stringify(fixed.toJS());
-  return originalData === fixedData;
+  const [, indent, key, separator, rawValueWithPadding, suffix] = match;
+  const keysToGuard = artifactKind === "task" ? TASK_SCALAR_GUARD_KEYS : DECISION_SCALAR_GUARD_KEYS;
+  if (!keysToGuard.has(key)) {
+    return line;
+  }
+
+  const rawValue = rawValueWithPadding.trim();
+  if (!rawValue || rawValue === "null" || !RISKY_PLAIN_SCALAR.test(rawValue)) {
+    return line;
+  }
+
+  return `${indent}${key}${separator}"${rawValue.replace(/"/g, '\\"')}"${suffix}`;
 }

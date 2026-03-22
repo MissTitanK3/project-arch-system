@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import path from "path";
 import fs from "fs-extra";
 import { createTempDir, type TestProjectContext } from "../../test/helpers";
 import { initializeProject } from "./initializeProject";
+import { agentSkillSchema } from "../../schemas/agentSkill";
+import { agentSkillRegistrySchema } from "../../schemas/agentSkillRegistry";
 
 describe.sequential("initializeProject - Standards Coverage", () => {
   let tempDir: string;
@@ -116,26 +118,17 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     const agentsPath = path.join(tempDir, "agents.md");
     const agentsContent = await fs.readFile(agentsPath, "utf8");
 
-    // Check for explicit standards review requirements
+    // Standards section present and markdown reference explicit
     expect(agentsContent).toContain("architecture/standards/");
-    expect(agentsContent).toContain("REQUIRED before implementation");
-    expect(agentsContent).toContain("Standards Review Checklist");
+    expect(agentsContent).toContain("architecture/standards/markdown-standards.md");
+    expect(agentsContent).toContain("Primary Markdown reference");
 
-    // Check that all standards files are mentioned
-    expect(agentsContent).toContain("typescript-standards.md");
-    expect(agentsContent).toContain("markdown-standards.md");
-    expect(agentsContent).toContain("testing-standards.md");
-    expect(agentsContent).toContain("naming-conventions.md");
-    expect(agentsContent).toContain("turborepo-standards.md");
-
-    // Operational additions from merged template spec
-    expect(agentsContent).toContain("## 6. Operational Command Reference");
-    expect(agentsContent).toContain("pa help workflows");
-    expect(agentsContent).toContain("pa help validation");
+    // CLI-first enforcement is present
+    expect(agentsContent).toContain("CLI-First Enforcement");
     expect(agentsContent).toContain("pa doctor");
-    expect(agentsContent).toContain("pa help lanes");
     expect(agentsContent).toContain("pa feedback list");
     expect(agentsContent).toContain("pa feedback review <issueId>");
+    expect(agentsContent).toContain("pa reconcile task <taskId>");
 
     // Governance hierarchy remains explicit
     expect(agentsContent).toContain("Documentation Authority");
@@ -160,7 +153,6 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       "## 3. Agent Execution Workflow",
       "## 4. Operating Rules",
       "## 5. Agent Philosophy",
-      "## 6. Operational Command Reference",
     ];
 
     const positions = requiredSections.map((section) => agentsContent.indexOf(section));
@@ -184,24 +176,36 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     const agentsPath = path.join(tempDir, "agents.md");
     const agentsContent = await fs.readFile(agentsPath, "utf8");
 
-    expect(agentsContent).toContain("### Workflow & Preflight");
-    expect(agentsContent).toContain("### Task Lane Commands");
-    expect(agentsContent).toContain("### Feedback Operations");
-    expect(agentsContent).toContain("`pa help validation`");
+    // CLI-first enforcement section present
+    expect(agentsContent).toContain("### CLI-First Enforcement (Required)");
+    expect(agentsContent).toContain("#### Project Architecture CLI (pa)");
 
-    expect(agentsContent).toContain("`pa task new {phase} {milestone}`");
-    expect(agentsContent).toContain("`pa task discover {phase} {milestone} --from <taskId>`");
-    expect(agentsContent).toContain("`pa task idea {phase} {milestone}`");
+    // Task lane commands present (code fence format uses <phase>/<milestone>)
+    expect(agentsContent).toContain("pa task new <phase> <milestone>");
+    expect(agentsContent).toContain("pa task discover <phase> <milestone> --from <taskId>");
+    expect(agentsContent).toContain("pa task idea <phase> <milestone>");
+    expect(agentsContent).toContain("pa task lanes <phase> <milestone>");
 
-    expect(agentsContent).toContain("`pa feedback list`");
-    expect(agentsContent).toContain("`pa feedback show <issueId>`");
-    expect(agentsContent).toContain(
-      "`pa feedback review <issueId> [--dismiss|--mitigated-locally|--defer|--escalate] [--yes]`",
-    );
-    expect(agentsContent).toContain("`pa feedback export <issueId> [--format md|json]`");
-    expect(agentsContent).toContain("`pa feedback refresh`");
-    expect(agentsContent).toContain("`pa feedback rebuild`");
-    expect(agentsContent).toContain("`pa feedback prune [--dry-run]`");
+    // Feedback commands present
+    expect(agentsContent).toContain("pa feedback list");
+    expect(agentsContent).toContain("pa feedback show <issueId>");
+    expect(agentsContent).toContain("pa feedback review <issueId>");
+    expect(agentsContent).toContain("pa feedback export <issueId>");
+    expect(agentsContent).toContain("pa feedback refresh");
+    expect(agentsContent).toContain("pa feedback rebuild");
+    expect(agentsContent).toContain("pa feedback prune");
+
+    // Feedback invocation policy present
+    expect(agentsContent).toContain("Feedback Invocation Policy");
+
+    // Reconciliation section present
+    expect(agentsContent).toContain("pa reconcile task <taskId>");
+    expect(agentsContent).toContain("pa backfill implemented");
+
+    // Lifecycle constraints present
+    expect(agentsContent).toContain("#### Lifecycle Constraints");
+    expect(agentsContent).toContain("discoveredFromTask");
+    expect(agentsContent).toContain("pa milestone activate");
   });
 
   it("standards files pass basic markdown lint rules", async () => {
@@ -472,5 +476,151 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(policy.schemaVersion).toBe("1.0");
     expect(policy.defaultProfile).toBe("default");
     expect(policy.profiles?.default?.timing?.phase?.skipDoneIfCompletedContainer).toBe(true);
+  });
+
+  it("scaffolds agents-of-arch tree with foundational built-ins and user template", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const agentsRoot = path.join(tempDir, ".arch", "agents-of-arch");
+    const skillsRoot = path.join(agentsRoot, "skills");
+    const templateRoot = path.join(agentsRoot, "user-skills", "_template");
+    const registryPath = path.join(agentsRoot, "registry.json");
+
+    expect(await fs.pathExists(path.join(agentsRoot, "README.md"))).toBe(true);
+    expect(await fs.pathExists(templateRoot)).toBe(true);
+    expect(await fs.pathExists(path.join(templateRoot, "README.md"))).toBe(true);
+    expect(await fs.pathExists(path.join(templateRoot, "system.md"))).toBe(true);
+    expect(await fs.pathExists(path.join(templateRoot, "checklist.md"))).toBe(true);
+    expect(await fs.pathExists(registryPath)).toBe(true);
+
+    const skillDirs = (await fs.readdir(skillsRoot, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort((left, right) => left.localeCompare(right));
+
+    expect(skillDirs).toHaveLength(7);
+
+    for (const skillId of skillDirs) {
+      const skillDir = path.join(skillsRoot, skillId);
+      const manifest = await fs.readJSON(path.join(skillDir, "skill.json"));
+      const parsed = agentSkillSchema.parse(manifest);
+
+      expect(parsed.id).toBe(skillId);
+      expect(parsed.source).toBe("builtin");
+      expect(await fs.pathExists(path.join(skillDir, parsed.files.system))).toBe(true);
+      expect(await fs.pathExists(path.join(skillDir, parsed.files.checklist))).toBe(true);
+    }
+
+    const registryRaw = await fs.readJSON(registryPath);
+    const registry = agentSkillRegistrySchema.parse(registryRaw);
+    expect(registry.skills).toHaveLength(7);
+    expect(registry.skills.map((skill) => skill.id)).toEqual([...skillDirs]);
+  });
+
+  it("writes deterministic agents registry content across repeated init", async () => {
+    const options = {
+      template: "nextjs-turbo" as const,
+      pm: "pnpm" as const,
+    };
+
+    await initializeProject(options, tempDir);
+
+    const registryPath = path.join(tempDir, ".arch", "agents-of-arch", "registry.json");
+    const first = await fs.readFile(registryPath, "utf8");
+
+    await initializeProject(options, tempDir);
+    const second = await fs.readFile(registryPath, "utf8");
+
+    expect(second).toBe(first);
+  });
+
+  it("does not overwrite managed files on re-init without force and reports conflicts", async () => {
+    const options = {
+      template: "nextjs-turbo" as const,
+      pm: "pnpm" as const,
+    };
+
+    await initializeProject(options, tempDir);
+
+    const policyPath = path.join(tempDir, "roadmap", "policy.json");
+    const customPolicy = {
+      schemaVersion: "1.0",
+      defaultProfile: "custom",
+      profiles: {
+        custom: {
+          timing: {
+            phase: {
+              skipDoneIfCompletedContainer: false,
+            },
+          },
+        },
+      },
+    };
+    await fs.writeFile(policyPath, `${JSON.stringify(customPolicy, null, 2)}\n`, "utf8");
+
+    const output = await (async () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      try {
+        await initializeProject(options, tempDir);
+        return logSpy.mock.calls.flat().join("\n");
+      } finally {
+        logSpy.mockRestore();
+      }
+    })();
+
+    const after = await fs.readJson(policyPath);
+    expect(after).toEqual(customPolicy);
+
+    expect(output).toContain("Skipped existing managed files:");
+    expect(output).toContain(
+      "Skipped (already exists): roadmap/policy.json — use --force to overwrite",
+    );
+  });
+
+  it("overwrites managed files on re-init with force and reports overwrites", async () => {
+    const options = {
+      template: "nextjs-turbo" as const,
+      pm: "pnpm" as const,
+    };
+
+    await initializeProject(options, tempDir);
+
+    const policyPath = path.join(tempDir, "roadmap", "policy.json");
+    const customPolicy = {
+      schemaVersion: "1.0",
+      defaultProfile: "custom",
+      profiles: {
+        custom: {
+          timing: {
+            phase: {
+              skipDoneIfCompletedContainer: false,
+            },
+          },
+        },
+      },
+    };
+    await fs.writeFile(policyPath, `${JSON.stringify(customPolicy, null, 2)}\n`, "utf8");
+
+    const output = await (async () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+      try {
+        await initializeProject({ ...options, force: true }, tempDir);
+        return logSpy.mock.calls.flat().join("\n");
+      } finally {
+        logSpy.mockRestore();
+      }
+    })();
+
+    const after = await fs.readJson(policyPath);
+    expect(after.defaultProfile).toBe("default");
+    expect(after).not.toEqual(customPolicy);
+
+    expect(output).toContain("Overwriting: roadmap/policy.json");
   });
 });

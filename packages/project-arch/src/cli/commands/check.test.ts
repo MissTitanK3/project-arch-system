@@ -47,6 +47,28 @@ describe("cli/commands/check", () => {
       consoleSpy.mockRestore();
     });
 
+    it("should pass coverage mode to sdk check run", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      const checkSpy = vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: true,
+          warnings: [],
+          errors: [],
+          diagnostics: [],
+        },
+      });
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--coverage-mode", "error"]);
+
+      expect(checkSpy).toHaveBeenCalledWith(expect.objectContaining({ coverageMode: "error" }));
+      expect(consoleSpy).toHaveBeenCalledWith("OK");
+    });
+
     it("should handle warnings without failing", async () => {
       const program = new Command();
       program.exitOverride();
@@ -469,7 +491,11 @@ describe("cli/commands/check", () => {
 
       await program.parseAsync(["node", "test", "check", "--fail-fast"]);
 
-      expect(checkRunSpy).toHaveBeenCalledWith({ failFast: true });
+      expect(checkRunSpy).toHaveBeenCalledWith({
+        failFast: true,
+        completenessThreshold: 100,
+        coverageMode: "warning",
+      });
       expect(warnSpy).not.toHaveBeenCalled();
       expect(logSpy).not.toHaveBeenCalledWith("OK");
       expect(errorSpy).toHaveBeenCalledTimes(1);
@@ -483,6 +509,51 @@ describe("cli/commands/check", () => {
 
       warnSpy.mockRestore();
       errorSpy.mockRestore();
+      logSpy.mockRestore();
+    });
+
+    it("should pass custom completeness threshold to check sdk", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      const checkRunSpy = vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: true,
+          warnings: [],
+          errors: [],
+          diagnostics: [],
+          graphDiagnostics: {
+            built: true,
+            completeness: {
+              score: 100,
+              threshold: 85,
+              sufficient: true,
+              connectedDecisionNodes: 1,
+              totalDecisionNodes: 1,
+            },
+            disconnectedNodes: {
+              decisionsWithoutDomain: [],
+              decisionsWithoutTaskBackReferences: [],
+              domainsWithoutDecisions: [],
+              taskReferencesToMissingDecisions: [],
+            },
+          },
+        },
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--completeness-threshold", "85"]);
+
+      expect(checkRunSpy).toHaveBeenCalledWith({
+        failFast: undefined,
+        completenessThreshold: 85,
+        coverageMode: "warning",
+      });
+      expect(logSpy).toHaveBeenCalledWith("OK");
+
       logSpy.mockRestore();
     });
 
@@ -607,6 +678,109 @@ describe("cli/commands/check", () => {
 
       logSpy.mockRestore();
       warnSpy.mockRestore();
+    });
+
+    it("should filter diagnostics to a specific file with --file", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: false,
+          warnings: [],
+          errors: ["error-a", "error-b"],
+          diagnostics: [
+            {
+              code: "MALFORMED_TASK_FILE",
+              severity: "error",
+              message:
+                "Malformed task file 'roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md': schema failure",
+              path: "roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md",
+              hint: null,
+            },
+            {
+              code: "MISSING_TASK_CODE_TARGET",
+              severity: "error",
+              message: "Missing code target 'apps/web/src/index.ts' referenced by task p1/m1/002",
+              path: "apps/web/src/index.ts",
+              hint: null,
+            },
+          ],
+        },
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "check",
+        "--json",
+        "--file",
+        "roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md",
+      ]);
+
+      const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+        summary: { errorCount: number; diagnosticCount: number };
+        diagnostics: Array<{ code: string; path: string | null }>;
+      };
+
+      // Only the matching file diagnostic should remain.
+      expect(payload.diagnostics).toHaveLength(1);
+      expect(payload.diagnostics[0]).toMatchObject({ code: "MALFORMED_TASK_FILE" });
+      expect(payload.summary.errorCount).toBe(1);
+
+      logSpy.mockRestore();
+    });
+
+    it("should filter diagnostics to a milestone with --milestone", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: false,
+          warnings: [],
+          errors: ["error-a", "error-b"],
+          diagnostics: [
+            {
+              code: "MALFORMED_TASK_FILE",
+              severity: "error",
+              message:
+                "Malformed task file 'roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md': schema failure",
+              path: "roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md",
+              hint: null,
+            },
+            {
+              code: "MISSING_TASK_CODE_TARGET",
+              severity: "error",
+              message: "Missing code target ref in other milestone",
+              path: "roadmap/phases/p1/milestones/other-milestone/tasks/planned/002-task.md",
+              hint: null,
+            },
+          ],
+        },
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--json", "--milestone", "m1"]);
+
+      const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+        summary: { errorCount: number; diagnosticCount: number };
+        diagnostics: Array<{ code: string; path: string | null }>;
+      };
+
+      // Only diagnostics in milestones/m1 should remain.
+      expect(payload.diagnostics).toHaveLength(1);
+      expect(payload.diagnostics[0]).toMatchObject({ code: "MALFORMED_TASK_FILE" });
+      expect(payload.summary.errorCount).toBe(1);
+
+      logSpy.mockRestore();
     });
   });
 });

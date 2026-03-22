@@ -10,8 +10,7 @@ export default tseslint.config(
         ignores: [
             '**/dist/**',
             '**/node_modules/**',
-            '**/.turbo/**',
-            'packages/create-project-arch/templates/**'
+            '**/.turbo/**'
         ],
     },
     {

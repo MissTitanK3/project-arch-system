@@ -10,6 +10,16 @@ import {
 import { detectReconciliationTriggers } from "./triggerDetection";
 import { currentDateISO } from "../../utils/date";
 import { renderReconciliationReportMarkdown } from "./reportMarkdown";
+import {
+  loadReconciliationLifecycleSettings,
+  pruneReconciliationArtifacts,
+  refreshCanonicalReconciliationPointers,
+} from "./lifecycle";
+import {
+  assertRealpathWithinRoot,
+  filterGlobPathsBySymlinkPolicy,
+} from "../../utils/symlinkPolicy";
+import { filterSensitivePaths } from "../../utils/sensitivePaths";
 
 // ---------------------------------------------------------------------------
 // Task file lookup
@@ -23,9 +33,13 @@ async function findTaskFileById(taskId: string, cwd: string): Promise<string | n
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
+  });
+  const safeFiles = await filterGlobPathsBySymlinkPolicy(files, cwd, {
+    pathsAreAbsolute: true,
   });
 
-  return files[0] ?? null;
+  return safeFiles[0] ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +142,10 @@ export async function runReconcile(options: RunReconcileOptions): Promise<RunRec
   const frontmatter = taskSchema.parse(data);
 
   // 2. Assemble changed file signals
-  const changedFiles = [...frontmatter.codeTargets, ...(options.additionalChangedFiles ?? [])];
+  const changedFiles = filterSensitivePaths([
+    ...frontmatter.codeTargets,
+    ...(options.additionalChangedFiles ?? []),
+  ]).kept;
 
   // 3. Run trigger detection
   const { status, firedTriggers } = await detectReconciliationTriggers(
@@ -194,12 +211,22 @@ export async function runReconcile(options: RunReconcileOptions): Promise<RunRec
   const jsonPath = path.join(outDir, `${frontmatter.id}-${date}.json`);
   const markdownPath = path.join(outDir, `${frontmatter.id}-${date}.md`);
 
+  await assertRealpathWithinRoot(jsonPath, cwd, "reconciliation report json");
+  await assertRealpathWithinRoot(markdownPath, cwd, "reconciliation report markdown");
+
   await fs.writeJson(jsonPath, report, { spaces: 2 });
   await fs.writeFile(
     markdownPath,
     renderReconciliationReportMarkdown(report, "pa reconcile"),
     "utf8",
   );
+
+  const lifecycle = await loadReconciliationLifecycleSettings(cwd);
+  if (lifecycle.mode === "current-state-record") {
+    await pruneReconciliationArtifacts({ cwd, apply: true });
+  } else {
+    await refreshCanonicalReconciliationPointers(cwd);
+  }
 
   return { report, jsonPath, markdownPath };
 }

@@ -4,15 +4,17 @@ import { traceTask } from "../graph/traceTask";
 import { pathExists, readJson } from "../fs";
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
+import type { GraphLayerMode } from "../core/manifests/graph";
 
 export async function graphBuild(
   input: {
     cwd?: string;
     write?: boolean;
+    layerMode?: GraphLayerMode;
   } = {},
 ): Promise<OperationResult<{ path: string }>> {
   return wrap(async () => {
-    await buildGraph(input.cwd, { write: input.write });
+    await buildGraph(input.cwd, { write: input.write, layerMode: input.layerMode });
     return { path: ".arch/graph.json" };
   });
 }

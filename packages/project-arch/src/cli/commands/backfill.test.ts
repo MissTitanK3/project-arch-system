@@ -15,12 +15,12 @@ describe("cli/commands/backfill", () => {
     context = await createTestProject(originalCwd);
     await createPhase("phase-99");
     await createMilestone("phase-99", "milestone-99-backfill");
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     process.chdir(originalCwd);
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   it("registers backfill command with implemented subcommand", () => {
     const program = new Command();

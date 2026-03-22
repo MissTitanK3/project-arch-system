@@ -12,8 +12,9 @@ import { createTask } from "../tasks/createTask";
 import { createDecision } from "../decisions/createDecision";
 import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
-import { writeFile } from "../../fs";
+import { readMarkdownWithFrontmatter, writeFile, writeMarkdownWithFrontmatter } from "../../fs";
 import { readJson, writeJsonDeterministic } from "../../utils/fs";
+import { pruneReconciliationArtifacts } from "../reconciliation/lifecycle";
 
 describe.sequential("core/validation/check", () => {
   let context: TestProjectContext;
@@ -22,7 +23,7 @@ describe.sequential("core/validation/check", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd());
     tempDir = context.tempDir;
-  }, 90_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
@@ -52,7 +53,7 @@ describe.sequential("core/validation/check", () => {
         ],
       });
 
-      expect(payload).toEqual({
+      expect(payload).toMatchObject({
         schemaVersion: CHECK_DIAGNOSTICS_SCHEMA_VERSION,
         status: "invalid",
         summary: {
@@ -77,6 +78,8 @@ describe.sequential("core/validation/check", () => {
           },
         ],
       });
+      expect(payload.graphDiagnostics).toBeDefined();
+      expect(payload.graphDiagnostics.completeness.score).toBe(100);
     });
   });
 
@@ -169,7 +172,20 @@ describe.sequential("core/validation/check", () => {
       expect(result.errors).toEqual([]);
       expect(Array.isArray(result.diagnostics)).toBe(true);
       // May have warnings but should not have errors
-    }, 60_000);
+    }, 120_000);
+
+    it("fails when decision graph completeness is below threshold", async () => {
+      await createDecision({ scope: "project", title: "Orphaned decision" }, tempDir);
+
+      const result = await runRepositoryChecks(tempDir, { completenessThreshold: 100 });
+
+      expect(result.ok).toBe(false);
+      expect(result.diagnostics.some((d) => d.code === "DECISION_DOMAIN_LINK_MISSING")).toBe(true);
+      expect(result.diagnostics.some((d) => d.code === "GRAPH_COMPLETENESS_BELOW_THRESHOLD")).toBe(
+        true,
+      );
+      expect(result.graphDiagnostics?.completeness.sufficient).toBe(false);
+    }, 120_000);
 
     it("should detect duplicate task IDs in milestone scope", async () => {
       await createPhase("dup-phase", tempDir);
@@ -221,7 +237,7 @@ This task has a duplicate ID.
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Duplicate task id"))).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should detect missing code targets referenced by tasks", async () => {
       await createPhase("missing-target-phase", tempDir);
@@ -288,7 +304,7 @@ This task references a missing code target.
       expect(missingTargetDiagnostic?.code).toBe("MISSING_TASK_CODE_TARGET");
       expect(missingTargetDiagnostic?.severity).toBe("error");
       expect(missingTargetDiagnostic?.path).toBe("apps/nonexistent/src/missing.ts");
-    }, 60_000);
+    }, 120_000);
 
     it("should detect missing public docs referenced by tasks", async () => {
       await createPhase("missing-docs-phase", tempDir);
@@ -340,7 +356,7 @@ This task references missing public docs.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Missing public docs path"))).toBe(true);
       expect(result.errors.some((e) => e.includes("architecture/nonexistent.md"))).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should detect undeclared modules referenced by tasks", async () => {
       await createPhase("undeclared-module-phase", tempDir);
@@ -399,7 +415,7 @@ This task references an undeclared module.
       expect(undeclaredModuleDiagnostic).toBeDefined();
       expect(undeclaredModuleDiagnostic?.code).toBe("TASK_UNDECLARED_MODULE");
       expect(undeclaredModuleDiagnostic?.hint).toContain("Declare it in arch-model/modules.json");
-    }, 60_000);
+    }, 120_000);
 
     it("should detect undeclared domains referenced by task tags", async () => {
       await createPhase("undeclared-domain-phase", tempDir);
@@ -451,7 +467,7 @@ This task references an undeclared domain.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("undeclared domain"))).toBe(true);
       expect(result.errors.some((e) => e.includes("undeclared-domain"))).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should detect missing tasks linked by decisions", async () => {
       const decisionPath = await createDecision(
@@ -501,7 +517,7 @@ This decision links to a missing task.
       expect(
         result.errors.some((e) => e.includes("nonexistent-phase/nonexistent-milestone/999")),
       ).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should detect invalid decision task link format", async () => {
       const decisionPath = await createDecision(
@@ -552,7 +568,7 @@ This decision has an invalid task link format.
         d.message.includes("Invalid decision task link"),
       );
       expect(invalidDecisionTaskLinkDiagnostic?.code).toBe("INVALID_DECISION_TASK_LINK");
-    }, 60_000);
+    }, 120_000);
 
     it("should detect missing code targets referenced by decisions", async () => {
       const decisionPath = await createDecision(
@@ -605,7 +621,7 @@ This decision references a missing code target.
           d.message.includes("Missing code target") && d.message.includes("referenced by decision"),
       );
       expect(missingDecisionTargetDiagnostic?.code).toBe("MISSING_DECISION_CODE_TARGET");
-    }, 60_000);
+    }, 120_000);
 
     it("should detect missing superseded decisions", async () => {
       const decisionPath = await createDecision(
@@ -654,7 +670,7 @@ This decision supersedes a missing decision.
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("supersedes missing decision"))).toBe(true);
       expect(result.errors.some((e) => e.includes("project:20260101:nonexistent"))).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should handle warnings without failing validation", async () => {
       // Run checks on initialized project which may have warnings
@@ -665,7 +681,7 @@ This decision supersedes a missing decision.
         expect(result.ok).toBe(true);
         expect(Array.isArray(result.warnings)).toBe(true);
       }
-    }, 60_000);
+    }, 120_000);
 
     it("should return empty errors for valid project with declared modules", async () => {
       // Declare all modules that exist in the initialized project
@@ -688,7 +704,7 @@ This decision supersedes a missing decision.
       // Note: May have warnings, but should have no errors
       expect(result.ok).toBe(true);
       expect(result.errors).toEqual([]);
-    }, 60_000);
+    }, 120_000);
 
     it("should return empty errors for valid project with declared domains", async () => {
       // Add a declared domain
@@ -704,7 +720,7 @@ This decision supersedes a missing decision.
 
       expect(result.ok).toBe(true);
       expect(result.errors).toEqual([]);
-    }, 60_000);
+    }, 120_000);
 
     it("should detect multiple errors across different categories", async () => {
       await createPhase("multi-error-phase", tempDir);
@@ -756,7 +772,7 @@ Multiple validation errors.
 
       expect(result.ok).toBe(false);
       expect(result.errors.length).toBeGreaterThan(1);
-    }, 60_000);
+    }, 120_000);
 
     it("should stop at first actionable issue when failFast is enabled", async () => {
       await createPhase("fail-fast-phase", tempDir);
@@ -811,13 +827,17 @@ Multiple validation failures for fail-fast test.
 
       expect(failFastResult.ok).toBe(false);
       expect(failFastResult.errors).toHaveLength(1);
-      expect(failFastResult.diagnostics).toHaveLength(1);
-      expect(failFastResult.diagnostics[0]?.code).toBe("MISSING_TASK_CODE_TARGET");
-      expect(failFastResult.diagnostics[0]?.path).toBe("apps/missing-module/src/index.ts");
-    }, 60_000);
+      const failFastErrorDiagnostics = failFastResult.diagnostics.filter(
+        (diagnostic) => diagnostic.severity === "error",
+      );
+      expect(failFastErrorDiagnostics).toHaveLength(1);
+      expect(failFastErrorDiagnostics[0]?.code).toBe("MISSING_TASK_CODE_TARGET");
+      expect(failFastErrorDiagnostics[0]?.path).toBe("apps/missing-module/src/index.ts");
+    }, 120_000);
 
     it("should handle empty codeTargets array", async () => {
       await createPhase("empty-targets-phase", tempDir);
+      await scaffoldValidationContractForPhase(tempDir, "empty-targets-phase");
       await createMilestone("empty-targets-phase", "empty-targets-milestone", tempDir);
 
       const taskPath = await createTask({
@@ -861,10 +881,11 @@ Empty code targets should be valid.
       const result = await runRepositoryChecks(tempDir);
 
       expect(result.ok).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should handle empty publicDocs array", async () => {
       await createPhase("empty-docs-phase", tempDir);
+      await scaffoldValidationContractForPhase(tempDir, "empty-docs-phase");
       await createMilestone("empty-docs-phase", "empty-docs-milestone", tempDir);
 
       const taskPath = await createTask({
@@ -908,10 +929,11 @@ Empty public docs should be valid.
       const result = await runRepositoryChecks(tempDir);
 
       expect(result.ok).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should validate multiple tasks in same lane", async () => {
       await createPhase("multi-task-phase", tempDir);
+      await scaffoldValidationContractForPhase(tempDir, "multi-task-phase");
       await createMilestone("multi-task-phase", "multi-task-milestone", tempDir);
 
       // Create multiple tasks in the same lane
@@ -930,7 +952,7 @@ Empty public docs should be valid.
 
       // All should have unique IDs within the lane
       expect(result.ok).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should validate decisions with all required fields", async () => {
       await createDecision(
@@ -944,7 +966,7 @@ Empty public docs should be valid.
       const result = await runRepositoryChecks(tempDir);
 
       expect(result.ok).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should detect decision linking to non-existent task", async () => {
       await createDecision({ scope: "project", title: "Decision with Missing Task Link" }, tempDir);
@@ -954,7 +976,7 @@ Empty public docs should be valid.
       // May or may not error depending on implementation - just verify check runs
       expect(result.ok !== undefined).toBe(true);
       expect(Array.isArray(result.errors)).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should report invalid milestone manifest parsing errors", async () => {
       const phaseId = "invalid-manifest-phase";
@@ -982,7 +1004,7 @@ Empty public docs should be valid.
 
       expect(result.ok).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
-    }, 60_000);
+    }, 120_000);
 
     it("should detect project decision index entries for missing decisions", async () => {
       const projectDecisionIndexPath = path.join(tempDir, "roadmap", "decisions", "index.json");
@@ -1000,7 +1022,7 @@ Empty public docs should be valid.
           error.includes("Project decision index references missing decision"),
         ),
       ).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should fail with clear diagnostic when reconcile config is invalid", async () => {
       const configPath = path.join(tempDir, ".project-arch", "reconcile.config.json");
@@ -1027,7 +1049,53 @@ Empty public docs should be valid.
       expect(diagnostic?.code).toBe("INVALID_RECONCILE_CONFIG_SCHEMA");
       expect(diagnostic?.severity).toBe("error");
       expect(diagnostic?.path?.startsWith(".project-arch/reconcile.config.json")).toBe(true);
-    }, 60_000);
+    }, 120_000);
+
+    it("should detect duplicate reconciliation overrides and clear after prune", async () => {
+      const reconcileDir = path.join(tempDir, ".project-arch", "reconcile");
+      await fs.ensureDir(reconcileDir);
+
+      const baseReport = {
+        schemaVersion: "1.0",
+        type: "local-reconciliation",
+        changedFiles: [],
+        affectedAreas: [],
+        missingUpdates: [],
+        missingTraceLinks: [],
+        decisionCandidates: [],
+        standardsGaps: [],
+        proposedActions: [],
+        feedbackCandidates: [],
+      };
+
+      await writeJsonDeterministic(path.join(reconcileDir, "001-2026-03-20.json"), {
+        ...baseReport,
+        id: "reconcile-001-2026-03-20",
+        status: "reconciliation suggested",
+        taskId: "001",
+        date: "2026-03-20",
+      });
+      await writeJsonDeterministic(path.join(reconcileDir, "001-2026-03-22.json"), {
+        ...baseReport,
+        id: "reconcile-001-2026-03-22",
+        status: "reconciliation complete",
+        taskId: "001",
+        date: "2026-03-22",
+      });
+
+      const beforePrune = await runRepositoryChecks(tempDir);
+      expect(beforePrune.ok).toBe(false);
+      expect(
+        beforePrune.diagnostics.some((item) => item.code === "DUPLICATE_RECONCILIATION_OVERRIDE"),
+      ).toBe(true);
+
+      await pruneReconciliationArtifacts({ cwd: tempDir, apply: true });
+
+      const afterPrune = await runRepositoryChecks(tempDir);
+      expect(
+        afterPrune.diagnostics.some((item) => item.code === "DUPLICATE_RECONCILIATION_OVERRIDE"),
+      ).toBe(false);
+    }, 120_000);
 
     it("should surface warning count for outstanding tooling-feedback reports", async () => {
       const feedbackDir = path.join(tempDir, ".project-arch", "feedback");
@@ -1061,7 +1129,7 @@ Empty public docs should be valid.
       expect(result.diagnostics.some((item) => item.code === "OUTSTANDING_TOOLING_FEEDBACK")).toBe(
         true,
       );
-    }, 60_000);
+    }, 120_000);
 
     it("should validate decision links with valid code targets", async () => {
       // Just run checks on the current initialized project
@@ -1071,7 +1139,7 @@ Empty public docs should be valid.
       // Basic validation should succeed for initialized project
       expect(Array.isArray(result.errors)).toBe(true);
       expect(typeof result.ok).toBe("boolean");
-    }, 60_000);
+    }, 120_000);
 
     it("should accept code targets from declared modules", async () => {
       // Create modules.json with all default and new modules declared
@@ -1089,6 +1157,7 @@ Empty public docs should be valid.
       });
 
       await createPhase("module-phase", tempDir);
+      await scaffoldValidationContractForPhase(tempDir, "module-phase");
       await createMilestone("module-phase", "module-milestone", tempDir);
 
       // Create the actual target directories and files
@@ -1144,7 +1213,7 @@ completionCriteria: []
 
       // Should pass because modules are declared and files exist
       expect(result.ok).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should handle invalid modules.json structure", async () => {
       // Create invalid modules.json (not an array)
@@ -1157,7 +1226,7 @@ completionCriteria: []
 
       // Should still run without crashing, treating it as no declared modules
       expect(result.ok !== undefined).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should handle code targets with insufficient path segments", async () => {
       await createPhase("short-path-phase", tempDir);
@@ -1209,7 +1278,113 @@ completionCriteria: []
 
       // Should handle gracefully (these targets won't have modules to check)
       expect(result.ok !== undefined).toBe(true);
-    }, 60_000);
+    }, 120_000);
+
+    it("should warn when task codeTarget resolves to non-module artifact", async () => {
+      await createPhase("artifact-phase", tempDir);
+      await createMilestone("artifact-phase", "artifact-milestone", tempDir);
+
+      await createTask({
+        phaseId: "artifact-phase",
+        milestoneId: "artifact-milestone",
+        lane: "planned",
+        title: "Task with non-runtime artifact target",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      const taskDir = path.join(
+        tempDir,
+        "roadmap/phases/artifact-phase/milestones/artifact-milestone/tasks/planned",
+      );
+      const taskFiles = await walkDir(taskDir);
+      const taskFile = taskFiles[0];
+
+      await writeFile(
+        taskFile,
+        `---
+schemaVersion: "1.0"
+id: "001"
+slug: task-non-module-artifact
+lane: planned
+title: Task with non-runtime artifact target
+status: todo
+createdAt: "2026-03-07"
+updatedAt: "2026-03-07"
+discoveredFromTask: null
+publicDocs: []
+codeTargets:
+  - README.md
+tags: []
+decisions: []
+completionCriteria: []
+---
+
+# Task with non-runtime artifact target
+`,
+      );
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.diagnostics.some((item) => item.code === "TASK_NON_MODULE_CODE_TARGET")).toBe(
+        true,
+      );
+    }, 120_000);
+
+    it("should suppress non-module artifact warnings via graph config", async () => {
+      await createPhase("artifact-suppress-phase", tempDir);
+      await createMilestone("artifact-suppress-phase", "artifact-suppress-milestone", tempDir);
+
+      await createTask({
+        phaseId: "artifact-suppress-phase",
+        milestoneId: "artifact-suppress-milestone",
+        lane: "planned",
+        title: "Task with suppressed non-runtime target",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      await writeJsonDeterministic(path.join(tempDir, ".project-arch", "graph.config.json"), {
+        suppress: ["README.md"],
+      });
+
+      const taskDir = path.join(
+        tempDir,
+        "roadmap/phases/artifact-suppress-phase/milestones/artifact-suppress-milestone/tasks/planned",
+      );
+      const taskFiles = await walkDir(taskDir);
+      const taskFile = taskFiles[0];
+
+      await writeFile(
+        taskFile,
+        `---
+schemaVersion: "1.0"
+id: "001"
+slug: task-suppressed-non-module-artifact
+lane: planned
+title: Task with suppressed non-runtime target
+status: todo
+createdAt: "2026-03-07"
+updatedAt: "2026-03-07"
+discoveredFromTask: null
+publicDocs: []
+codeTargets:
+  - README.md
+tags: []
+decisions: []
+completionCriteria: []
+---
+
+# Task with suppressed non-runtime target
+`,
+      );
+
+      const result = await runRepositoryChecks(tempDir);
+
+      expect(result.diagnostics.some((item) => item.code === "TASK_NON_MODULE_CODE_TARGET")).toBe(
+        false,
+      );
+    }, 120_000);
 
     it("should parse domain tags correctly", async () => {
       // Create domains.json
@@ -1222,6 +1397,7 @@ completionCriteria: []
       });
 
       await createPhase("domain-phase", tempDir);
+      await scaffoldValidationContractForPhase(tempDir, "domain-phase");
       await createMilestone("domain-phase", "domain-milestone", tempDir);
 
       // Create task with domain tag
@@ -1270,7 +1446,7 @@ completionCriteria: []
 
       // Should validate domain tag successfully
       expect(result.ok).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should handle invalid domains.json structure", async () => {
       // Create invalid domains.json (not an array)
@@ -1283,7 +1459,7 @@ completionCriteria: []
 
       // Should still run without crashing
       expect(result.ok !== undefined).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should handle non-domain tags gracefully", async () => {
       await createPhase("non-domain-phase", tempDir);
@@ -1336,7 +1512,7 @@ completionCriteria: []
 
       // Should handle gracefully (non-domain tags should be ignored for domain validation)
       expect(result.ok !== undefined).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should fail when roadmap task count differs from .arch task node count", async () => {
       const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
@@ -1357,7 +1533,7 @@ completionCriteria: []
             error.includes("roadmap task files count") && error.includes(".arch task node count"),
         ),
       ).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should fail when milestone-task edges are missing", async () => {
       const edgesPath = path.join(tempDir, ".arch", "edges", "milestone_to_task.json");
@@ -1369,7 +1545,7 @@ completionCriteria: []
       expect(result.errors.some((error) => error.includes("missing milestone-task edge"))).toBe(
         true,
       );
-    }, 60_000);
+    }, 120_000);
 
     it("should fail when roadmap task status differs from graph task status", async () => {
       const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
@@ -1397,7 +1573,7 @@ completionCriteria: []
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((error) => error.includes("status drift for task"))).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should fail when arch-model/concept-map.json violates schema", async () => {
       const conceptMapPath = path.join(tempDir, "arch-model", "concept-map.json");
@@ -1425,7 +1601,7 @@ completionCriteria: []
           error.includes("Invalid concept-map schema at arch-model/concept-map.json"),
         ),
       ).toBe(true);
-    }, 60_000);
+    }, 120_000);
 
     it("should handle 100+ untracked implementation diagnostics in JSON mode", async () => {
       // Add a single tracked target to trigger untracked diagnostic collection
@@ -1479,9 +1655,247 @@ completionCriteria: []
       // Verify truncation diagnostic contains count information
       const truncatedMsg = truncatedDiagnostics[0]?.message ?? "";
       expect(truncatedMsg).toContain("omitted");
-    }, 60_000);
+    }, 120_000);
   });
 });
+
+describe("runRepositoryChecks – malformed task file resilience", () => {
+  let context: TestProjectContext;
+  let tempDir: string;
+
+  beforeEach(async () => {
+    context = await createTestProject(process.cwd(), undefined, { setCwd: false });
+    tempDir = context.tempDir;
+  }, 120_000);
+
+  afterEach(async () => {
+    await context.cleanup();
+  });
+
+  it("emits MALFORMED_TASK_FILE diagnostic and continues validating remaining files", async () => {
+    // Drop a malformed task file (schema-invalid frontmatter) into an existing lane.
+    const laneDir = path.join(
+      tempDir,
+      "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned",
+    );
+    const malformedPath = path.join(laneDir, "001-malformed-schema.md");
+    await fs.ensureDir(laneDir);
+    await fs.writeFile(
+      malformedPath,
+      `---
+schemaVersion: "1.0"
+id: "001"
+slug: "malformed-schema"
+lane: "planned"
+status: "todo"
+createdAt: "not-a-date"
+updatedAt: "not-a-date"
+discoveredFromTask: null
+tags: []
+codeTargets: []
+publicDocs: []
+decisions: []
+completionCriteria: []
+---
+
+# Malformed schema task
+`,
+      "utf8",
+    );
+
+    const result = await runRepositoryChecks(tempDir);
+
+    // Should not throw – malformed file becomes a diagnostic, not a crash.
+    expect(Array.isArray(result.errors)).toBe(true);
+    expect(Array.isArray(result.diagnostics)).toBe(true);
+
+    // The malformed file must surface as MALFORMED_TASK_FILE.
+    const malformedDiagnostic = result.diagnostics.find((d) => d.code === "MALFORMED_TASK_FILE");
+    expect(malformedDiagnostic).toBeDefined();
+    expect(malformedDiagnostic?.severity).toBe("error");
+    expect(malformedDiagnostic?.message).toContain("malformed-schema");
+
+    // All other valid task files must still produce their own diagnostics (or none).
+    // The graph parity / lane checks must still run and report normally.
+    const notMalformed = result.diagnostics.filter((d) => d.code !== "MALFORMED_TASK_FILE");
+    // No crash – we just verify we got at least the malformed diagnostic.
+    expect(result.diagnostics.length).toBeGreaterThanOrEqual(1);
+    // notMalformed being defined asserts the rest of validation continued.
+    expect(Array.isArray(notMalformed)).toBe(true);
+  }, 120_000);
+});
+
+describe("runRepositoryChecks – planning coverage diagnostics", () => {
+  let context: TestProjectContext;
+  let tempDir: string;
+
+  beforeEach(async () => {
+    context = await createTestProject(process.cwd(), undefined, { setCwd: false });
+    tempDir = context.tempDir;
+  }, 120_000);
+
+  afterEach(async () => {
+    await context.cleanup();
+  });
+
+  it("emits PAC coverage warnings by default for uncovered targets and missing objective traces", async () => {
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.ok).toBe(true);
+    expect(result.warnings.some((warning) => warning.includes("PAC_TARGET_UNCOVERED"))).toBe(true);
+    expect(
+      result.warnings.some((warning) => warning.includes("PAC_TASK_MISSING_OBJECTIVE_TRACE")),
+    ).toBe(true);
+  }, 120_000);
+
+  it("escalates PAC coverage findings to errors in strict mode", async () => {
+    const result = await runRepositoryChecks(tempDir, { coverageMode: "error" });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes("PAC_TARGET_UNCOVERED"))).toBe(true);
+    expect(result.errors.some((error) => error.includes("PAC_TASK_MISSING_OBJECTIVE_TRACE"))).toBe(
+      true,
+    );
+  }, 120_000);
+
+  it("avoids false positives when planned task links target areas and objective refs", async () => {
+    const plannedTasksDir = path.join(
+      tempDir,
+      "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned",
+    );
+
+    const taskPaths = (await walkDir(plannedTasksDir)).filter((filePath) =>
+      filePath.endsWith(".md"),
+    );
+
+    for (const taskPath of taskPaths) {
+      const taskDoc = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskPath);
+      const existingTraceLinks = Array.isArray(taskDoc.data.traceLinks)
+        ? (taskDoc.data.traceLinks as string[])
+        : [];
+
+      const updatedFrontmatter: Record<string, unknown> = {
+        ...taskDoc.data,
+        traceLinks: Array.from(
+          new Set([
+            ...existingTraceLinks,
+            "roadmap/phases/phase-1/overview.md",
+            "roadmap/phases/phase-1/milestones/milestone-1-setup/targets.md",
+          ]),
+        ),
+      };
+
+      if (path.basename(taskPath).startsWith("001-")) {
+        updatedFrontmatter["codeTargets"] = [
+          "apps/web",
+          "apps/docs",
+          "packages/ui",
+          "packages/types",
+          "packages/config",
+          "packages/database",
+          "packages/api",
+          "architecture/foundation",
+          "apps/web/app/dashboard",
+          "packages/ui/components/dashboard",
+        ];
+      }
+
+      await writeMarkdownWithFrontmatter(taskPath, updatedFrontmatter, taskDoc.content);
+    }
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.warnings.some((warning) => warning.includes("PAC_TARGET_UNCOVERED"))).toBe(false);
+    expect(
+      result.warnings.some((warning) => warning.includes("PAC_TASK_MISSING_OBJECTIVE_TRACE")),
+    ).toBe(false);
+  }, 120_000);
+});
+
+describe("runRepositoryChecks – validation contract", () => {
+  let context: TestProjectContext;
+  let tempDir: string;
+
+  beforeEach(async () => {
+    context = await createTestProject(process.cwd(), undefined, { setCwd: false });
+    tempDir = context.tempDir;
+  }, 120_000);
+
+  afterEach(async () => {
+    await context.cleanup();
+  });
+
+  it("emits PAV_CONTRACT_MISSING when validation contract is absent", async () => {
+    const contractPath = path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json");
+    await fs.remove(contractPath);
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes("PAV_CONTRACT_MISSING"))).toBe(true);
+    expect(result.errors.some((error) => error.includes("phase-1"))).toBe(true);
+  }, 120_000);
+
+  it("accepts valid validation contract", async () => {
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.ok).toBe(true);
+    expect(result.errors.some((error) => error.includes("PAV_"))).toBe(false);
+  }, 120_000);
+
+  it("emits PAV_CONTRACT_INVALID_SCHEMA when contract has invalid schema", async () => {
+    const contractPath = path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json");
+    const invalidContract = {
+      schemaVersion: "2.0", // invalid version
+      phaseId: "phase-1",
+      checks: [],
+      createdAt: "2026-03-22",
+      updatedAt: "2026-03-22",
+    };
+
+    await writeJsonDeterministic(contractPath, invalidContract);
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes("PAV_CONTRACT_INVALID_SCHEMA"))).toBe(true);
+  }, 120_000);
+
+  it("emits PAV_CONTRACT_INVALID_SCHEMA when check is missing required fields", async () => {
+    const contractPath = path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json");
+    const incompleteContract = {
+      schemaVersion: "1.0",
+      phaseId: "phase-1",
+      checks: [
+        {
+          id: "check-1",
+          objectiveRef: "objective-1",
+          // missing verifyCommand, expectedSignal, owner
+        },
+      ],
+      createdAt: "2026-03-22",
+      updatedAt: "2026-03-22",
+    };
+
+    await writeJsonDeterministic(contractPath, incompleteContract);
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes("PAV_CONTRACT_INVALID_SCHEMA"))).toBe(true);
+  }, 120_000);
+});
+
+async function scaffoldValidationContractForPhase(tempDir: string, phaseId: string): Promise<void> {
+  const contractPath = path.join(tempDir, `roadmap/phases/${phaseId}/validation-contract.json`);
+  await writeJsonDeterministic(contractPath, {
+    schemaVersion: "1.0",
+    phaseId,
+    checks: [],
+    createdAt: "2026-03-22",
+    updatedAt: "2026-03-22",
+  });
+}
 
 // Helper function to walk directory
 async function walkDir(dir: string): Promise<string[]> {

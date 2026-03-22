@@ -1,6 +1,7 @@
 import fs from "fs-extra";
 import fg from "fast-glob";
 import { DriftFinding } from "./runChecks";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
 const IMPORT_PATTERN =
   /(?:import|export)\s[^'"\n]*?from\s+['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g;
@@ -12,10 +13,12 @@ export async function checkImports(cwd: string): Promise<DriftFinding[]> {
     cwd,
     absolute: false,
     onlyFiles: true,
+    followSymbolicLinks: false,
     ignore: ["**/node_modules/**", "**/dist/**", "**/.next/**", "**/coverage/**"],
   });
+  const safeFiles = await filterGlobPathsBySymlinkPolicy(files, cwd);
 
-  for (const file of files.sort()) {
+  for (const file of safeFiles.sort()) {
     if (!file.startsWith("packages/")) {
       continue;
     }

@@ -13,4 +13,21 @@ describe("fs/index", () => {
     expect(typeof fsIndex.writeJsonDeterministicIfChanged).toBe("function");
     expect(typeof fsIndex.writeMarkdownWithFrontmatter).toBe("function");
   });
+
+  it("exposes stable top-level export keys", () => {
+    const keys = Object.keys(fsIndex);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "ensureDir",
+        "writeFile",
+        "readProject",
+        "pathExists",
+        "readJson",
+        "readMarkdownWithFrontmatter",
+        "writeJsonDeterministic",
+        "writeJsonDeterministicIfChanged",
+        "writeMarkdownWithFrontmatter",
+      ]),
+    );
+  });
 });

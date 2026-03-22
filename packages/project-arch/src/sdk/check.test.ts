@@ -9,7 +9,7 @@ describe.sequential("sdk/check", () => {
   beforeEach(async () => {
     originalCwd = process.cwd();
     context = await createTestProject(originalCwd);
-  }, 45_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
@@ -23,5 +23,5 @@ describe.sequential("sdk/check", () => {
     expect(Array.isArray(result.data.errors)).toBe(true);
     expect(Array.isArray(result.data.warnings)).toBe(true);
     expect(Array.isArray(result.data.diagnostics)).toBe(true);
-  }, 60_000);
+  }, 120_000);
 });

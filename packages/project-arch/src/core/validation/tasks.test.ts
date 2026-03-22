@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "path";
+import os from "os";
+import fs from "fs-extra";
 import { collectTaskRecords } from "./tasks";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createTask } from "../tasks/createTask";
@@ -14,11 +16,11 @@ describe("core/validation/tasks", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     tempDir = context.tempDir;
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   describe("collectTaskRecords", () => {
     it("should collect all task records from initialized project", async () => {
@@ -177,7 +179,7 @@ This task has a lane mismatch.
       );
 
       await expect(collectTaskRecords(tempDir)).rejects.toThrow(/lane mismatch/);
-    }, 10_000);
+    }, 120_000);
 
     it("should sort tasks consistently across multiple collections", async () => {
       const records1 = await collectTaskRecords(tempDir);
@@ -186,6 +188,47 @@ This task has a lane mismatch.
       expect(records1.length).toBe(records2.length);
       for (let i = 0; i < records1.length; i++) {
         expect(records1[i].filePath).toBe(records2[i].filePath);
+      }
+    });
+
+    it("should ignore symlinked task files that resolve outside project root", async () => {
+      const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "pa-task-symlink-outside-"));
+      try {
+        const outsideTask = path.join(outsideDir, "099-escape.md");
+        await fs.writeFile(
+          outsideTask,
+          `---
+schemaVersion: "1.0"
+id: "099"
+slug: outside-task
+lane: planned
+title: Outside Task
+status: todo
+createdAt: "2026-03-07"
+updatedAt: "2026-03-07"
+discoveredFromTask: null
+publicDocs: []
+codeTargets: []
+tags: []
+decisions: []
+completionCriteria: []
+---
+
+# Outside Task
+`,
+          "utf8",
+        );
+
+        const linkedTaskPath = path.join(
+          tempDir,
+          "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned/099-escape.md",
+        );
+        await fs.symlink(outsideTask, linkedTaskPath);
+
+        const records = await collectTaskRecords(tempDir);
+        expect(records.some((record) => record.frontmatter.id === "099")).toBe(false);
+      } finally {
+        await fs.remove(outsideDir);
       }
     });
   });

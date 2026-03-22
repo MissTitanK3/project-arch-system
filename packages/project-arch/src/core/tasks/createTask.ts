@@ -7,6 +7,8 @@ import { taskSchema, TaskLane } from "../../schemas/task";
 import { currentDateISO } from "../../utils/date";
 import { milestoneDir, milestoneTaskLaneDir, projectDocsRoot } from "../../utils/paths";
 import { pathExists, readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import { assertSafeId } from "../../utils/safeId";
+import { assertWithinRoot } from "../../utils/assertWithinRoot";
 import * as graphManifests from "../../graph/manifests";
 import { withAtomicTaskMutation } from "./atomicMutation";
 
@@ -93,6 +95,8 @@ export async function createTask(input: {
   cwd?: string;
 }): Promise<string> {
   const cwd = input.cwd ?? process.cwd();
+  assertSafeId(input.phaseId, "phaseId");
+  assertSafeId(input.milestoneId, "milestoneId");
   await assertInitialized(cwd);
   await assertMilestoneExists(input.phaseId, input.milestoneId, cwd);
 
@@ -107,6 +111,7 @@ export async function createTask(input: {
     milestoneTaskLaneDir(input.phaseId, input.milestoneId, input.lane, cwd),
     `${id}-${slug}.md`,
   );
+  assertWithinRoot(targetPath, cwd, "task file");
 
   const now = currentDateISO();
   const frontmatter = defaultTaskFrontmatter({

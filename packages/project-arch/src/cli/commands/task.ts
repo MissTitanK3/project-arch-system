@@ -3,6 +3,7 @@ import path from "path";
 import { Command } from "commander";
 import { tasks } from "../../sdk";
 import { unwrap } from "../../sdk/_utils";
+import { assertSafeId } from "../../utils/safeId";
 import { getLaneRangesTable } from "../../core/ids/task";
 import { getLaneUsage } from "../../core/tasks/laneUsage";
 import { formatEnhancedHelp } from "../help/format";
@@ -58,6 +59,17 @@ export function registerTaskCommand(program: Command): void {
       }),
     )
     .action(async (phaseId: string, milestoneId: string) => {
+      try {
+        assertSafeId(phaseId, "phaseId");
+        assertSafeId(milestoneId, "milestoneId");
+      } catch (error) {
+        console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(
+          "Hint: ids must be lowercase alphanumeric with single hyphens, e.g. phase-1 milestone-1-setup",
+        );
+        process.exitCode = 1;
+        return;
+      }
       const result = await tasks.taskCreate({ phase: phaseId, milestone: milestoneId });
       const created = unwrap(result).path;
       console.log(path.relative(process.cwd(), created));
@@ -126,6 +138,17 @@ export function registerTaskCommand(program: Command): void {
       }),
     )
     .action(async (phaseId: string, milestoneId: string, options: { from: string }) => {
+      try {
+        assertSafeId(phaseId, "phaseId");
+        assertSafeId(milestoneId, "milestoneId");
+      } catch (error) {
+        console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(
+          "Hint: ids must be lowercase alphanumeric with single hyphens, e.g. phase-1 milestone-1-setup",
+        );
+        process.exitCode = 1;
+        return;
+      }
       if (!/^\d{3}$/.test(options.from)) {
         console.error("ERROR: --from must be a 3-digit task id (e.g., 001)");
         console.error("Hint: Try 'pa task discover --help' for usage information");
@@ -176,6 +199,17 @@ export function registerTaskCommand(program: Command): void {
       }),
     )
     .action(async (phaseId: string, milestoneId: string) => {
+      try {
+        assertSafeId(phaseId, "phaseId");
+        assertSafeId(milestoneId, "milestoneId");
+      } catch (error) {
+        console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(
+          "Hint: ids must be lowercase alphanumeric with single hyphens, e.g. phase-1 milestone-1-setup",
+        );
+        process.exitCode = 1;
+        return;
+      }
       const result = await tasks.taskIdea({ phase: phaseId, milestone: milestoneId });
       const created = unwrap(result).path;
       console.log(path.relative(process.cwd(), created));

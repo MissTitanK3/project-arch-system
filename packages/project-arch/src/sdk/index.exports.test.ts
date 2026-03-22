@@ -10,10 +10,12 @@ describe("sdk/index", () => {
     expect(sdk.decisions).toBeDefined();
     expect(sdk.graph).toBeDefined();
     expect(sdk.check).toBeDefined();
+    expect(sdk.next).toBeDefined();
     expect(sdk.lint).toBeDefined();
     expect(sdk.report).toBeDefined();
     expect(sdk.policy).toBeDefined();
     expect(sdk.docs).toBeDefined();
+    expect(sdk.agents).toBeDefined();
     expect(sdk.registry).toBeDefined();
     expect(sdk.commandMetadata).toBeDefined();
   });

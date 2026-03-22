@@ -29,6 +29,7 @@ type FeedbackReviewOptions = {
 
 type FeedbackExportOptions = {
   format?: FeedbackExportFormat;
+  allowSensitivePaths?: boolean;
 };
 
 type FeedbackPruneOptions = {
@@ -287,7 +288,7 @@ async function clearDerivedFeedbackState(archDir: string): Promise<string[]> {
     path.join(archDir, "feedback", "issues"),
     path.join(archDir, "feedback", "exports"),
     path.join(process.cwd(), "architecture", "feedback", "open-feedback.md"),
-    path.join(process.cwd(), "architecture", "feedback", "feedback-history.md"),
+    path.join(process.cwd(), "architecture", "feedback", "optimization-candidates.md"),
   ];
 
   for (const derivedPath of derivedPaths) {
@@ -411,12 +412,24 @@ export function registerFeedbackCommand(program: Command): void {
     .description("Export a feedback issue or promote reconciliation feedback candidates")
     .argument("<id>", "Issue ID (e.g. FB-AMB-001) or reconciliation report ID/path")
     .option("--format <format>", "Export format: md | json", "md")
+    .option(
+      "--allow-sensitive-paths",
+      "UNSAFE: include sensitive file paths (e.g., .env, keys, tokens) in promoted tooling-feedback changedFiles",
+      false,
+    )
     .addHelpText("after", () =>
       formatEnhancedHelp({
-        usage: "pa feedback export <id> [--format md|json]",
+        usage: "pa feedback export <id> [--format md|json] [--allow-sensitive-paths]",
         description:
           "Generate a portable issue export artifact (FB-* IDs) or promote feedbackCandidates from a reconciliation report into tooling-feedback reports.",
-        options: [{ flag: "--format <format>", description: "Export format (default: md)" }],
+        options: [
+          { flag: "--format <format>", description: "Export format (default: md)" },
+          {
+            flag: "--allow-sensitive-paths",
+            description:
+              "UNSAFE override: include sensitive paths in promoted changedFiles (default excludes them)",
+          },
+        ],
         examples: [
           { description: "Export markdown", command: "pa feedback export FB-AMB-001" },
           {
@@ -435,6 +448,7 @@ export function registerFeedbackCommand(program: Command): void {
         const result = await exportToolingFeedbackFromReconciliation({
           reconciliationId: id,
           cwd: process.cwd(),
+          includeSensitivePaths: options.allowSensitivePaths === true,
         });
 
         if (result.generatedCount === 0) {
@@ -448,6 +462,11 @@ export function registerFeedbackCommand(program: Command): void {
         }
         for (const markdownPath of result.markdownPaths) {
           console.log(`md:   ${path.relative(process.cwd(), markdownPath)}`);
+        }
+        if (result.excludedSensitivePaths.length > 0) {
+          console.warn(
+            `Excluded sensitive changedFiles by default: ${result.excludedSensitivePaths.length} (re-run with --allow-sensitive-paths to include).`,
+          );
         }
         return;
       }

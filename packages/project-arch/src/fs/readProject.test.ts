@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, writeFile, mkdir } from "fs/promises";
+import { mkdtemp, rm, writeFile, mkdir, symlink } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import { readProject } from "./readProject";
@@ -252,6 +252,22 @@ describe("fs/readProject", () => {
 
       // Result should use forward slashes regardless of OS
       expect(result.files[0]).toBe("dir1/dir2/file.txt");
+    });
+
+    it("should ignore symlinked files that resolve outside project root", async () => {
+      const outsideDir = await mkdtemp(path.join(tmpdir(), "readProject-outside-"));
+      try {
+        const outsideFile = path.join(outsideDir, "outside.txt");
+        await writeFile(outsideFile, "outside");
+
+        const linkPath = path.join(tempDir, "outside-link.txt");
+        await symlink(outsideFile, linkPath);
+
+        const result = await readProject(tempDir);
+        expect(result.files).toEqual([]);
+      } finally {
+        await rm(outsideDir, { recursive: true, force: true });
+      }
     });
   });
 });

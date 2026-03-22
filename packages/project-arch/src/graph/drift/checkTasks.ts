@@ -2,6 +2,7 @@ import fg from "fast-glob";
 import { DecisionRecord } from "../../core/validation/decisions";
 import { TaskRecord } from "../../core/validation/tasks";
 import { DriftFinding } from "./runChecks";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
 export async function checkTasks(
   cwd: string,
@@ -30,10 +31,12 @@ export async function checkTasks(
     cwd,
     absolute: false,
     onlyFiles: true,
+    followSymbolicLinks: false,
     ignore: ["**/node_modules/**", "**/dist/**", "**/.next/**", "**/coverage/**"],
   });
+  const safeFiles = await filterGlobPathsBySymlinkPolicy(files, cwd);
 
-  for (const file of files.sort()) {
+  for (const file of safeFiles.sort()) {
     const normalizedFile = file.replace(/\\/g, "/");
     const matches = [...trackedPrefixes].some(
       (prefix) => normalizedFile === prefix || normalizedFile.startsWith(`${prefix}/`),

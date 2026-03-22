@@ -1,0 +1,58 @@
+version: "3"
+
+tasks:
+  install:locked:
+    desc: Install dependencies with lockfile enforcement
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  project-arch:build:
+    desc: Build project-arch from a clean dist path
+    deps: [install:locked]
+    cmds:
+      - pnpm --filter project-arch build
+
+  project-arch:typecheck:
+    desc: Typecheck project-arch
+    deps: [project-arch:build]
+    cmds:
+      - pnpm --filter project-arch typecheck
+
+  project-arch:lint:
+    desc: Lint project-arch
+    deps: [project-arch:typecheck]
+    cmds:
+      - pnpm --filter project-arch lint
+
+  project-arch:test:
+    desc: Test project-arch
+    deps: [project-arch:lint]
+    cmds:
+      - pnpm --filter project-arch test
+
+  project-arch:pack-check:
+    desc: Verify npm publish payload for project-arch
+    deps: [project-arch:test]
+    dir: packages/project-arch
+    cmds:
+      - npm pack --dry-run
+
+  checkout:clean:
+    desc: Ensure working tree is clean for release operations
+    cmds:
+      - git update-index -q --refresh
+      - git diff --quiet --ignore-submodules HEAD --
+      - git diff --cached --quiet --ignore-submodules
+
+  ci:validate:
+    desc: Provider-agnostic CI validation (build, typecheck, lint, test, pack dry-run)
+    deps: [project-arch:pack-check]
+
+  release:check:
+    desc: Release gate (clean checkout + full validation + publish payload check)
+    deps: [checkout:clean, ci:validate]
+
+  release:prepare:
+    desc: Local release preparation utility (pre-push / pre-publish)
+    cmds:
+      - pnpm --filter project-arch release:prepare

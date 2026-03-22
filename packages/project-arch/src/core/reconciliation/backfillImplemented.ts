@@ -9,6 +9,10 @@ import {
 } from "../../schemas/reconciliationReport";
 import { detectReconciliationTriggers } from "./triggerDetection";
 import { currentDateISO } from "../../utils/date";
+import {
+  assertRealpathWithinRoot,
+  filterGlobPathsBySymlinkPolicy,
+} from "../../utils/symlinkPolicy";
 
 export interface BackfillCandidate {
   taskId: string;
@@ -58,11 +62,15 @@ async function loadReconciliationReportIndex(cwd: string): Promise<Map<string, R
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
+  });
+  const safeReportFiles = await filterGlobPathsBySymlinkPolicy(reportFiles, cwd, {
+    pathsAreAbsolute: true,
   });
 
   const reportIndex = new Map<string, ReportIndexEntry>();
 
-  for (const reportFile of reportFiles.sort()) {
+  for (const reportFile of safeReportFiles.sort()) {
     try {
       const payload = await fs.readJson(reportFile);
       const parsed = reconciliationReportSchema.safeParse(payload);
@@ -201,6 +209,7 @@ export async function runBackfillImplemented(
     await fs.ensureDir(outputDir);
 
     const jsonPath = path.join(outputDir, `backfill-${generatedAt}.json`);
+    await assertRealpathWithinRoot(jsonPath, cwd, "backfill report json");
     await fs.writeJson(
       jsonPath,
       {

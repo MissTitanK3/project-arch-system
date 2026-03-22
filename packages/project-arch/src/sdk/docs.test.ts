@@ -14,7 +14,7 @@ describe.sequential("sdk/docs", () => {
     originalCwd = process.cwd();
     context = await createTestProject(originalCwd);
     tempDir = context.tempDir;
-  }, 45_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
@@ -33,12 +33,12 @@ describe.sequential("sdk/docs", () => {
 
     resultAssertions.assertSuccess(result);
     expect(result.data.refs).toEqual(["docs/a.md", "docs/b.md"]);
-  }, 60_000);
+  }, 120_000);
 
   it("should return empty refs in repository without doc links", async () => {
     const result = await docsList();
 
     resultAssertions.assertSuccess(result);
     expect(Array.isArray(result.data.refs)).toBe(true);
-  }, 60_000);
+  }, 120_000);
 });

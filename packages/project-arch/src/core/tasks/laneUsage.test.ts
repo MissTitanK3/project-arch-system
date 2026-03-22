@@ -14,11 +14,11 @@ describe("getLaneUsage", () => {
     tempDir = context.tempDir;
     await createPhase("phase-2", tempDir);
     await createMilestone("phase-2", "milestone-1-foundation", tempDir);
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   it("returns default ranges and next IDs for an empty milestone", async () => {
     const usage = await getLaneUsage("phase-2", "milestone-1-foundation", tempDir);

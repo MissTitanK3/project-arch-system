@@ -51,6 +51,11 @@ describe("sdk/registry", () => {
       expect(registry.check.checkRun).toBeDefined();
     });
 
+    it("should export next module", () => {
+      expect(registry.next).toBeDefined();
+      expect(registry.next.nextResolve).toBeDefined();
+    });
+
     it("should export lint module", () => {
       expect(registry.lint).toBeDefined();
       expect(registry.lint.lintFrontmatterRun).toBeDefined();
@@ -64,6 +69,15 @@ describe("sdk/registry", () => {
     it("should export docs module", () => {
       expect(registry.docs).toBeDefined();
       expect(registry.docs.docsList).toBeDefined();
+    });
+
+    it("should export agents module", () => {
+      expect(registry.agents).toBeDefined();
+      expect(registry.agents.agentsList).toBeDefined();
+      expect(registry.agents.agentsShow).toBeDefined();
+      expect(registry.agents.agentsNew).toBeDefined();
+      expect(registry.agents.agentsSync).toBeDefined();
+      expect(registry.agents.agentsCheck).toBeDefined();
     });
   });
 });

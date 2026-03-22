@@ -14,6 +14,11 @@ import { registerFeedbackCommand } from "./commands/feedback";
 import { registerDoctorCommand } from "./commands/doctor";
 import { registerReconcileCommand } from "./commands/reconcile";
 import { registerBackfillCommand } from "./commands/backfill";
+import { registerNextCommand } from "./commands/next";
+import { registerExplainCommand } from "./commands/explain";
+import { registerFixCommand } from "./commands/fix";
+import { registerNormalizeCommand } from "./commands/normalize";
+import { registerAgentsCommand } from "./commands/agents";
 import {
   getArchDir,
   getCommandPathFromCommander,
@@ -63,6 +68,11 @@ export async function runCli(argv = process.argv): Promise<void> {
   registerFeedbackCommand(program);
   registerReconcileCommand(program);
   registerBackfillCommand(program);
+  registerNextCommand(program);
+  registerExplainCommand(program);
+  registerFixCommand(program);
+  registerNormalizeCommand(program);
+  registerAgentsCommand(program);
   registerHelpCommand(program);
 
   try {

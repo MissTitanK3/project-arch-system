@@ -1,12 +1,9 @@
 #!/usr/bin/env node
 import { runCli } from "./cli/index";
-import { addHintToError } from "./cli/help/hints";
+import { formatErrorWithHint } from "./cli/help/hints";
+import { isDebugOutputEnabled } from "./utils/outputSafety";
 
 runCli(process.argv).catch((error: unknown) => {
-  if (error instanceof Error) {
-    console.error(addHintToError(error));
-  } else {
-    console.error(String(error));
-  }
+  console.error(formatErrorWithHint(error, { includeStack: isDebugOutputEnabled() }));
   process.exit(1);
 });

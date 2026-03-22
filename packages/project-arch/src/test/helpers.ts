@@ -1,4 +1,4 @@
-import { mkdtemp, rm, pathExists, readFile } from "fs-extra";
+import { mkdtemp, rm, pathExists, readFile, copy } from "fs-extra";
 import { tmpdir } from "os";
 import path from "path";
 import { expect } from "vitest";
@@ -8,6 +8,39 @@ import { OperationResult } from "../types/result";
 export interface TestProjectContext {
   tempDir: string;
   cleanup: () => Promise<void>;
+}
+
+let defaultFixturePromise: Promise<string> | null = null;
+async function runCleanupWithTimeout(cleanup: () => Promise<void>): Promise<void> {
+  await cleanup().catch(() => {
+    // best-effort: ignore errors so a failed cleanup never blocks suite progress
+  });
+}
+
+function shouldUseDefaultFixture(options?: Partial<InitOptions>): boolean {
+  if (!options) {
+    return true;
+  }
+
+  return Object.keys(options).length === 0;
+}
+
+async function getDefaultFixtureDir(): Promise<string> {
+  if (!defaultFixturePromise) {
+    defaultFixturePromise = (async () => {
+      const fixtureContext = await createTempDir();
+      await initializeProject(
+        {
+          template: "nextjs-turbo",
+          pm: "pnpm",
+        },
+        fixtureContext.tempDir,
+      );
+      return fixtureContext.tempDir;
+    })();
+  }
+
+  return defaultFixturePromise;
 }
 
 export async function createTempDir(): Promise<TestProjectContext> {
@@ -27,35 +60,51 @@ export async function createTestProject(
 ): Promise<TestProjectContext> {
   const context = await createTempDir();
   const shouldSetCwd = config?.setCwd !== false;
+  const fallbackCwd = (await pathExists(originalCwd)) ? originalCwd : process.cwd();
+  let cleanedUp = false;
 
   if (shouldSetCwd) {
     process.chdir(context.tempDir);
   }
 
   try {
-    await initializeProject(
-      {
-        template: "nextjs-turbo",
-        pm: "pnpm",
-        ...options,
-      },
-      context.tempDir,
-    );
-  } catch (error) {
-    if (shouldSetCwd) {
-      process.chdir(originalCwd);
+    if (shouldUseDefaultFixture(options)) {
+      const fixtureDir = await getDefaultFixtureDir();
+      await copy(fixtureDir, context.tempDir, { overwrite: true, errorOnExist: false });
+    } else {
+      await initializeProject(
+        {
+          template: "nextjs-turbo",
+          pm: "pnpm",
+          ...options,
+        },
+        context.tempDir,
+      );
     }
-    await context.cleanup();
+  } catch (error) {
+    if (shouldSetCwd && process.cwd() !== fallbackCwd) {
+      process.chdir(fallbackCwd);
+    }
+    await runCleanupWithTimeout(context.cleanup);
     throw error;
   }
 
   return {
     tempDir: context.tempDir,
     cleanup: async () => {
-      if (shouldSetCwd) {
-        process.chdir(originalCwd);
+      if (cleanedUp) {
+        return;
       }
-      await context.cleanup();
+
+      cleanedUp = true;
+
+      if (process.cwd().startsWith(context.tempDir)) {
+        process.chdir(fallbackCwd);
+      } else if (shouldSetCwd && process.cwd() !== fallbackCwd) {
+        process.chdir(fallbackCwd);
+      }
+
+      await runCleanupWithTimeout(context.cleanup);
     },
   };
 }

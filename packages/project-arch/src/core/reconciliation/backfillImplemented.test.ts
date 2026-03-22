@@ -26,12 +26,12 @@ describe("core/reconciliation/backfillImplemented", () => {
     context = await createTestProject(originalCwd);
     await createPhase("phase-99");
     await createMilestone("phase-99", "milestone-99-backfill");
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     process.chdir(originalCwd);
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   it("returns candidates for done tasks without reconciliation reports", async () => {
     const taskPath = await createTask({

@@ -4,6 +4,9 @@ import { unwrap } from "../../sdk/_utils";
 import { formatEnhancedHelp } from "../help/format";
 import { filterCheckResult, toCheckDiagnosticsPayload } from "../../core/validation/check";
 import { buildChangedScopePaths, detectChangedPaths } from "./checkChangedScope";
+import { resolveWorkflowProfile } from "../../schemas/workflowProfile";
+import type { WorkflowProfile } from "../../schemas/workflowProfile";
+import path from "path";
 
 function renderFailFastDiagnostic(diagnostic: {
   code: string;
@@ -41,11 +44,53 @@ function parseSeverityValues(
   return [...previous, ...parsed];
 }
 
+function parseCompletenessThreshold(value: string): number {
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed)) {
+    return 100;
+  }
+  if (parsed < 0) {
+    return 0;
+  }
+  if (parsed > 100) {
+    return 100;
+  }
+  return Number(parsed.toFixed(2));
+}
+
 export function registerCheckCommand(program: Command): void {
+  const parseWorkflowProfile = (value: string): WorkflowProfile | undefined => {
+    const lower = value.toLowerCase();
+    if (lower === "quality" || lower === "balanced" || lower === "budget") {
+      return lower as WorkflowProfile;
+    }
+    return undefined;
+  };
+
+  const parseCoverageMode = (value: string): "warning" | "error" =>
+    value === "error" ? "error" : "warning";
+
   program
     .command("check")
     .description("Validate architecture consistency")
     .option("--json", "Output machine-readable diagnostics as JSON")
+    .option(
+      "--profile <quality|balanced|budget>",
+      "Workflow profile: quality (strictest), balanced (default), or budget (minimal)",
+      parseWorkflowProfile,
+    )
+    .option(
+      "--completeness-threshold <0-100>",
+      "Fail when decision-domain completeness falls below threshold percentage",
+      parseCompletenessThreshold,
+      100,
+    )
+    .option(
+      "--coverage-mode <warning|error>",
+      "Planning coverage diagnostics severity mode (default: warning)",
+      parseCoverageMode,
+      "warning",
+    )
     .option(
       "--only <codes>",
       "Filter diagnostics by code (comma-separated or repeatable)",
@@ -66,6 +111,8 @@ export function registerCheckCommand(program: Command): void {
     )
     .option("--changed", "Limit reported diagnostics to changed git scope with safe fallback")
     .option("--fail-fast", "Stop at first actionable error")
+    .option("--file <path>", "Validate only the specified file (workspace-relative or absolute)")
+    .option("--milestone <id>", "Validate only tasks belonging to the given milestone ID")
     .addHelpText("after", () =>
       formatEnhancedHelp({
         usage: "pa check [options]",
@@ -79,6 +126,23 @@ export function registerCheckCommand(program: Command): void {
           },
           { description: "Stop after first actionable error", command: "pa check --fail-fast" },
           { description: "Emit diagnostics JSON", command: "pa check --json" },
+          {
+            description: "Require minimum decision graph completeness",
+            command: "pa check --completeness-threshold 90",
+          },
+          {
+            description: "Escalate planning coverage findings to errors",
+            command: "pa check --coverage-mode error",
+          },
+          {
+            description: "Validate a single file",
+            command:
+              "pa check --file roadmap/phases/phase-1/milestones/m-1/tasks/planned/001-task.md",
+          },
+          {
+            description: "Scope diagnostics to one milestone",
+            command: "pa check --milestone milestone-1-setup",
+          },
           {
             description: "Triage only untracked implementation warnings",
             command: "pa check --only UNTRACKED_IMPLEMENTATION --severity warning",
@@ -94,19 +158,64 @@ export function registerCheckCommand(program: Command): void {
         relatedCommands: [
           { command: "pa report", description: "Generate architecture report" },
           { command: "pa help architecture", description: "Learn about validation" },
+          { command: "pa explain <code>", description: "Explain a diagnostic code" },
         ],
       }),
     )
     .action(
       async (options: {
         json?: boolean;
+        profile?: WorkflowProfile;
         only?: string[];
         severity?: Array<"error" | "warning">;
         paths?: string[];
         changed?: boolean;
         failFast?: boolean;
+        file?: string;
+        milestone?: string;
+        completenessThreshold?: number;
+        coverageMode?: "warning" | "error";
       }) => {
-        const rawResult = unwrap(await check.checkRun({ failFast: options.failFast }));
+        let effectiveFailFast = options.failFast;
+        let effectiveCompleteness = options.completenessThreshold;
+        let effectiveCoverageMode = options.coverageMode;
+
+        // Only apply profile defaults if a profile is explicitly specified
+        if (options.profile) {
+          const profileDefaults = resolveWorkflowProfile(options.profile, undefined);
+          console.log(
+            `INFO: Using workflow profile '${options.profile}': ${profileDefaults.description}`,
+          );
+
+          // Apply profile defaults, allowing explicit CLI options to override
+          effectiveFailFast = options.failFast ?? profileDefaults.failFast;
+          effectiveCompleteness =
+            options.completenessThreshold !== undefined && options.completenessThreshold !== 100
+              ? options.completenessThreshold
+              : profileDefaults.completenessThreshold;
+          effectiveCoverageMode = options.coverageMode ?? profileDefaults.coverageMode;
+        }
+
+        const rawResult = unwrap(
+          await check.checkRun({
+            failFast: effectiveFailFast,
+            completenessThreshold: effectiveCompleteness,
+            coverageMode: effectiveCoverageMode,
+          }),
+        );
+
+        // Build scope paths from --file and --milestone options.
+        const scopePaths: string[] = [];
+        if (options.file) {
+          const cwd = process.cwd();
+          const absolute = path.isAbsolute(options.file)
+            ? options.file
+            : path.resolve(cwd, options.file);
+          scopePaths.push(path.relative(cwd, absolute).replace(/\\/g, "/"));
+        }
+        if (options.milestone) {
+          scopePaths.push(`**/milestones/${options.milestone}/**`);
+        }
 
         let changedScopePaths: string[] | undefined;
         if (options.changed) {
@@ -130,18 +239,17 @@ export function registerCheckCommand(program: Command): void {
           paths: changedScopePaths,
         });
 
-        const result =
-          options.changed && (options.paths?.length ?? 0) > 0
-            ? filterCheckResult(resultWithPrimaryFilters, {
-                paths: options.paths,
-              })
-            : options.changed
-              ? resultWithPrimaryFilters
-              : filterCheckResult(rawResult, {
-                  only: options.only,
-                  severity: options.severity,
-                  paths: options.paths,
-                });
+        // Apply --paths and --file/--milestone scope filters on top of changed-scope result.
+        const combinedPaths = [...(options.paths ?? []), ...scopePaths];
+        const result = options.changed
+          ? combinedPaths.length > 0
+            ? filterCheckResult(resultWithPrimaryFilters, { paths: combinedPaths })
+            : resultWithPrimaryFilters
+          : filterCheckResult(rawResult, {
+              only: options.only,
+              severity: options.severity,
+              paths: combinedPaths.length > 0 ? combinedPaths : options.paths,
+            });
 
         if (options.json) {
           const payload = toCheckDiagnosticsPayload(result);
@@ -166,6 +274,22 @@ export function registerCheckCommand(program: Command): void {
         for (const warning of result.warnings) {
           console.warn(`WARNING: ${warning}`);
         }
+        const graphSummary = result.graphDiagnostics;
+        if (graphSummary?.built) {
+          const score = graphSummary.completeness.score.toFixed(2);
+          const connected = graphSummary.completeness.connectedDecisionNodes;
+          const total = graphSummary.completeness.totalDecisionNodes;
+          const threshold = graphSummary.completeness.threshold.toFixed(2);
+          if (graphSummary.completeness.sufficient) {
+            console.log(
+              `GRAPH: built and sufficiently connected (${score}% decision-domain completeness, ${connected}/${total}, threshold ${threshold}%).`,
+            );
+          } else {
+            console.error(
+              `GRAPH: built but insufficiently connected (${score}% decision-domain completeness, ${connected}/${total}, threshold ${threshold}%).`,
+            );
+          }
+        }
         if (result.ok) {
           console.log("OK");
           return;
@@ -173,6 +297,14 @@ export function registerCheckCommand(program: Command): void {
 
         for (const error of result.errors) {
           console.error(`ERROR: ${error}`);
+        }
+        if (result.diagnostics.some((diagnostic) => diagnostic.code === "MALFORMED_TASK_FILE")) {
+          console.error("");
+          console.error("Repair suggestions:");
+          console.error("- Run pa fix frontmatter for a dry-run repair preview.");
+          console.error("- Run pa fix frontmatter --yes to apply safe repairs.");
+          console.error("- Run pa normalize to rewrite canonical frontmatter ordering.");
+          console.error("- Run pa explain MALFORMED_TASK_FILE for detailed remediation.");
         }
         process.exitCode = 1;
       },

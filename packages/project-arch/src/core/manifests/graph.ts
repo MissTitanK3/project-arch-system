@@ -9,6 +9,12 @@ import {
   readMarkdownWithFrontmatter,
   writeJsonDeterministicIfChanged,
 } from "../../utils/fs";
+import {
+  classifyModuleTarget,
+  loadModuleGraphConfig,
+  type ModuleLayer,
+} from "../../graph/moduleClassification";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
 interface DomainSpec {
   name: string;
@@ -20,6 +26,8 @@ interface ModuleNode {
   name: string;
   type: string;
   description: string;
+  layer: ModuleLayer;
+  confidence: "declared" | "inferred";
 }
 
 interface TaskNode {
@@ -75,26 +83,7 @@ function parseMilestoneFromManifestPath(manifestPath: string): {
   return { phaseId: match[1], milestoneId: match[2] };
 }
 
-function mapTargetToModule(target: string): string {
-  const normalized = normalizePath(target);
-  const parts = normalized.split("/").filter(Boolean);
-  if (parts.length === 0) {
-    return normalized;
-  }
-  if ((parts[0] === "apps" || parts[0] === "packages") && parts[1]) {
-    return `${parts[0]}/${parts[1]}`;
-  }
-  if (parts[0] === "architecture" && parts[1]) {
-    return `${parts[0]}/${parts[1]}`;
-  }
-  if (parts[0] === "arch-domains") {
-    return "arch-domains";
-  }
-  if (parts[0] === "roadmap") {
-    return "roadmap";
-  }
-  return parts.slice(0, Math.min(parts.length, 2)).join("/");
-}
+export type GraphLayerMode = "runtime" | "all";
 
 function inferDomainForTask(
   tags: string[],
@@ -159,8 +148,11 @@ function inferDomainsForDecision(
 
 export async function rebuildArchitectureGraph(
   cwd = process.cwd(),
-  options: { write?: boolean } = {},
+  options: { write?: boolean; layerMode?: GraphLayerMode } = {},
 ): Promise<void> {
+  const layerMode: GraphLayerMode = options.layerMode === "all" ? "all" : "runtime";
+  const graphConfig = await loadModuleGraphConfig(cwd);
+
   const archRoot = path.join(cwd, ".arch");
   const nodesRoot = path.join(archRoot, "nodes");
   const edgesRoot = path.join(archRoot, "edges");
@@ -195,7 +187,9 @@ export async function rebuildArchitectureGraph(
   const moduleNodesFromMap: ModuleNode[] = Array.isArray(aiMapModules.modules)
     ? aiMapModules.modules
         .filter(
-          (item): item is { name: string; type?: unknown; description?: unknown } =>
+          (
+            item,
+          ): item is { name: string; type?: unknown; description?: unknown; layer?: unknown } =>
             !!item &&
             typeof item === "object" &&
             typeof (item as { name?: unknown }).name === "string",
@@ -204,6 +198,14 @@ export async function rebuildArchitectureGraph(
           name: item.name,
           type: typeof item.type === "string" ? item.type : "unknown",
           description: typeof item.description === "string" ? item.description : "",
+          layer:
+            item.layer === "runtime" ||
+            item.layer === "docs" ||
+            item.layer === "generated" ||
+            item.layer === "infra"
+              ? item.layer
+              : "runtime",
+          confidence: "declared",
         }))
     : [];
 
@@ -211,17 +213,34 @@ export async function rebuildArchitectureGraph(
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
   });
   const decisionFiles = await fg(["roadmap/decisions/**/*.md", "!roadmap/decisions/**/index.md"], {
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
   });
   const milestoneManifestFiles = await fg("roadmap/phases/*/milestones/*/manifest.json", {
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
   });
+
+  const safeTaskFiles = await filterGlobPathsBySymlinkPolicy(taskFiles, cwd, {
+    pathsAreAbsolute: true,
+  });
+  const safeDecisionFiles = await filterGlobPathsBySymlinkPolicy(decisionFiles, cwd, {
+    pathsAreAbsolute: true,
+  });
+  const safeMilestoneManifestFiles = await filterGlobPathsBySymlinkPolicy(
+    milestoneManifestFiles,
+    cwd,
+    {
+      pathsAreAbsolute: true,
+    },
+  );
 
   const taskNodes: TaskNode[] = [];
   const decisionNodes: DecisionNode[] = [];
@@ -234,9 +253,11 @@ export async function rebuildArchitectureGraph(
 
   const taskDomainByRef = new Map<string, string | null>();
   const knownDecisionIds = new Set<string>();
-  const moduleSet = new Set<string>(moduleNodesFromMap.map((node) => node.name));
+  const moduleNodeByName = new Map<string, ModuleNode>(
+    moduleNodesFromMap.map((moduleNode) => [moduleNode.name, moduleNode]),
+  );
 
-  for (const manifestPath of milestoneManifestFiles.sort()) {
+  for (const manifestPath of safeMilestoneManifestFiles.sort()) {
     const { phaseId, milestoneId } = parseMilestoneFromManifestPath(manifestPath);
     milestoneNodes.push({
       id: `${phaseId}/${milestoneId}`,
@@ -245,7 +266,7 @@ export async function rebuildArchitectureGraph(
     });
   }
 
-  for (const taskFile of taskFiles.sort()) {
+  for (const taskFile of safeTaskFiles.sort()) {
     const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskFile);
     const parsed = taskSchema.parse(data);
     const { phaseId, milestoneId } = parseMilestoneFromTaskPath(taskFile);
@@ -273,16 +294,31 @@ export async function rebuildArchitectureGraph(
       taskToDecisionEdges.push({ task: taskRef, decision: decisionId });
     }
 
-    const targetModules = uniqueSorted(
-      [...parsed.codeTargets, ...parsed.publicDocs].map((target) => mapTargetToModule(target)),
-    );
-    for (const moduleName of targetModules) {
-      moduleSet.add(moduleName);
-      taskToModuleEdges.push({ task: taskRef, module: moduleName });
+    for (const target of [...parsed.codeTargets, ...parsed.publicDocs]) {
+      const classification = classifyModuleTarget(target, graphConfig);
+      if (classification.suppressed || !classification.module) {
+        continue;
+      }
+      if (layerMode === "runtime" && !classification.isRuntime) {
+        continue;
+      }
+
+      const existingNode = moduleNodeByName.get(classification.module);
+      if (!existingNode) {
+        moduleNodeByName.set(classification.module, {
+          name: classification.module,
+          type: "unknown",
+          description: "",
+          layer: classification.layer,
+          confidence: "inferred",
+        });
+      }
+
+      taskToModuleEdges.push({ task: taskRef, module: classification.module });
     }
   }
 
-  for (const decisionFile of decisionFiles.sort()) {
+  for (const decisionFile of safeDecisionFiles.sort()) {
     try {
       const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(decisionFile);
       const parsed = decisionSchema.parse(data);
@@ -349,10 +385,9 @@ export async function rebuildArchitectureGraph(
     return { milestone, task };
   });
 
-  const moduleNodes: ModuleNode[] = uniqueSorted([...moduleSet]).map((name) => {
-    const existing = moduleNodesFromMap.find((node) => node.name === name);
-    return existing ?? { name, type: "unknown", description: "" };
-  });
+  const moduleNodes: ModuleNode[] = [...moduleNodeByName.values()].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 
   const domainsPayload = {
     domains: domains.map((domain) => ({

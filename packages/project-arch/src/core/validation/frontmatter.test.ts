@@ -127,23 +127,23 @@ links:
     expect(result.diagnostics.some((d) => d.code === "KEY_TYPE")).toBe(true);
   });
 
-  it("applies --fix only for safe whitespace normalization", async () => {
+  it("applies --fix for all safe auto-fixable frontmatter issues", async () => {
     const taskPath = path.join(context.tempDir, "feedback/tasks/002-fixable.md");
     await fs.ensureDir(path.dirname(taskPath));
     await fs.writeFile(
       taskPath,
       `---
-schemaVersion: "1.0"
-id: "002"
-slug: "fixable-task"
+schemaVersion: 1.0   
+id: 002
+slug: "fixable-task"   
 title: "Fixable Task"
-lane: "planned"
-status: "todo"
-createdAt: "2026-03-09"
-updatedAt: "2026-03-09"
+lane: planned
+status: todo
+createdAt: 2026-03-09
+updatedAt: 2026-03-09
 discoveredFromTask: null
 tags:
-\t- "lint"
+\t- "lint"   
 codeTargets: []
 publicDocs: []
 decisions: []
@@ -163,6 +163,10 @@ completionCriteria: []
     expect(result.diagnostics).toHaveLength(0);
     expect(updated).toContain('  - "lint"');
     expect(updated).not.toContain("\t-");
+    expect(updated).toContain('schemaVersion: "1.0"');
     expect(updated).toContain('id: "002"');
+    expect(updated).toContain("lane: planned");
+    expect(updated).toContain("status: todo");
+    expect(updated).not.toContain("schemaVersion: 1.0   ");
   });
 });

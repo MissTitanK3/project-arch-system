@@ -2,6 +2,7 @@ import fg from "fast-glob";
 import path from "path";
 import { decisionSchema, DecisionFrontmatter } from "../../schemas/decision";
 import { readMarkdownWithFrontmatter } from "../../utils/fs";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
 export interface DecisionRecord {
   filePath: string;
@@ -13,11 +14,15 @@ export async function collectDecisionRecords(cwd = process.cwd()): Promise<Decis
     cwd,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
+  });
+  const safeFiles = await filterGlobPathsBySymlinkPolicy(files, cwd, {
+    pathsAreAbsolute: true,
   });
 
   const records: DecisionRecord[] = [];
 
-  for (const filePath of files.sort()) {
+  for (const filePath of safeFiles.sort()) {
     try {
       const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(filePath);
       const frontmatter = decisionSchema.parse(data);

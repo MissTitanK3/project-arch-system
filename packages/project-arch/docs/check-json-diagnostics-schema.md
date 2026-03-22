@@ -28,6 +28,22 @@ pa check --json
     "warningCount": 0,
     "diagnosticCount": 0
   },
+  "graphDiagnostics": {
+    "built": true,
+    "completeness": {
+      "score": 100,
+      "threshold": 100,
+      "sufficient": true,
+      "connectedDecisionNodes": 0,
+      "totalDecisionNodes": 0
+    },
+    "disconnectedNodes": {
+      "decisionsWithoutDomain": [],
+      "decisionsWithoutTaskBackReferences": [],
+      "domainsWithoutDecisions": [],
+      "taskReferencesToMissingDecisions": []
+    }
+  },
   "diagnostics": [
     {
       "code": "<STABLE_CODE>",
@@ -48,6 +64,7 @@ pa check --json
 - `summary.warningCount`: number of warning diagnostics.
 - `summary.diagnosticCount`: total diagnostics count.
 - `diagnostics`: ordered list of all diagnostics emitted by `check`.
+- `graphDiagnostics`: dedicated graph-completeness section, including score and disconnected-node report.
 - `diagnostics[].code`: stable machine-friendly identifier.
 - `diagnostics[].severity`: one of `error` or `warning`.
 - `diagnostics[].message`: human-readable diagnostic text.
@@ -89,6 +106,22 @@ If a diagnostic is not mapped to a specific stable code, fallback values are `CH
     "warningCount": 1,
     "diagnosticCount": 2
   },
+    "graphDiagnostics": {
+      "built": true,
+      "completeness": {
+        "score": 75,
+        "threshold": 80,
+        "sufficient": false,
+        "connectedDecisionNodes": 3,
+        "totalDecisionNodes": 4
+      },
+      "disconnectedNodes": {
+        "decisionsWithoutDomain": ["project:20260322:orphan"],
+        "decisionsWithoutTaskBackReferences": [],
+        "domainsWithoutDecisions": ["payments"],
+        "taskReferencesToMissingDecisions": []
+      }
+    },
   "diagnostics": [
     {
       "code": "UNMAPPED_MODULE",

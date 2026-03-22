@@ -4,6 +4,8 @@ import { wrap } from "./_utils";
 
 export interface CheckRunOptions {
   failFast?: boolean;
+  completenessThreshold?: number;
+  coverageMode?: "warning" | "error";
 }
 
 export async function checkRun(options: CheckRunOptions = {}): Promise<
@@ -18,7 +20,29 @@ export async function checkRun(options: CheckRunOptions = {}): Promise<
       path: string | null;
       hint: string | null;
     }>;
+    graphDiagnostics?: {
+      built: boolean;
+      completeness: {
+        score: number;
+        threshold: number;
+        sufficient: boolean;
+        connectedDecisionNodes: number;
+        totalDecisionNodes: number;
+      };
+      disconnectedNodes: {
+        decisionsWithoutDomain: string[];
+        decisionsWithoutTaskBackReferences: string[];
+        domainsWithoutDecisions: string[];
+        taskReferencesToMissingDecisions: Array<{ task: string; decision: string }>;
+      };
+    };
   }>
 > {
-  return wrap(async () => runCheck(process.cwd(), { failFast: options.failFast }));
+  return wrap(async () =>
+    runCheck(process.cwd(), {
+      failFast: options.failFast,
+      completenessThreshold: options.completenessThreshold,
+      coverageMode: options.coverageMode,
+    }),
+  );
 }

@@ -9,9 +9,24 @@ describe("schemas/reconcileConfig", () => {
 
     expect(parsed.schemaVersion).toBe("1.0");
     expect(parsed.extends).toBe("default");
+    expect(parsed.lifecycle.mode).toBe("append-only-history");
+    expect(parsed.lifecycle.writeCanonicalPointers).toBe(false);
     expect(parsed.triggers.include).toEqual([]);
     expect(parsed.triggers.exclude).toEqual([]);
     expect(parsed.triggers.overrides).toEqual([]);
+  });
+
+  it("accepts lifecycle mode and canonical pointer settings", () => {
+    const parsed = reconcileConfigSchema.parse({
+      extends: "default",
+      lifecycle: {
+        mode: "current-state-record",
+        writeCanonicalPointers: true,
+      },
+    });
+
+    expect(parsed.lifecycle.mode).toBe("current-state-record");
+    expect(parsed.lifecycle.writeCanonicalPointers).toBe(true);
   });
 
   it("accepts include/exclude/override rules", () => {

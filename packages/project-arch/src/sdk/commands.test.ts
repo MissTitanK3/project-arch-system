@@ -52,6 +52,14 @@ describe("sdk/commands", () => {
       expect(commandMetadata["graph.traceTask"].inputs).toEqual(["task"]);
     });
 
+    it("should define metadata for next.resolve", () => {
+      expect(commandMetadata["next.resolve"]).toBeDefined();
+      expect(commandMetadata["next.resolve"].description).toBe(
+        "Resolve the deterministic next workflow action",
+      );
+      expect(commandMetadata["next.resolve"].inputs).toEqual([]);
+    });
+
     it("should define metadata for policy.check", () => {
       expect(commandMetadata["policy.check"]).toBeDefined();
       expect(commandMetadata["policy.check"].description).toBe(
@@ -74,6 +82,34 @@ describe("sdk/commands", () => {
         "Lint frontmatter for schema and YAML safety issues",
       );
       expect(commandMetadata["lint.frontmatter"].inputs).toEqual(["fix"]);
+    });
+
+    it("should define metadata for agents commands", () => {
+      expect(commandMetadata["agents.list"]).toBeDefined();
+      expect(commandMetadata["agents.list"].description).toBe("List resolved agent skills");
+      expect(commandMetadata["agents.list"].inputs).toEqual([]);
+
+      expect(commandMetadata["agents.show"]).toBeDefined();
+      expect(commandMetadata["agents.show"].description).toBe("Show details for a skill by id");
+      expect(commandMetadata["agents.show"].inputs).toEqual(["id"]);
+
+      expect(commandMetadata["agents.new"]).toBeDefined();
+      expect(commandMetadata["agents.new"].description).toBe("Scaffold a new user skill");
+      expect(commandMetadata["agents.new"].inputs).toEqual([
+        "id",
+        "title",
+        "summary",
+        "overrides",
+        "tags",
+      ]);
+
+      expect(commandMetadata["agents.sync"]).toBeDefined();
+      expect(commandMetadata["agents.sync"].description).toBe("Sync derived skills registry");
+      expect(commandMetadata["agents.sync"].inputs).toEqual(["check"]);
+
+      expect(commandMetadata["agents.check"]).toBeDefined();
+      expect(commandMetadata["agents.check"].description).toBe("Run focused skill validation");
+      expect(commandMetadata["agents.check"].inputs).toEqual([]);
     });
 
     it("should have all commands use consistent structure", () => {

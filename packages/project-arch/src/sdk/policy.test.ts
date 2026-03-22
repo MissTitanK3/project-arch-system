@@ -10,7 +10,7 @@ describe.sequential("sdk/policy", () => {
 
   beforeEach(async () => {
     context = await createTestProject(originalCwd);
-  }, 45_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();

@@ -12,11 +12,11 @@ describe("createPhase", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd());
     tempDir = context.tempDir;
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   it("creates a new phase and required directories", async () => {
     await createPhase("phase-2", tempDir);

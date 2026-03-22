@@ -48,10 +48,11 @@
     "pa": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node ./scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run",
+    "release:prepare": "node ./scripts/release-prepare.mjs",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {

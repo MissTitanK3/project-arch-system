@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { workflowProfileSchema } from "./workflowProfile";
 
 export const triggerNameSchema = z.enum([
   "architecture-surface",
@@ -66,10 +67,22 @@ export const overrideRuleSchema = z.object({
   status: ruleStatusSchema,
 });
 
+export const reconciliationLifecycleModeSchema = z.enum([
+  "append-only-history",
+  "current-state-record",
+]);
+
 export const reconcileConfigSchema = z
   .object({
     schemaVersion: z.literal("1.0").default("1.0"),
     extends: z.literal("default"),
+    workflowProfile: workflowProfileSchema.optional(),
+    lifecycle: z
+      .object({
+        mode: reconciliationLifecycleModeSchema.default("append-only-history"),
+        writeCanonicalPointers: z.boolean().default(false),
+      })
+      .default({ mode: "append-only-history", writeCanonicalPointers: false }),
     triggers: z
       .object({
         include: z.array(includeRuleSchema).optional().default([]),
@@ -101,3 +114,4 @@ export type ReconcileConfig = z.infer<typeof reconcileConfigSchema>;
 export type IncludeRule = z.infer<typeof includeRuleSchema>;
 export type ExcludeRule = z.infer<typeof excludeRuleSchema>;
 export type OverrideRule = z.infer<typeof overrideRuleSchema>;
+export type ReconciliationLifecycleMode = z.infer<typeof reconciliationLifecycleModeSchema>;

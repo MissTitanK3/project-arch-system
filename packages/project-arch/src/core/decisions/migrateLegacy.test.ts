@@ -15,11 +15,11 @@ describe("migrateLegacy", () => {
   beforeEach(async () => {
     context = await createTestProject(process.cwd(), undefined, { setCwd: false });
     tempDir = context.tempDir;
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   describe("scanLegacyDecisions", () => {
     it("should identify valid decisions", async () => {

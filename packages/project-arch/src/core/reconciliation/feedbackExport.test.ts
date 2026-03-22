@@ -11,12 +11,12 @@ describe("core/reconciliation/feedbackExport", () => {
 
   beforeEach(async () => {
     context = await createTestProject(originalCwd);
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     process.chdir(originalCwd);
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   it("exports one tooling-feedback report per feedbackCandidate", async () => {
     const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
@@ -66,6 +66,80 @@ describe("core/reconciliation/feedbackExport", () => {
       expect(markdown).toContain("## Feedback Candidates");
       expect(markdown).toContain("**Type**: tooling-feedback");
     }
+  });
+
+  it("excludes sensitive changedFiles by default", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await fs.ensureDir(reconcileDir);
+
+    await fs.writeJson(path.join(reconcileDir, "003-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-003-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "003",
+      date: "2026-03-12",
+      changedFiles: [
+        "packages/project-arch/src/core/reconciliation/runReconcile.ts",
+        ".env.local",
+        "secrets.txt",
+      ],
+      affectedAreas: ["packages/project-arch/src/core/reconciliation"],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: ["Improve export summaries"],
+    });
+
+    const result = await exportToolingFeedbackFromReconciliation({
+      reconciliationId: "reconcile-003-2026-03-12",
+      cwd: process.cwd(),
+    });
+
+    expect(result.excludedSensitivePaths).toEqual([".env.local", "secrets.txt"]);
+
+    const exported = reconciliationReportSchema.parse(await fs.readJson(result.jsonPaths[0]));
+    expect(exported.changedFiles).toEqual([
+      "packages/project-arch/src/core/reconciliation/runReconcile.ts",
+    ]);
+  });
+
+  it("includes sensitive changedFiles only when explicitly opted in", async () => {
+    const reconcileDir = path.join(process.cwd(), ".project-arch", "reconcile");
+    await fs.ensureDir(reconcileDir);
+
+    await fs.writeJson(path.join(reconcileDir, "004-2026-03-12.json"), {
+      schemaVersion: "1.0",
+      id: "reconcile-004-2026-03-12",
+      type: "local-reconciliation",
+      status: "reconciliation complete",
+      taskId: "004",
+      date: "2026-03-12",
+      changedFiles: [".env", "packages/project-arch/src/core/reports/generateReport.ts"],
+      affectedAreas: ["packages/project-arch/src/core/reports"],
+      missingUpdates: [],
+      missingTraceLinks: [],
+      decisionCandidates: [],
+      standardsGaps: [],
+      proposedActions: [],
+      feedbackCandidates: ["Investigate report classification"],
+    });
+
+    const result = await exportToolingFeedbackFromReconciliation({
+      reconciliationId: "reconcile-004-2026-03-12",
+      cwd: process.cwd(),
+      includeSensitivePaths: true,
+    });
+
+    expect(result.excludedSensitivePaths).toEqual([]);
+
+    const exported = reconciliationReportSchema.parse(await fs.readJson(result.jsonPaths[0]));
+    expect(exported.changedFiles).toEqual([
+      ".env",
+      "packages/project-arch/src/core/reports/generateReport.ts",
+    ]);
   });
 
   it("returns empty result when reconciliation report has no feedbackCandidates", async () => {

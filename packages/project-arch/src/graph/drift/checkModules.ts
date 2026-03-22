@@ -3,6 +3,7 @@ import fg from "fast-glob";
 import { DecisionRecord } from "../../core/validation/decisions";
 import { pathExists, readJson } from "../../fs";
 import { DriftFinding } from "./runChecks";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 
 export async function checkModules(
   cwd: string,
@@ -36,9 +37,11 @@ export async function checkModules(
     cwd,
     onlyDirectories: true,
     absolute: false,
+    followSymbolicLinks: false,
   });
+  const safeRepoModules = await filterGlobPathsBySymlinkPolicy(repoModules, cwd);
 
-  for (const moduleName of repoModules.sort()) {
+  for (const moduleName of safeRepoModules.sort()) {
     if (declaredModules.has(moduleName)) {
       continue;
     }

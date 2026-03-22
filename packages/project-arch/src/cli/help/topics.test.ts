@@ -5,6 +5,7 @@ describe("Help Topics", () => {
   describe("TOPIC_LIST", () => {
     it("should include all expected topics", () => {
       expect(TOPIC_LIST).toContain("commands");
+      expect(TOPIC_LIST).toContain("agents");
       expect(TOPIC_LIST).toContain("workflows");
       expect(TOPIC_LIST).toContain("lanes");
       expect(TOPIC_LIST).toContain("decisions");
@@ -12,6 +13,7 @@ describe("Help Topics", () => {
       expect(TOPIC_LIST).toContain("standards");
       expect(TOPIC_LIST).toContain("validation");
       expect(TOPIC_LIST).toContain("remediation");
+      expect(TOPIC_LIST).toContain("operations");
     });
   });
 
@@ -20,6 +22,16 @@ describe("Help Topics", () => {
       const content = getHelpTopic("commands");
       expect(content).toBeTruthy();
       expect(content).toContain("Available Commands");
+    });
+
+    it("should return content for agents topic", () => {
+      const content = getHelpTopic("agents");
+      expect(content).toBeTruthy();
+      expect(content).toContain("Agent Skills");
+      expect(content).toContain("pa agents new");
+      expect(content).toContain("overrides=true");
+      expect(content).toContain("pa agents sync --check");
+      expect(content).toContain("No executable skill runtime");
     });
 
     it("should return content for workflows topic", () => {
@@ -90,6 +102,18 @@ describe("Help Topics", () => {
       expect(content).toContain("Task Management Issues");
     });
 
+    it("should return content for operations topic", () => {
+      const content = getHelpTopic("operations");
+      expect(content).toBeTruthy();
+      expect(content).toContain("Security & Operations Model");
+      expect(content).toContain("does not perform hidden HTTP(S) requests");
+      expect(content).toContain("git status --porcelain");
+      expect(content).toContain("pnpm lint:md");
+      expect(content).toContain("roadmap/policy.json");
+      expect(content).toContain(".project-arch/graph.config.json");
+      expect(content).toContain(".project-arch/reconcile.config.json");
+    });
+
     it("should return null for invalid topic", () => {
       const content = getHelpTopic("invalid-topic");
       expect(content).toBeNull();
@@ -101,6 +125,7 @@ describe("Help Topics", () => {
       const commandsTopic = getHelpTopic("commands");
 
       it("should document pa check with --json option", () => {
+        expect(commandsTopic).toContain("pa next [--json]");
         expect(commandsTopic).toContain("pa check");
         expect(commandsTopic).toContain("--json");
       });
@@ -135,6 +160,15 @@ describe("Help Topics", () => {
       it("should document pa policy explain command", () => {
         expect(commandsTopic).toContain("pa policy explain");
       });
+
+      it("should document pa agents sync check behavior", () => {
+        expect(commandsTopic).toContain("pa agents sync [--check] [--json]");
+        expect(commandsTopic).toContain("pa agents check [--json]");
+      });
+
+      it("should document pa doctor health command", () => {
+        expect(commandsTopic).toContain("pa doctor health [--repair] [--json]");
+      });
     });
   });
 
@@ -144,6 +178,7 @@ describe("Help Topics", () => {
       expect(list).toContain("Available Commands");
       expect(list).toContain("Help Topics");
       expect(list).toContain("commands");
+      expect(list).toContain("agents");
       expect(list).toContain("workflows");
       expect(list).toContain("pa help <topic>");
     });

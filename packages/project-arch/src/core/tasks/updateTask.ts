@@ -6,6 +6,7 @@ import fs from "fs-extra";
 import * as graphManifests from "../../graph/manifests";
 import { withAtomicTaskMutation } from "./atomicMutation";
 import { getMilestoneDependencyStatuses, getTaskIdentityFromTaskPath } from "./dependencyStatus";
+import { assertWithinRoot } from "../../utils/assertWithinRoot";
 
 export async function updateTaskStatus(
   taskFilePath: string,
@@ -14,9 +15,7 @@ export async function updateTaskStatus(
 ): Promise<void> {
   const taskRoot = path.resolve(cwd);
   const absoluteTaskPath = path.resolve(taskFilePath);
-  if (!absoluteTaskPath.startsWith(taskRoot)) {
-    throw new Error(`Task file '${taskFilePath}' is outside repository root '${cwd}'`);
-  }
+  assertWithinRoot(absoluteTaskPath, taskRoot, "task file");
 
   const originalContent = await fs.readFile(absoluteTaskPath, "utf8");
   const parsed = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskFilePath);

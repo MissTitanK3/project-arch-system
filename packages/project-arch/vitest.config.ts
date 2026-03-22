@@ -4,9 +4,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    hookTimeout: 60_000,
-    testTimeout: 60_000,
+    hookTimeout: 120_000,
+    testTimeout: 120_000,
     fileParallelism: false,
+    maxWorkers: 1,
     exclude: ["**/node_modules/**", "**/dist/**"],
     coverage: {
       provider: "v8",

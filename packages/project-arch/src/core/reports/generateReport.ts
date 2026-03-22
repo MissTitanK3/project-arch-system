@@ -7,6 +7,8 @@ import {
   formatPercent,
   resolveDiscoveredLoadThresholdPercent,
 } from "../../core/governance/discoveredLoad";
+import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
+import { isSensitivePath } from "../../utils/sensitivePaths";
 import { loadPhaseManifest } from "../../graph/manifests";
 import { pathExists, readJson } from "../../fs";
 
@@ -71,13 +73,15 @@ async function discoverActivePhaseFromFilesystem(cwd: string): Promise<string | 
     cwd,
     onlyDirectories: true,
     absolute: false,
+    followSymbolicLinks: false,
   });
+  const safePhaseDirs = await filterGlobPathsBySymlinkPolicy(phaseDirs, cwd);
 
-  if (phaseDirs.length === 0) {
+  if (safePhaseDirs.length === 0) {
     return null;
   }
 
-  return path.basename(phaseDirs.sort()[0]);
+  return path.basename(safePhaseDirs.sort()[0]);
 }
 
 /**
@@ -95,13 +99,15 @@ async function discoverActiveMilestoneFromFilesystem(
     cwd,
     onlyDirectories: true,
     absolute: false,
+    followSymbolicLinks: false,
   });
+  const safeMilestoneDirs = await filterGlobPathsBySymlinkPolicy(milestoneDirs, cwd);
 
-  if (milestoneDirs.length === 0) {
+  if (safeMilestoneDirs.length === 0) {
     return null;
   }
 
-  return path.basename(milestoneDirs.sort()[0]);
+  return path.basename(safeMilestoneDirs.sort()[0]);
 }
 
 /**
@@ -367,10 +373,14 @@ export async function generateReport(
 
   const docRefs = new Set<string>();
   for (const task of tasks) {
-    task.frontmatter.publicDocs.forEach((ref) => docRefs.add(ref));
+    task.frontmatter.publicDocs
+      .filter((ref) => !isSensitivePath(ref))
+      .forEach((ref) => docRefs.add(ref));
   }
   for (const decision of decisions) {
-    decision.frontmatter.links.publicDocs.forEach((ref) => docRefs.add(ref));
+    decision.frontmatter.links.publicDocs
+      .filter((ref) => !isSensitivePath(ref))
+      .forEach((ref) => docRefs.add(ref));
   }
 
   let existingDocs = 0;

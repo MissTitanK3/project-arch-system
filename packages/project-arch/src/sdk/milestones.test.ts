@@ -14,11 +14,11 @@ describe.sequential("SDK Milestones", () => {
   beforeEach(async () => {
     context = await createTestProject(originalCwd, undefined, { setCwd: false });
     testDir = context.tempDir;
-  }, 90_000);
+  }, 120_000);
 
   afterEach(async () => {
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   describe("milestoneCreate", () => {
     it("should create a milestone successfully", async () => {

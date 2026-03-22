@@ -23,6 +23,10 @@ export const commandMetadata = {
     description: "Trace a task in the architecture graph",
     inputs: ["task"],
   },
+  "next.resolve": {
+    description: "Resolve the deterministic next workflow action",
+    inputs: [],
+  },
   "policy.check": {
     description: "Detect policy conflicts between tasks and architecture",
     inputs: [],
@@ -34,5 +38,25 @@ export const commandMetadata = {
   "lint.frontmatter": {
     description: "Lint frontmatter for schema and YAML safety issues",
     inputs: ["fix"],
+  },
+  "agents.list": {
+    description: "List resolved agent skills",
+    inputs: [],
+  },
+  "agents.show": {
+    description: "Show details for a skill by id",
+    inputs: ["id"],
+  },
+  "agents.new": {
+    description: "Scaffold a new user skill",
+    inputs: ["id", "title", "summary", "overrides", "tags"],
+  },
+  "agents.sync": {
+    description: "Sync derived skills registry",
+    inputs: ["check"],
+  },
+  "agents.check": {
+    description: "Run focused skill validation",
+    inputs: [],
   },
 } as const;

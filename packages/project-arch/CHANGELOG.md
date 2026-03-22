@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-03-22
+
+### Added
+
+#### **Validation and Health Rails**
+
+- `pa doctor health` command with deterministic health states, optional repair mode, JSON output, and `PAH*` diagnostics catalog
+- `pa next` workflow router (CLI + SDK) with deterministic precedence and machine-readable recommendations
+- Validation contract artifact flow for phase templates and `pa check` validation, including `PAV*` diagnostics
+
+#### **Agents and Workflow Surface Expansion**
+
+- Agents command surface (`list`, `show`, `new`, `sync`, `check`) across CLI and SDK
+- Deterministic skill loader/resolver/registry behavior, including sync support and override handling
+- Workflow profiles (`quality`, `balanced`, `budget`) with schema-backed resolution and command-level profile override
+- Local release prep utility for pre-push/pre-publish checks and release-check artifact generation
+
+### Changed
+
+- Graph completeness checks now include decision/domain coverage diagnostics, disconnected-node reporting, and threshold-aware scoring
+- Module graph generation now classifies runtime/docs/generated/infra layers and reduces noisy inferred edges
+- `pa init` now defaults to safe re-init behavior (skip existing managed files) with explicit force-overwrite mode and conflict summaries
+- Init scaffolding now includes `.arch/agents-of-arch` templates and derived registry generation
+- Publish pipeline now uses build-specific TS config and clean-dist production artifact preparation
+- Report/export behavior now excludes sensitive path classes by default, with explicit unsafe opt-in
+
+### Fixed
+
+- Identifier path traversal risks by enforcing safe ID validation at CLI, SDK, and core boundaries
+- Filesystem escape risks by applying path-boundary guards to write/delete mutation paths
+- Symlink escape surfaces via non-follow traversal defaults and realpath confinement checks
+- Terminal/document output safety by sanitizing control characters and hardening markdown/frontmatter emission
+- Contract validation regressions by hardening test fixtures that require validation-contract artifacts
+- Release payload contamination from compiled test artifacts
+
+### Security
+
+- Defense-in-depth hardening for filesystem mutation paths (safe IDs, root confinement, symlink policy)
+- Output and artifact hardening for terminal/report generation and release packaging
+
+### Docs
+
+- Expanded docs/help coverage for security operations, agents skill schema, init/re-init behavior, and release controls
+
+### Test Coverage
+
+- Added targeted unit and integration coverage for health checks, routing, validation contracts, graph completeness, module noise reduction, profiles, sanitization, sensitive output filtering, and release preparation
+- Package-level test suites were expanded to cover new safety and release gates
+
 ## [1.5.0] - 2026-03-12
 
 ### Added
@@ -72,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved diagnostics truncation for large warning/path sets (50+ item limit with metadata)
 - Enhanced task registration workflow to support untracked surface remediation
 - Refactored CLI feedback command structure with hierarchical subcommand organization
-- Extended test timeouts for scale regression tests (60_000ms for heavy setup operations)
+- Extended test timeouts for scale regression tests (120_000ms for heavy setup operations)
 
 ### Fixed
 
@@ -142,6 +191,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration with monorepo workflows
 
 [1.4.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.3.0...v1.4.0
+[1.6.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.4.0...v1.5.0
 [1.3.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.1.0...v1.3.0
 [1.1.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/MissTitanK3/project-arch-system/releases/tag/v1.0.0

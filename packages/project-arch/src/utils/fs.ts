@@ -1,6 +1,8 @@
 import fs from "fs-extra";
 import path from "path";
 import matter from "gray-matter";
+import { sanitizeFrontmatterValue } from "./markdownSafety";
+import { stripUnsafeControlChars } from "./outputSafety";
 
 export async function ensureDir(dirPath: string): Promise<void> {
   await fs.ensureDir(dirPath);
@@ -46,8 +48,10 @@ export async function writeMarkdownWithFrontmatter(
   body: string,
 ): Promise<void> {
   await fs.ensureDir(path.dirname(targetPath));
-  const normalizedBody = body.endsWith("\n") ? body : `${body}\n`;
-  const content = matter.stringify(normalizedBody, frontmatter, { language: "yaml" });
+  const sanitizedBody = stripUnsafeControlChars(body, { allowNewlines: true, allowTabs: true });
+  const normalizedBody = sanitizedBody.endsWith("\n") ? sanitizedBody : `${sanitizedBody}\n`;
+  const sanitizedFrontmatter = sanitizeFrontmatterValue(frontmatter) as Record<string, unknown>;
+  const content = matter.stringify(normalizedBody, sanitizedFrontmatter, { language: "yaml" });
   await fs.writeFile(targetPath, content, "utf8");
 }
 

@@ -97,6 +97,23 @@ describe("cli/commands/task", () => {
 
       consoleSpy.mockRestore();
     });
+
+    it("should set non-zero exit code for invalid safe IDs", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerTaskCommand(program);
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "task", "new", "Phase-1", milestoneId]);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("ERROR:"));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("Hint: ids must be"));
+      expect(process.exitCode).toBe(1);
+
+      process.exitCode = 0;
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   describe("task discover", () => {
@@ -213,6 +230,49 @@ describe("cli/commands/task", () => {
       consoleErrorSpy.mockRestore();
       process.exitCode = 0;
     });
+
+    it("should reject missing required arguments", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerTaskCommand(program);
+
+      await expect(
+        program.parseAsync([
+          "node",
+          "test",
+          "task",
+          "discover",
+          phaseId,
+          // missing milestone + --from
+        ]),
+      ).rejects.toMatchObject({ code: "commander.missingMandatoryOptionValue" });
+    });
+
+    it("should stop early on invalid safe IDs before lane checks", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerTaskCommand(program);
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "task",
+        "discover",
+        phaseId,
+        "Milestone-Upper",
+        "--from",
+        "001",
+      ]);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("ERROR:"));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("Hint: ids must be"));
+      expect(process.exitCode).toBe(1);
+
+      process.exitCode = 0;
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   describe("task idea", () => {
@@ -249,6 +309,22 @@ describe("cli/commands/task", () => {
       consoleAssertions.assertConsoleContains(consoleSpy, "902");
 
       consoleSpy.mockRestore();
+    });
+
+    it("should set non-zero exit code when IDs are invalid", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerTaskCommand(program);
+
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "task", "idea", phaseId, "Milestone-Invalid"]);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("ERROR:"));
+      expect(process.exitCode).toBe(1);
+
+      process.exitCode = 0;
+      consoleErrorSpy.mockRestore();
     });
   });
 

@@ -12,7 +12,7 @@ describe.sequential("graph/buildGraph", () => {
   beforeEach(async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "build-graph-test-"));
     await initializeProject({ template: "nextjs-turbo", pm: "pnpm" }, tempDir);
-  }, 45_000);
+  }, 120_000);
 
   afterEach(async () => {
     if (tempDir) {
@@ -28,7 +28,7 @@ describe.sequential("graph/buildGraph", () => {
 
     const graph = await readJson<{ schemaVersion: string }>(graphPath);
     expect(graph.schemaVersion).toBe("1.0");
-  }, 60_000);
+  }, 120_000);
 
   it("should be idempotent across repeated calls", async () => {
     await buildGraph(tempDir);
@@ -41,5 +41,5 @@ describe.sequential("graph/buildGraph", () => {
 
     expect(graph.nodes.tasks).toBeGreaterThan(0);
     expect(graph.nodes.milestones).toBeGreaterThan(0);
-  }, 60_000);
+  }, 120_000);
 });

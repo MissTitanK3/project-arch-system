@@ -77,21 +77,64 @@ Phase & Milestone:
     Output: Success message or governance diagnostics
 
 Validation & Reporting:
+  pa next [--json]                     Recommend next deterministic workflow action
+    Output: status + recommended command + reason + evidence
+    --json: Machine-readable routing decision payload
+
   pa check [--json]                    Validate architecture consistency
     Output: Validation errors and warnings
     --json: Machine-readable diagnostics with file paths
 
-  pa doctor                             Run canonical preflight pipeline
-    Order: pa lint frontmatter --fix -> pnpm lint:md -> pa check --json
-    Output: Step-attributed results; exits on first failing step
+  pa check --file <path>               Validate only a specific file
+    Output: Diagnostics filtered to the specified file
+
+  pa check --milestone <id>            Validate only tasks in a milestone
+    Output: Diagnostics filtered to tasks in that milestone ID
+
+  pa explain <code>                    Print explanation and remediation for a diagnostic code
+    Output: Human-readable description and step-by-step remediation
+    Example: pa explain MALFORMED_TASK_FILE
+
+  pa fix frontmatter [--yes]           Preview or apply safe frontmatter repairs
+    Output: Dry-run diff by default; apply with --yes
+
+  pa normalize [--yes]                 Preview or apply canonical frontmatter normalization
+    Output: Dry-run diff by default; apply with --yes
+
+  pa doctor                             Run holistic health sweep
+    Order: pa lint frontmatter --fix -> pnpm lint:md -> pa check --json (all steps run)
+    Output: Per-step issues + severity summary; exits 1 if any step failed
+
+  pa doctor health [--repair] [--json]  Run structural health checks and optional safe repair
+    --repair: Apply only repairable actions (directory/index/artifact recovery)
+    --json: Machine-readable health payload with status, summary, and issue list
 
   pa lint frontmatter [--fix]          Preflight lint for YAML frontmatter
     Output: File+line diagnostics for tabs, missing keys, and schema/type issues
-    --fix: Safe whitespace normalization only (no scalar rewrite)
+    --fix: Safe fixes for tabs, trailing whitespace, and risky plain scalars
 
   pa report [-v|--verbose]             Generate architecture report
     Output: Report text
     --verbose: Include detailed inconsistency diagnostics
+
+Agent Skills:
+  pa agents list [--json]             List resolved skill set
+    Output: Stable skill list (human-readable or JSON)
+
+  pa agents show <id> [--json]        Show one skill by id
+    Output: Skill details (human-readable or JSON)
+
+  pa agents new <id> [options]        Create a user skill scaffold
+    Options: --title, --summary, --override, --tags, --json
+    Output: Created skill path(s)
+
+  pa agents sync [--check] [--json]   Sync or check derived registry status
+    --check: Validate drift only, no write
+
+  pa agents check [--json]            Run focused skill linter
+    Output: OK/errors or diagnostics JSON
+
+  pa help agents                      Explain skill manifests, overrides, and registry drift
 
 Policy Analysis:
   pa policy check                      Detect policy conflicts (machine-readable JSON)
@@ -106,7 +149,7 @@ Documentation:
 
 Help System:
   pa help <topic>                      Get detailed help on a topic
-    Topics: commands, workflows, lanes, decisions, architecture, standards
+    Topics: commands, agents, workflows, lanes, decisions, architecture, standards, validation, remediation, operations
     
   pa help topics                       List all available help topics
 
@@ -126,6 +169,61 @@ Validation Patterns:
   Phase ID:     ^phase-\\d+$       (e.g., phase-1, phase-2)
   Milestone ID: ^milestone-[\\w-]+$ (e.g., milestone-1-setup)
   Decision ID:  ^\\d{3}$           (e.g., 001, 042)
+`,
+
+  agents: `Agent Skills:
+
+Purpose:
+  Agent skills provide a deterministic capability layer under .arch/agents-of-arch/
+  for repo-native guidance. They are documentation contracts, not executable plugins.
+
+Directory Layout:
+  .arch/agents-of-arch/
+    skills/                Built-in skills scaffolded by pa init
+    user-skills/           User-authored skills and explicit overrides
+    user-skills/_template/ Reference template, ignored by the loader
+    registry.json          Derived registry written by pa agents sync
+
+Create a user skill:
+  1. Scaffold the directory and required files:
+     pa agents new architecture-audit --title "Architecture Audit"
+
+  2. Edit the generated files:
+     - skill.json      Manifest metadata and referenced files
+     - system.md       Instructions for using the skill
+     - checklist.md    Preconditions, execution steps, done criteria
+
+  3. Validate and sync:
+     pa agents sync --check
+     pa agents sync
+     pa agents check
+
+Override semantics:
+  - Built-in skills load first, sorted by skill id.
+  - User skills load second, also sorted by skill id.
+  - Final resolved output is sorted by skill id.
+  - Reusing a built-in id requires overrides=true in the user skill manifest.
+  - Duplicate ids without explicit override intent fail resolution.
+
+Examples:
+  pa agents list
+  pa agents show repo-map
+  pa agents new repo-map --override
+  pa agents sync --check
+  pa agents check --json
+
+Registry behavior:
+  - registry.json is derived from discovered skill manifests.
+  - Do not edit registry.json directly.
+  - pa agents sync --check exits non-zero when registry.json is stale.
+
+Non-goals:
+  - No executable skill runtime
+  - No JavaScript/TypeScript plugin hooks
+  - No plugin marketplace or remote code loading
+
+Further reading:
+  - packages/project-arch/docs/agents-skill-schema.md
 `,
 
   workflows: `Common Workflows:
@@ -175,6 +273,9 @@ Decision Recording:
      pa decision supersede 002 001
 
 Validation & Review:
+  0. Ask the router for the next action:
+    pa next
+
   1. Run frontmatter preflight lint:
     pa lint frontmatter --fix
 
@@ -188,11 +289,29 @@ Validation & Review:
     pa doctor
     # Equivalent to lint frontmatter --fix -> lint:md -> check --json
 
+  Structural integrity sweep (safe repair mode):
+    pa doctor health --repair
+
   4. Generate architecture report:
     pa report
 
   5. List all documentation:
      pa docs
+
+  Custom Skill Authoring:
+    1. Scaffold a new user skill:
+      pa agents new release-readiness-custom --title "Release Readiness Custom"
+
+    2. Update skill.json, system.md, and checklist.md with repo-specific guidance
+
+    3. Check whether the registry is stale:
+      pa agents sync --check
+
+    4. Regenerate the derived registry when needed:
+      pa agents sync
+
+    5. Validate referenced files and structure:
+      pa agents check
 `,
 
   lanes: `Task Lanes Explained:
@@ -692,6 +811,79 @@ Emergency Recovery:
   5. Generate final report
      pa report -v
 `,
+
+  operations: `Security & Operations Model:
+
+Purpose:
+  This topic documents observable CLI side effects: what is created or modified,
+  whether network access occurs, subprocess usage, and where runtime config is read from.
+
+File Creation and Managed Writes:
+
+  pa init creates and manages repository architecture scaffolding, including:
+    - roadmap/
+    - architecture/
+    - arch-domains/
+    - arch-model/
+    - .project-arch/ (tool state and configs)
+    - .arch/agents-of-arch/ (skills and derived registry)
+
+  Re-running pa init:
+    - default: keeps existing conflicting managed files and reports them
+    - --force: overwrites managed files
+
+Commands That Create New Artifacts:
+
+  - pa phase new
+  - pa milestone new
+  - pa task new / pa task discover / pa task idea
+  - pa decision new
+  - pa agents new
+  - pa reconcile task (writes .project-arch/reconcile/*.json and *.md)
+
+Commands That Modify Existing Artifacts:
+
+  - pa decision link / status / supersede
+  - pa task register-surfaces (unless --dry-run)
+  - pa lint frontmatter --fix
+  - pa fix frontmatter --yes
+  - pa normalize --yes
+  - pa policy setup (creates roadmap/policy.json if missing)
+  - pa agents sync (writes registry unless --check)
+  - pa reconcile prune --apply / pa reconcile compact --apply
+  - pa feedback review / prune / export / rebuild / clear-derived / sync-from-reconcile
+
+Automatic Feedback Capture:
+
+  Failed CLI invocations can append observations under:
+    .arch/feedback/observations/YYYY-MM-DD.jsonl
+  This capture path is best-effort and never blocks command execution.
+
+Network Behavior:
+
+  Normal CLI execution is offline. The CLI does not perform hidden HTTP(S) requests.
+  It operates on local repository files.
+
+Subprocess Usage:
+
+  Known subprocess calls in CLI code:
+    - pa check --changed: runs git status --porcelain to infer changed paths
+    - pa doctor: runs pnpm lint:md as the markdown-lint preflight step
+
+Runtime Config Loading:
+
+  - roadmap/policy.json
+      Used for policy profile resolution (optional PA_POLICY_PROFILE env override)
+
+  - .project-arch/graph.config.json
+      Optional graph classification/suppression config
+
+  - .project-arch/reconcile.config.json
+      Optional reconciliation trigger tuning config
+
+  - .project-arch/reconcile-config.json
+      Legacy reconcile config filename accepted for compatibility
+`,
 };
 
 export const TOPIC_LIST = Object.keys(HELP_TOPICS) as Array<keyof typeof HELP_TOPICS>;
@@ -792,13 +984,30 @@ ${commandLine("pa decision migrate [--scan-only]", "Migrate legacy decision file
 ${separator}
 ${colors.heading("Validation & Reporting:")}
 ${separator}
+${commandLine("pa next [--json]", "Recommend next deterministic workflow action")}
 ${commandLine("pa check", "Validate architecture integrity")}
                                        - Task/decision consistency
                                        - Roadmap-graph parity
                                        - Schema compliance
+
+${commandLine("pa doctor", "Run holistic preflight sweep (lint + check)")}
+${commandLine("pa doctor health [--repair] [--json]", "Run structural health checks and optional safe repair")}
   
 ${commandLine("pa report [options]", "Generate architecture report")}
 ${optionLine("--verbose, -v", "Include detailed diagnostics")}
+
+${separator}
+${colors.heading("Agent Skills:")}
+${separator}
+${commandLine("pa agents list [--json]", "List resolved agent skills")}
+${commandLine("pa agents show <id> [--json]", "Show one resolved skill")}
+${commandLine("pa agents new <id> [options]", "Scaffold a user skill")}
+${optionLine("--title <title>", "Optional display name")}
+${optionLine("--summary <summary>", "Optional summary")}
+${optionLine("--override", "Mark skill as override for a built-in id")}
+${optionLine("--tags <tags>", "Comma-separated tags")}
+${commandLine("pa agents sync [--check] [--json]", "Sync or check derived registry status")}
+${commandLine("pa agents check [--json]", "Validate skill manifests and referenced files")}
 
 ${separator}
 ${colors.heading("Policy Analysis:")}
@@ -848,6 +1057,7 @@ ${colors.dim("Usage:")}
 function getTopicDescription(topic: string): string {
   const descriptions: Record<string, string> = {
     commands: "Complete command reference for AI agents",
+    agents: "Agent skill contracts, overrides, and registry workflow",
     workflows: "Common task and decision workflows",
     lanes: "Task lane system explained",
     decisions: "Architecture decision management",
@@ -855,6 +1065,7 @@ function getTopicDescription(topic: string): string {
     standards: "File naming and schema standards",
     validation: "Validation commands and workflows",
     remediation: "Fix common architecture issues",
+    operations: "Security-facing operational behavior and side effects",
   };
   return descriptions[topic] || "";
 }

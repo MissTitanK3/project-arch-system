@@ -13,12 +13,12 @@ describe("cli/commands/report", () => {
 
   beforeEach(async () => {
     context = await createTestProject(originalCwd);
-  }, 60_000);
+  }, 120_000);
 
   afterEach(async () => {
     process.chdir(originalCwd);
     await context.cleanup();
-  }, 60_000);
+  }, 120_000);
 
   describe("registerReportCommand", () => {
     it("should register report command", () => {

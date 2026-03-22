@@ -1,11 +1,7 @@
 import path from "path";
 import fs from "fs-extra";
-import {
-  ensureDir,
-  pathExists,
-  writeJsonDeterministic,
-  writeMarkdownWithFrontmatter,
-} from "../../utils/fs";
+import matter from "gray-matter";
+import { ensureDir, pathExists, writeJsonDeterministic } from "../../utils/fs";
 import {
   milestoneDir,
   milestoneTaskLaneDir,
@@ -14,18 +10,24 @@ import {
   projectDocsRoot,
 } from "../../utils/paths";
 import { currentDateISO } from "../../utils/date";
-import {
-  ensureDecisionIndex,
-  rebuildArchitectureGraph,
-  savePhaseManifest,
-} from "../../core/manifests";
+import { ensureDecisionIndex, rebuildArchitectureGraph } from "../../core/manifests";
 import { defaultPolicyFileDocument } from "../../core/governance/policy";
-import { ObservationStore } from "../../feedback/observation-store";
-import { IssueStore } from "../../feedback/issue-store";
+import { ObservationStore } from "../../feedback/observation-store.js";
+import { IssueStore } from "../../feedback/issue-store.js";
 import { defaultTaskFrontmatter } from "../../core/templates/task";
 import { defaultArchitectureSpecTemplate } from "../../core/templates/architecture";
 import { defaultConceptMapTemplate } from "../../core/templates/conceptMap";
 import { defaultMilestoneGapClosureReportTemplate } from "../../core/templates/milestoneGapClosure";
+import { defaultValidationContractTemplate } from "../../core/templates/validationContract";
+import { agentSkillSchema } from "../../schemas/agentSkill";
+import { syncRegistry } from "../agents/syncRegistry";
+import {
+  defaultAgentsReadme,
+  defaultUserSkillTemplateChecklist,
+  defaultUserSkillTemplateReadme,
+  defaultUserSkillTemplateSystem,
+  foundationalAgentSkills,
+} from "../templates/agents";
 
 function generateStandardsContent(fileName: string, title: string, description: string): string {
   const content = [`# ${title}`, "", description, ""];
@@ -297,6 +299,15 @@ export interface InitOptions {
   pm?: string;
   withAi?: boolean;
   withDocsSite?: boolean;
+  force?: boolean;
+}
+
+interface ManagedWriteState {
+  cwd: string;
+  force: boolean;
+  created: string[];
+  overwritten: string[];
+  skipped: string[];
 }
 
 interface PlannedBootstrapTask {
@@ -725,6 +736,131 @@ function renderTaskBody(task: PlannedBootstrapTask): string {
   ].join("\n");
 }
 
+async function writeTextFileIfMissing(targetPath: string, content: string): Promise<void> {
+  if (await pathExists(targetPath)) {
+    return;
+  }
+
+  await ensureDir(path.dirname(targetPath));
+  const normalized = content.endsWith("\n") ? content : `${content}\n`;
+  await fs.writeFile(targetPath, normalized, "utf8");
+}
+
+function toManagedRelativePath(cwd: string, targetPath: string): string {
+  return path.relative(cwd, targetPath).split(path.sep).join("/");
+}
+
+async function writeManagedFile(
+  targetPath: string,
+  nextRaw: string,
+  state: ManagedWriteState,
+): Promise<"created" | "overwritten" | "skipped" | "unchanged"> {
+  await ensureDir(path.dirname(targetPath));
+
+  const relativePath = toManagedRelativePath(state.cwd, targetPath);
+  const exists = await pathExists(targetPath);
+  if (exists) {
+    const currentRaw = await fs.readFile(targetPath, "utf8");
+    if (currentRaw === nextRaw) {
+      return "unchanged";
+    }
+
+    if (!state.force) {
+      state.skipped.push(relativePath);
+      return "skipped";
+    }
+
+    state.overwritten.push(relativePath);
+    await fs.writeFile(targetPath, nextRaw, "utf8");
+    return "overwritten";
+  }
+
+  state.created.push(relativePath);
+  await fs.writeFile(targetPath, nextRaw, "utf8");
+  return "created";
+}
+
+async function writeManagedJsonFile(
+  targetPath: string,
+  data: unknown,
+  state: ManagedWriteState,
+): Promise<"created" | "overwritten" | "skipped" | "unchanged"> {
+  const nextRaw = `${JSON.stringify(data, null, 2)}\n`;
+  return writeManagedFile(targetPath, nextRaw, state);
+}
+
+async function writeManagedMarkdownFile(
+  targetPath: string,
+  frontmatter: Record<string, unknown>,
+  body: string,
+  state: ManagedWriteState,
+): Promise<"created" | "overwritten" | "skipped" | "unchanged"> {
+  const normalizedBody = body.endsWith("\n") ? body : `${body}\n`;
+  const nextRaw = matter.stringify(normalizedBody, frontmatter, { language: "yaml" });
+  return writeManagedFile(targetPath, nextRaw, state);
+}
+
+function flushManagedWriteLogs(state: ManagedWriteState): void {
+  for (const relativePath of state.created) {
+    console.log(`Created: ${relativePath}`);
+  }
+
+  for (const relativePath of state.overwritten) {
+    console.log(`Overwriting: ${relativePath}`);
+  }
+
+  if (state.skipped.length > 0) {
+    console.log("Skipped existing managed files:");
+    for (const relativePath of state.skipped) {
+      console.log(`Skipped (already exists): ${relativePath} — use --force to overwrite`);
+    }
+  }
+}
+
+async function scaffoldAgentsOfArch(cwd: string): Promise<void> {
+  const agentsRoot = path.join(cwd, ".arch", "agents-of-arch");
+  const skillsRoot = path.join(agentsRoot, "skills");
+  const userSkillsRoot = path.join(agentsRoot, "user-skills");
+  const userTemplateRoot = path.join(userSkillsRoot, "_template");
+
+  await ensureDir(skillsRoot);
+  await ensureDir(userSkillsRoot);
+  await ensureDir(userTemplateRoot);
+
+  await writeTextFileIfMissing(path.join(agentsRoot, "README.md"), defaultAgentsReadme());
+  await writeTextFileIfMissing(
+    path.join(userTemplateRoot, "README.md"),
+    defaultUserSkillTemplateReadme(),
+  );
+  await writeTextFileIfMissing(
+    path.join(userTemplateRoot, "system.md"),
+    defaultUserSkillTemplateSystem(),
+  );
+  await writeTextFileIfMissing(
+    path.join(userTemplateRoot, "checklist.md"),
+    defaultUserSkillTemplateChecklist(),
+  );
+
+  for (const skillTemplate of foundationalAgentSkills()) {
+    const parsedManifest = agentSkillSchema.parse(skillTemplate.manifest);
+    const skillDir = path.join(skillsRoot, parsedManifest.id);
+    await ensureDir(skillDir);
+
+    const manifestPath = path.join(skillDir, "skill.json");
+    const systemPath = path.join(skillDir, parsedManifest.files.system);
+    const checklistPath = path.join(skillDir, parsedManifest.files.checklist);
+
+    if (!(await pathExists(manifestPath))) {
+      await writeJsonDeterministic(manifestPath, parsedManifest);
+    }
+
+    await writeTextFileIfMissing(systemPath, skillTemplate.system);
+    await writeTextFileIfMissing(checklistPath, skillTemplate.checklist);
+  }
+
+  await syncRegistry(cwd, { archAgentsDir: agentsRoot });
+}
+
 export async function initializeProject(options: InitOptions, cwd = process.cwd()): Promise<void> {
   if (options.template !== "nextjs-turbo") {
     throw new Error(`Unsupported template '${options.template}'. Expected nextjs-turbo`);
@@ -734,6 +870,13 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   }
 
   const apps = parseApps(options.apps);
+  const managedWriteState: ManagedWriteState = {
+    cwd,
+    force: options.force === true,
+    created: [],
+    overwritten: [],
+    skipped: [],
+  };
   const fixedDirs = [
     "apps",
     "arch-model",
@@ -778,24 +921,29 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   const milestoneId = "milestone-1-setup";
   const now = currentDateISO();
 
-  await savePhaseManifest(
+  await writeManagedJsonFile(
+    path.join(docsRoot, "manifest.json"),
     {
       schemaVersion: "1.0",
       phases: [{ id: phaseId, createdAt: now }],
       activePhase: phaseId,
       activeMilestone: milestoneId,
     },
-    cwd,
+    managedWriteState,
   );
 
-  await writeJsonDeterministic(path.join(docsRoot, "policy.json"), defaultPolicyFileDocument());
+  await writeManagedJsonFile(
+    path.join(docsRoot, "policy.json"),
+    defaultPolicyFileDocument(),
+    managedWriteState,
+  );
 
   const phasePath = phaseDir(phaseId, cwd);
   await ensureDir(path.join(phasePath, "milestones"));
   await ensureDir(phaseDecisionsRoot(phaseId, cwd));
   await ensureDecisionIndex(phaseDecisionsRoot(phaseId, cwd));
 
-  await writeMarkdownWithFrontmatter(
+  await writeManagedMarkdownFile(
     path.join(phasePath, "overview.md"),
     {
       schemaVersion: "1.0",
@@ -819,6 +967,13 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "  without missing context.",
       "",
     ].join("\n"),
+    managedWriteState,
+  );
+
+  await writeManagedJsonFile(
+    path.join(phasePath, "validation-contract.json"),
+    defaultValidationContractTemplate(phaseId),
+    managedWriteState,
   );
 
   const milestonePath = milestoneDir(phaseId, milestoneId, cwd);
@@ -828,15 +983,19 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   await ensureDir(path.join(milestonePath, "decisions"));
   await ensureDecisionIndex(path.join(milestonePath, "decisions"));
 
-  await writeJsonDeterministic(path.join(milestonePath, "manifest.json"), {
-    schemaVersion: "1.0",
-    id: milestoneId,
-    phaseId,
-    createdAt: now,
-    updatedAt: now,
-  });
+  await writeManagedJsonFile(
+    path.join(milestonePath, "manifest.json"),
+    {
+      schemaVersion: "1.0",
+      id: milestoneId,
+      phaseId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    managedWriteState,
+  );
 
-  await writeMarkdownWithFrontmatter(
+  await writeManagedMarkdownFile(
     path.join(milestonePath, "overview.md"),
     {
       schemaVersion: "1.0",
@@ -852,6 +1011,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "This milestone creates the baseline project architecture and workflow assets.",
       "",
     ].join("\n"),
+    managedWriteState,
   );
   const targetsPath = path.join(milestonePath, "targets.md");
   if (!(await pathExists(targetsPath))) {
@@ -874,13 +1034,14 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       frontmatter.dependsOn = task.dependsOn;
     }
 
-    await writeMarkdownWithFrontmatter(
+    await writeManagedMarkdownFile(
       path.join(
         milestoneTaskLaneDir(phaseId, milestoneId, "planned", cwd),
         `${task.id}-${task.slug}.md`,
       ),
       frontmatter,
       renderTaskBody(task),
+      managedWriteState,
     );
   }
 
@@ -1993,56 +2154,64 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "Agents must read documentation in the following order before executing work.",
       "",
       "1. `architecture/system.md`",
+      "",
       "   - Single entrypoint that summarizes architecture, domains, model, and roadmap context.",
       "",
-      "2. `architecture/REPO_INDEX.md`",
+      "1. `architecture/REPO_INDEX.md`",
+      "",
       "   - Repository architecture model and authority hierarchy.",
       "",
-      "3. `arch-model/README.md`",
+      "1. `arch-model/README.md`",
+      "",
       "   - Machine-readable codebase topology and module navigation.",
       "",
-      "4. `.arch/graph.json`",
+      "1. `.arch/graph.json`",
+      "",
       "   - Machine-readable architecture traceability graph.",
       "",
-      "5. `architecture/README.md`",
+      "1. `architecture/README.md`",
+      "",
       "   - Documentation structure and navigation.",
       "",
-      "6. `arch-domains/README.md`",
+      "1. `arch-domains/README.md`",
+      "",
       "   - Domain boundaries and ownership map.",
       "",
-      "7. `architecture/foundation/*`",
+      "1. `architecture/foundation/*`",
+      "",
       "   - Project goals",
       "   - product intent",
       "   - user journey",
       "   - scope boundaries",
       "",
-      "8. `architecture/architecture/*`",
+      "1. `architecture/architecture/*`",
+      "",
       "   - canonical system boundaries and architecture decisions",
       "",
-      "9. **`architecture/standards/*` (REQUIRED before implementation)**",
-      "   - **ALL standards must be reviewed before writing code**",
-      "   - Implementation and repository standards",
-      "   - TypeScript, React, Next.js, Markdown, Testing conventions",
-      "   - Naming patterns and Turborepo organization",
+      "1. `architecture/standards/*`",
       "",
-      "10. `roadmap/phases/*`",
+      "   - implementation and repository standards",
+      "   - always include `architecture/standards/markdown-standards.md` when authoring or editing Markdown",
+      "",
+      "1. `roadmap/phases/*`",
+      "",
       "   - Current development phase",
       "   - milestones",
       "   - active tasks",
       "",
-      "11. `roadmap/decisions/*`",
+      "1. `roadmap/decisions/*`",
+      "",
       "   - architectural decisions that constrain implementation",
       "",
-      "12. `roadmap/phases/{phase}/milestones/{milestone}/targets.md`",
-      "   - Canonical implementation targets for task placement.",
+      "1. `roadmap/phases/{phase}/milestones/{milestone}/targets.md`",
       "",
-      "13. `architecture/reference/*` (optional)",
-      "   - Informational context only; non-authoritative.",
+      "   Canonical implementation targets for task placement.",
       "",
-      "14. `architecture/templates-usage.md`",
-      "   - Guidance on when to use each template type.",
+      "1. `architecture/reference/*` (optional)",
       "",
-      "15. Relevant topic directories depending on the task.",
+      "   Informational context only; non-authoritative.",
+      "",
+      "1. Relevant topic directories depending on the task.",
       "",
       "Agents must not begin implementation before completing this read order.",
       "",
@@ -2072,18 +2241,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "Defines binding implementation and repository standards.",
       "",
-      "**Critical: Agents must review ALL standards files before implementing ANY code.**",
-      "",
-      "Required standards files:",
-      "",
-      "- `repo-structure.md`",
-      "- `react-standards.md`",
-      "- `nextjs-standards.md`",
-      "- `typescript-standards.md`",
-      "- `markdown-standards.md`",
-      "- `testing-standards.md`",
-      "- `naming-conventions.md`",
-      "- `turborepo-standards.md`",
+      "Primary Markdown reference: `architecture/standards/markdown-standards.md`",
       "",
       "---",
       "",
@@ -2150,7 +2308,8 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "architecture/foundation/",
       "architecture/architecture/",
-      "**architecture/standards/** (ALL files required)",
+      "architecture/standards/",
+      "architecture/standards/markdown-standards.md",
       "arch-domains/",
       "roadmap/phases/",
       "",
@@ -2159,20 +2318,6 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "- project goals",
       "- current milestone",
       "- active tasks",
-      "- **ALL standards docs have been reviewed**",
-      "",
-      "**Standards Review Checklist:**",
-      "",
-      "Before writing ANY code, verify you have read:",
-      "",
-      "- [ ] `repo-structure.md`",
-      "- [ ] `typescript-standards.md`",
-      "- [ ] `react-standards.md`",
-      "- [ ] `nextjs-standards.md`",
-      "- [ ] `markdown-standards.md`",
-      "- [ ] `testing-standards.md`",
-      "- [ ] `naming-conventions.md`",
-      "- [ ] `turborepo-standards.md`",
       "",
       "---",
       "",
@@ -2183,23 +2328,18 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "roadmap/phases/{phase}/milestones/{milestone}/tasks/",
       "roadmap/phases/{phase}/milestones/{milestone}/targets.md",
       "",
-      "Task lanes:",
+      "Task lanes (organized by ID ranges):",
       "",
-      "planned/",
-      "discovered/",
-      "backlog/",
+      "- **planned/** (001-099): Pre-planned milestone tasks",
+      "- **discovered/** (101-199): Tasks discovered during execution",
+      "- **backlog/** (901-999): Future/deferred task ideas",
       "",
       "Rules:",
       "",
       "- Prefer tasks in `planned/`",
       "- `discovered/` tasks must be documented before execution",
       "- `backlog/` tasks are not part of the active milestone",
-      "",
-      "Operational references:",
-      "- Planned lane creation: `pa task new {phase} {milestone}`",
-      "- Discovered lane creation: `pa task discover {phase} {milestone} --from <taskId>`",
-      "- Backlog lane creation: `pa task idea {phase} {milestone}`",
-      "- Lane guidance: `pa help lanes`",
+      "- Use `pa task lanes <phase> <milestone>` to check available task IDs",
       "",
       "---",
       "",
@@ -2231,15 +2371,6 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "Code",
       "Documentation",
       "",
-      "Operational references:",
-      "- Workflow guidance: `pa help workflows`",
-      "- Validation guidance: `pa help validation`",
-      "- Canonical preflight: `pa doctor`",
-      "- Feedback queue and triage: `pa feedback list`, `pa feedback show <issueId>`, `pa feedback review <issueId> [--dismiss|--mitigated-locally|--defer|--escalate] [--yes]` (see `pa feedback --help`)",
-      "",
-      "**Milestone Completion**: When all tasks in a milestone reach 'done' status, ",
-      "create a Gap Closure Report using `architecture/reference/GAP_CLOSURE_REPORT_TEMPLATE.md`.",
-      "",
       "---",
       "",
       "## 4. Operating Rules",
@@ -2260,16 +2391,14 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "Documentation is hierarchical. Resolve conflicts using this order:",
       "",
       "1. `architecture/foundation`",
-      "2. `architecture/architecture`",
-      "3. `architecture/standards`",
-      "4. `arch-domains`",
-      "5. `roadmap/decisions`",
-      "6. `roadmap/phases`",
-      "7. `architecture/reference`",
+      "1. `architecture/architecture`",
+      "1. `architecture/standards`",
+      "1. `arch-domains`",
+      "1. `roadmap/decisions`",
+      "1. `roadmap/phases`",
+      "1. `architecture/reference`",
       "",
       "`architecture/reference` is informational only and must not override architecture or standards.",
-      "",
-      "For operational command discovery, use `pa help workflows`, `pa help validation`, and `pa help lanes`.",
       "",
       "---",
       "",
@@ -2287,8 +2416,8 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "If a required concept does not exist, the agent must:",
       "",
       "1. create a decision proposal",
-      "2. document the concept",
-      "3. wait for approval before implementation",
+      "1. document the concept",
+      "1. wait for approval before implementation",
       "",
       "---",
       "",
@@ -2308,21 +2437,230 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "New artifacts should be created using CLI tooling when available.",
       "",
-      "Example:",
+      "### CLI-First Enforcement (Required)",
       "",
-      "pa task new {phase} {milestone}",
-      "pa decision new",
+      "When a `pa` command exists for the artifact being created (phase, milestone, task, decision), agents must follow this order:",
       "",
-      "**Template Usage Rules**:",
+      "1. Attempt the appropriate `pa` command first.",
+      "1. If the command appears interactive, still attempt it in the current execution context before falling back.",
+      "1. Manual file creation is allowed only after a `pa` attempt fails with a non-zero exit code or a clear execution error.",
+      "1. Any manual fallback must include a short record in the current work summary containing:",
+      "   - the attempted `pa` command",
+      "   - the failure signal (exit code and/or error message)",
+      "   - the manual artifact path(s) created as fallback",
       "",
-      "- Tasks: Create per work item using CLI",
-      "- Decisions: Create only when architectural choice is required",
-      "- Domain Specs: Create 1-5 times per phase for new domains only",
-      "- Architecture Specs: Create 2-8 times per project for major components",
-      "- Concept Maps: Update once per milestone during planning",
-      "- Gap Closure Reports: Create ONLY when all milestone tasks are done",
+      "Agents must not skip a `pa` attempt solely because help output suggests interactivity.",
       "",
-      "See `architecture/templates-usage.md` for detailed guidance.",
+      "#### Project Architecture CLI (pa)",
+      "",
+      "**Initialization:**",
+      "",
+      "```bash",
+      "pa init [options]                    # Initialize new project architecture",
+      "```",
+      "",
+      "**Phase Management:**",
+      "",
+      "```bash",
+      "pa phase new <phaseId>               # Create new phase (format: phase-1, phase-2)",
+      "pa phase list                        # List all phases",
+      "```",
+      "",
+      "**Milestone Management:**",
+      "",
+      "```bash",
+      "pa milestone new <phase> <milestone>              # Create new milestone",
+      "pa milestone list                                 # List all milestones",
+      "pa milestone activate <phase> <milestone>         # Activate milestone (requires ≥1 planned task)",
+      "pa milestone complete <phase> <milestone>         # Complete milestone (governance check)",
+      "pa milestone status <phase> <milestone>           # Show task statuses with dependency gating",
+      "```",
+      "",
+      "**Task Management (Lane System):**",
+      "",
+      "Tasks are organized into three lanes with distinct ID ranges:",
+      "",
+      "- **planned** (001-099): Pre-planned milestone tasks",
+      "- **discovered** (101-199): Tasks discovered during execution",
+      "- **backlog** (901-999): Future/deferred task ideas",
+      "",
+      "```bash",
+      "pa task new <phase> <milestone>                # Create planned task (001-099)",
+      "pa task discover <phase> <milestone> --from <taskId>  # Create discovered task (101-199)",
+      "pa task idea <phase> <milestone>               # Create backlog idea (901-999)",
+      "pa task status <phase> <milestone> <taskId>    # Get task status",
+      "pa task lanes <phase> <milestone>              # Show lane usage and next available IDs",
+      "pa task lanes -v <phase> <milestone>           # Show all task IDs (not truncated)",
+      "pa task register-surfaces <phase> <milestone> <taskId>  # Bulk-register untracked code paths to codeTargets",
+      "  # Options: --from-check (default), --include <glob...>, --exclude <glob...>, --dry-run",
+      "```",
+      "",
+      "**Decision Management:**",
+      "",
+      "```bash",
+      "pa decision new [options]            # Create architecture decision record",
+      "  # Options: --scope (project|phase|milestone), --phase, --milestone, --slug, --title",
+      "pa decision link <decisionId> [options]  # Link decision to tasks/code/docs",
+      "  # Options: --task, --code, --doc",
+      "pa decision status <decisionId> <status>  # Update decision status",
+      "  # Status: proposed|accepted|rejected|superseded",
+      "pa decision supersede <decisionId> <supersededId>  # Mark superseded decision",
+      "pa decision list                     # List all decisions",
+      "pa decision migrate [--scan-only]    # Migrate legacy decision files (--scan-only: report without writing)",
+      "```",
+      "",
+      "**Validation & Reporting:**",
+      "",
+      "```bash",
+      "pa doctor                            # Canonical preflight: lint frontmatter → pnpm lint:md → pa check",
+      "pa check                             # Validate architecture consistency",
+      "pa check --json                      # Machine-readable diagnostics",
+      "pa lint frontmatter                  # Lint YAML frontmatter (tabs, missing keys, schema/type issues)",
+      "pa lint frontmatter --fix            # Auto-fix safe whitespace issues",
+      "pa policy check                      # Detect timing/domain policy conflicts (JSON output)",
+      "pa policy explain                    # Human-readable policy conflict rationale",
+      "pa report                            # Generate architecture report",
+      "pa report -v                         # Include detailed inconsistency diagnostics",
+      "pa docs                              # List all architecture documentation",
+      "pnpm lint:md                         # Lint Markdown files (ignores node_modules/.next/.turbo/dist)",
+      "```",
+      "",
+      "Run `pa doctor` before marking a milestone complete or transitioning phases. It is the single command that covers all three preflight steps in order.",
+      "",
+      "**Feedback Management:**",
+      "",
+      "```bash",
+      "pa feedback --help                   # Show feedback command group and subcommands",
+      "pa feedback list                     # List open feedback issues",
+      "pa feedback show <issueId>           # Show full detail for a feedback issue",
+      "pa feedback review <issueId>         # Review issue with terminal or deferred outcome",
+      "pa feedback export <issueId>         # Export issue report without changing issue state",
+      "pa feedback prune                    # Prune expired observations and stale deferred issues",
+      "pa feedback rebuild                  # Rebuild issue index/summaries from retained observations",
+      "pa feedback refresh                  # Clear derived feedback state and rebuild from retained observations",
+      "```",
+      "",
+      "**Feedback Invocation Policy:**",
+      "",
+      "Use `pa feedback` when:",
+      "",
+      "- architecture validation or workflow friction repeats across tasks/milestones",
+      "- `pa check`, `pa lint frontmatter`, `pa policy check`, or milestone governance output indicates recurring issues",
+      "- there is a need to inspect, triage, or close previously detected architecture/process problems",
+      "- the agent must produce a shareable issue artifact (`pa feedback export`) without mutating issue state",
+      "",
+      "Do NOT use `pa feedback` when:",
+      "",
+      "- executing normal one-off implementation tasks with no recurring diagnostics",
+      "- creating new roadmap artifacts (`phase`, `milestone`, `task`, `decision`) where standard `pa` commands are sufficient",
+      "- validating immediate local changes where `pa check`/`pa report` already provide adequate signal",
+      "- there are no feedback issues to inspect (`pa feedback list` empty) and no recurring pattern to capture",
+      "",
+      "**Reconciliation:**",
+      "",
+      "```bash",
+      "pa reconcile task <taskId>           # Post-implementation reconciliation pass for a completed task",
+      "  # Options: --files <paths>  Comma-separated additional changed file paths",
+      "  # Output: JSON+Markdown report written to .project-arch/reconcile/",
+      "pa backfill implemented              # List completed tasks with missing or incomplete reconciliation",
+      "pa backfill implemented --json       # Also write artifact to .project-arch/reconcile/",
+      "```",
+      "",
+      "Run `pa reconcile task <taskId>` after marking a task `done` to verify code targets, trace",
+      "links, and architecture areas are consistent. Run `pa backfill implemented` to identify any",
+      "completed tasks that were never reconciled.",
+      "",
+      "**Help System:**",
+      "",
+      "```bash",
+      "pa help <topic>                      # Get detailed help on a topic",
+      "  # Topics: commands, workflows, lanes, decisions, architecture, standards, validation, remediation",
+      "pa help topics                       # List all available help topics",
+      "pa help commands                     # Complete command reference for AI agents",
+      "pa feedback --help                   # Feedback subcommand reference (not listed in pa help topics)",
+      "```",
+      "",
+      "**File Path Conventions:**",
+      "",
+      "| Artifact  | Path pattern                                                                    |",
+      "| --------- | ------------------------------------------------------------------------------- |",
+      "| Task      | `roadmap/phases/{phase}/milestones/{milestone}/tasks/{lane}/{id}-{slug}.md`     |",
+      "| Decision  | `roadmap/decisions/{scope}/{id}-{slug}.md`                                      |",
+      "| Phase     | `roadmap/phases/{phase}/overview.md`                                            |",
+      "| Milestone | `roadmap/phases/{phase}/milestones/{milestone}/overview.md`                     |",
+      "",
+      "**ID Validation Patterns:**",
+      "",
+      "| Field        | Pattern              | Example              |",
+      "| ------------ | -------------------- | -------------------- |",
+      "| Task ID      | `^\\d{3}$`           | `001`, `042`, `999`  |",
+      "| Phase ID     | `^phase-\\d+$`       | `phase-1`, `phase-2` |",
+      "| Milestone ID | `^milestone-[\\w-]+$`| `milestone-1-setup`  |",
+      "| Decision ID  | `^\\d{3}$`           | `001`, `042`         |",
+      "",
+      "---",
+      "",
+      "#### Lifecycle Constraints",
+      "",
+      "These constraints are not enforced by the CLI but cause validation failures if violated.",
+      "",
+      "**Phase close (no `pa phase complete` command):**",
+      "",
+      "1. Ensure all planned and discovered tasks in the phase have `status: done`.",
+      "1. Add `status: completed` to the phase overview YAML frontmatter manually:",
+      "",
+      "   ```yaml",
+      "   status: completed",
+      "   ```",
+      "",
+      "1. Run `pa doctor` to confirm `pa policy check` is clean.",
+      "1. Advance `activePhase` by running `pa milestone new` or `pa milestone activate`",
+      "   on the next phase (which updates `roadmap/manifest.json`).",
+      "",
+      "**Milestone close:**",
+      "",
+      "`pa milestone complete` clears `activeMilestone` in `roadmap/manifest.json` but does",
+      "not write `status: completed` to the milestone overview frontmatter. A milestone is",
+      "considered complete by the policy engine when either:",
+      "",
+      "- All tasks in the milestone have `status: done`, **or**",
+      "- The milestone overview frontmatter contains `status: completed`",
+      "",
+      "Backlog tasks (`901-999`) with `status: todo` will block the `allTasksDone` path.",
+      "To avoid false `TIMING_CONFLICT` warnings when progressing to the next milestone,",
+      "add `status: completed` to completed milestone overviews.",
+      "",
+      "**`pa milestone activate` prerequisite:**",
+      "",
+      "Activation is blocked until at least one planned task exists in `tasks/planned/`.",
+      "Create the first task before calling activate:",
+      "",
+      "```bash",
+      "pa task new <phase> <milestone>",
+      "pa milestone activate <phase> <milestone>",
+      "```",
+      "",
+      "**`discoveredFromTask` quoting rule:**",
+      "",
+      "Task IDs in `discoveredFromTask` frontmatter must be quoted strings, not bare integers:",
+      "",
+      "```yaml",
+      "discoveredFromTask: '008'   # correct",
+      "discoveredFromTask: 008     # wrong — YAML coerces to integer 8, fails schema",
+      "```",
+      "",
+      "If `pa lint frontmatter` reports `SCALAR_SAFETY` or `SCHEMA_TYPE` on `discoveredFromTask`,",
+      "quote the value.",
+      "",
+      "**Status value contract:**",
+      "",
+      "The policy engine checks for the exact string `completed` (not `complete`). The schema",
+      "does not validate this field on overview files, so the error is silent until",
+      "`pa policy check` is run. Always use:",
+      "",
+      "```yaml",
+      "status: completed",
+      "```",
       "",
       "---",
       "",
@@ -2347,42 +2685,15 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "Agents should prioritize:",
       "",
       "1. traceability",
-      "2. deterministic structure",
-      "3. documentation alignment",
-      "4. minimal architectural drift",
-      "",
-      "---",
-      "",
-      "## 6. Operational Command Reference",
-      "",
-      "This appendix provides command-level operational guidance and does not change documentation authority or governance rules above.",
-      "",
-      "### Workflow & Preflight",
-      "",
-      "- `pa help workflows`",
-      "- `pa help validation`",
-      "- `pa doctor`",
-      "",
-      "### Task Lane Commands",
-      "",
-      "- `pa task new {phase} {milestone}`",
-      "- `pa task discover {phase} {milestone} --from <taskId>`",
-      "- `pa task idea {phase} {milestone}`",
-      "- `pa help lanes`",
-      "",
-      "### Feedback Operations",
-      "",
-      "- `pa feedback list`",
-      "- `pa feedback show <issueId>`",
-      "- `pa feedback review <issueId> [--dismiss|--mitigated-locally|--defer|--escalate] [--yes]`",
-      "- `pa feedback export <issueId> [--format md|json]`",
-      "- `pa feedback refresh`",
-      "- `pa feedback rebuild`",
-      "- `pa feedback prune [--dry-run]`",
+      "1. deterministic structure",
+      "1. documentation alignment",
+      "1. minimal architectural drift",
       "",
     ].join("\n");
     await fs.writeFile(agentsDocPath, `${agentsDoc}\n`, "utf8");
   }
+
+  await scaffoldAgentsOfArch(cwd);
 
   // Initialize feedback system stores
   const archDir = path.join(cwd, ".arch");
@@ -2391,6 +2702,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   await observationStore.initialize();
   await issueStore.initialize();
 
+  flushManagedWriteLogs(managedWriteState);
   await rebuildArchitectureGraph(cwd);
   console.log(`Initialized project architecture layout on ${currentDateISO()}`);
 }

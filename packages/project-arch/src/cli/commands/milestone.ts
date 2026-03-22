@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { milestones } from "../../sdk";
 import { unwrap } from "../../sdk/_utils";
+import { assertSafeId } from "../../utils/safeId";
 import { formatEnhancedHelp } from "../help/format";
 
 export function registerMilestoneCommand(program: Command): void {
@@ -41,6 +42,17 @@ export function registerMilestoneCommand(program: Command): void {
       }),
     )
     .action(async (phaseId: string, milestoneId: string) => {
+      try {
+        assertSafeId(phaseId, "phaseId");
+        assertSafeId(milestoneId, "milestoneId");
+      } catch (error) {
+        console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(
+          "Hint: ids must be lowercase alphanumeric with single hyphens, e.g. phase-1 milestone-1-setup",
+        );
+        process.exitCode = 1;
+        return;
+      }
       unwrap(await milestones.milestoneCreate({ phase: phaseId, milestone: milestoneId }));
       console.log(`Created milestone ${phaseId}/${milestoneId}`);
     });
