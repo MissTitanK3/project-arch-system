@@ -1,6 +1,6 @@
 {
   "name": "project-arch",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": false,
   "description": "Architecture-centric project management CLI and SDK for managing phases, milestones, tasks, and architectural decisions",
   "keywords": [

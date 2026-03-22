@@ -1,83 +1,21 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-03-22T17:14:09.978Z",
-  "startedAt": "2026-03-22T17:13:11.301Z",
+  "generatedAt": "2026-03-22T18:17:12.518Z",
+  "startedAt": "2026-03-22T18:16:13.417Z",
   "package": {
     "name": "project-arch",
-    "version": "1.5.0",
-    "targetVersion": "1.5.0"
+    "version": "1.6.0",
+    "targetVersion": "1.6.0"
   },
   "release": {
-    "tag": "v1.5.0"
+    "tag": "v1.6.0"
   },
   "git": {
     "branch": "main",
-    "commit": "d4b0741",
+    "commit": "a1e7260",
     "allowDirtyOverride": true,
     "cleanWorktree": false,
-    "untrackedPackageFiles": [
-      "packages/project-arch/docs/agents-skill-schema.md",
-      "packages/project-arch/docs/security-operations-model.md",
-      "packages/project-arch/scripts/build.mjs",
-      "packages/project-arch/scripts/release-prepare.mjs",
-      "packages/project-arch/src/cli/commands/_repair.ts",
-      "packages/project-arch/src/cli/commands/agents.test.ts",
-      "packages/project-arch/src/cli/commands/agents.ts",
-      "packages/project-arch/src/cli/commands/explain.test.ts",
-      "packages/project-arch/src/cli/commands/explain.ts",
-      "packages/project-arch/src/cli/commands/fix.test.ts",
-      "packages/project-arch/src/cli/commands/fix.ts",
-      "packages/project-arch/src/cli/commands/integration.test.ts",
-      "packages/project-arch/src/cli/commands/next.test.ts",
-      "packages/project-arch/src/cli/commands/next.ts",
-      "packages/project-arch/src/cli/commands/normalize.test.ts",
-      "packages/project-arch/src/cli/commands/normalize.ts",
-      "packages/project-arch/src/core/agents/agents.test.ts",
-      "packages/project-arch/src/core/agents/loadSkills.ts",
-      "packages/project-arch/src/core/agents/newSkill.ts",
-      "packages/project-arch/src/core/agents/resolveSkills.ts",
-      "packages/project-arch/src/core/agents/syncRegistry.ts",
-      "packages/project-arch/src/core/diagnostics/explanations.ts",
-      "packages/project-arch/src/core/doctor/health.test.ts",
-      "packages/project-arch/src/core/doctor/health.ts",
-      "packages/project-arch/src/core/doctor/healthCodes.ts",
-      "packages/project-arch/src/core/reconciliation/lifecycle.test.ts",
-      "packages/project-arch/src/core/reconciliation/lifecycle.ts",
-      "packages/project-arch/src/core/templates/agents/index.test.ts",
-      "packages/project-arch/src/core/templates/agents/index.ts",
-      "packages/project-arch/src/core/templates/validationContract.ts",
-      "packages/project-arch/src/core/validation/frontmatterRepair.test.ts",
-      "packages/project-arch/src/core/validation/frontmatterRepair.ts",
-      "packages/project-arch/src/core/workflow/next.test.ts",
-      "packages/project-arch/src/core/workflow/next.ts",
-      "packages/project-arch/src/graph/drift/checkDecisionCompleteness.test.ts",
-      "packages/project-arch/src/graph/drift/checkDecisionCompleteness.ts",
-      "packages/project-arch/src/graph/moduleClassification.ts",
-      "packages/project-arch/src/schemas/agentSkill.test.ts",
-      "packages/project-arch/src/schemas/agentSkill.ts",
-      "packages/project-arch/src/schemas/agentSkillRegistry.ts",
-      "packages/project-arch/src/schemas/validationContract.test.ts",
-      "packages/project-arch/src/schemas/validationContract.ts",
-      "packages/project-arch/src/schemas/workflowProfile.test.ts",
-      "packages/project-arch/src/schemas/workflowProfile.ts",
-      "packages/project-arch/src/sdk/agents.test.ts",
-      "packages/project-arch/src/sdk/agents.ts",
-      "packages/project-arch/src/sdk/next.test.ts",
-      "packages/project-arch/src/sdk/next.ts",
-      "packages/project-arch/src/utils/assertWithinRoot.test.ts",
-      "packages/project-arch/src/utils/assertWithinRoot.ts",
-      "packages/project-arch/src/utils/markdownSafety.test.ts",
-      "packages/project-arch/src/utils/markdownSafety.ts",
-      "packages/project-arch/src/utils/outputSafety.test.ts",
-      "packages/project-arch/src/utils/outputSafety.ts",
-      "packages/project-arch/src/utils/safeId.test.ts",
-      "packages/project-arch/src/utils/safeId.ts",
-      "packages/project-arch/src/utils/sensitivePaths.test.ts",
-      "packages/project-arch/src/utils/sensitivePaths.ts",
-      "packages/project-arch/src/utils/symlinkPolicy.test.ts",
-      "packages/project-arch/src/utils/symlinkPolicy.ts",
-      "packages/project-arch/tsconfig.build.json"
-    ]
+    "untrackedPackageFiles": []
   },
   "checks": [
     {
@@ -92,28 +30,28 @@
       "label": "Package version semver",
       "ok": true,
       "warning": false,
-      "details": "Version '1.5.0' is valid semver"
+      "details": "Version '1.6.0' is valid semver"
     },
     {
       "id": "version-match",
       "label": "package.json version consistency",
       "ok": true,
       "warning": false,
-      "details": "package.json version matches target version (1.5.0)"
+      "details": "package.json version matches target version (1.6.0)"
     },
     {
       "id": "changelog-version",
       "label": "CHANGELOG version entry",
-      "ok": false,
+      "ok": true,
       "warning": false,
-      "details": "CHANGELOG is missing entry for 1.5.0"
+      "details": "CHANGELOG contains entry for 1.6.0"
     },
     {
       "id": "tag-availability",
       "label": "Local tag availability",
       "ok": true,
       "warning": false,
-      "details": "Local tag 'v1.5.0' does not exist and is available"
+      "details": "Local tag 'v1.6.0' does not exist and is available"
     },
     {
       "id": "git-clean",
@@ -125,9 +63,9 @@
     {
       "id": "git-untracked-payload",
       "label": "Untracked package payload files",
-      "ok": false,
+      "ok": true,
       "warning": false,
-      "details": "61 untracked file(s) under packages/project-arch may affect payload"
+      "details": "No untracked files under packages/project-arch"
     },
     {
       "id": "typecheck",
@@ -146,9 +84,9 @@
     {
       "id": "test",
       "label": "Test",
-      "ok": true,
+      "ok": false,
       "warning": false,
-      "details": "Passed: pnpm --filter project-arch test"
+      "details": "Failed: pnpm --filter project-arch test"
     },
     {
       "id": "build",
@@ -173,17 +111,17 @@
     }
   ],
   "payload": {
-    "tarballName": "project-arch-1.5.0.tgz",
+    "tarballName": "project-arch-1.6.0.tgz",
     "fileCount": 280,
-    "size": 189256,
-    "unpackedSize": 874981,
+    "size": 184739,
+    "unpackedSize": 861470,
     "unsafeFiles": [],
     "missingExpectedEntries": []
   },
   "recommendedCommands": [
     "git add packages/project-arch/CHANGELOG.md packages/project-arch/package.json",
-    "git commit -m \"release(project-arch): v1.5.0\"",
-    "git tag v1.5.0",
+    "git commit -m \"release(project-arch): v1.6.0\"",
+    "git tag v1.6.0",
     "git push origin main --tags",
     "pnpm --filter project-arch publish --access public"
   ],

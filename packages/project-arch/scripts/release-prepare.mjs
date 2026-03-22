@@ -349,7 +349,10 @@ function main() {
   );
 
   const changelog = fs.readFileSync(changelogPath, "utf8");
-  const changelogRegex = new RegExp(`^## \\[${escapeRegExp(targetVersion)}\\]\\b`, "m");
+  const changelogRegex = new RegExp(
+    `^## \\[${escapeRegExp(targetVersion)}\\](?:\\s|$)`,
+    "m",
+  );
   const changelogHasVersion = changelogRegex.test(changelog);
   addCheck(
     checks,
