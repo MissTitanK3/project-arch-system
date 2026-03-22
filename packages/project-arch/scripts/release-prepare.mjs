@@ -96,6 +96,7 @@ function runCommand(command, args, cwd = repoRoot) {
     cwd,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    maxBuffer: 20 * 1024 * 1024,
   });
 
   return {
