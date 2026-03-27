@@ -70,7 +70,12 @@ export function registerTaskCommand(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const result = await tasks.taskCreate({ phase: phaseId, milestone: milestoneId });
+      const result = await tasks.taskCreateInLane({
+        phaseId,
+        milestoneId,
+        lane: "planned",
+        discoveredFromTask: null,
+      });
       const created = unwrap(result).path;
       console.log(path.relative(process.cwd(), created));
     });
@@ -155,10 +160,11 @@ export function registerTaskCommand(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const result = await tasks.taskDiscover({
-        phase: phaseId,
-        milestone: milestoneId,
-        from: options.from,
+      const result = await tasks.taskCreateInLane({
+        phaseId,
+        milestoneId,
+        lane: "discovered",
+        discoveredFromTask: options.from,
       });
       const created = unwrap(result).path;
       console.log(path.relative(process.cwd(), created));
@@ -210,7 +216,12 @@ export function registerTaskCommand(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const result = await tasks.taskIdea({ phase: phaseId, milestone: milestoneId });
+      const result = await tasks.taskCreateInLane({
+        phaseId,
+        milestoneId,
+        lane: "backlog",
+        discoveredFromTask: null,
+      });
       const created = unwrap(result).path;
       console.log(path.relative(process.cwd(), created));
     });

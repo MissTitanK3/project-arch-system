@@ -2,7 +2,7 @@ import path from "path";
 import { collectDecisionRecords } from "./decisions";
 import { collectTaskRecords } from "./tasks";
 import { loadPhaseManifest } from "../manifests";
-import { pathExists, readJson } from "../../fs";
+import { pathExists, readJson } from "../../utils/fs";
 import {
   resolvePolicyProfile,
   type CompletionMode,

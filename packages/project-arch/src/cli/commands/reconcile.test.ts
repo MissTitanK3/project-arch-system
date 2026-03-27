@@ -7,6 +7,7 @@ import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createPhase } from "../../core/phases/createPhase";
 import { createMilestone } from "../../core/milestones/createMilestone";
 import { createTask } from "../../core/tasks/createTask";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
 
 describe("cli/commands/reconcile", () => {
   let context: TestProjectContext;
@@ -258,11 +259,9 @@ describe("cli/commands/reconcile", () => {
       });
 
       // Patch codeTargets to a non-triggering path
-      const { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } =
-        await import("../../fs/index.js");
       const { data, content } =
         await readMarkdownWithFrontmatter<Record<string, unknown>>(taskPath);
-      (data as Record<string, unknown>).codeTargets = ["apps/web/src/components/Button.tsx"];
+      (data as Record<string, unknown>).codeTargets = ["packages/ui/src/components/Button.tsx"];
       (data as Record<string, unknown>).evidence = ["Button renders correctly."];
       await writeMarkdownWithFrontmatter(taskPath, data as Record<string, unknown>, content);
 

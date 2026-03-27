@@ -6,7 +6,8 @@ import { createMilestone } from "../milestones/createMilestone";
 import { createTask } from "../tasks/createTask";
 import { createDecision, linkDecision } from "../decisions/createDecision";
 import { listDocsReferences } from "./listDocs";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter, writeFile } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
+import { writeFile } from "../../fs/writeFile";
 
 describe.sequential("core/docs/listDocs", () => {
   let context: TestProjectContext;

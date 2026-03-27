@@ -3,7 +3,7 @@ import path from "path";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { writeJsonDeterministic } from "../../utils/fs";
-import { writeFile } from "../../fs";
+import { writeFile } from "../../fs/writeFile";
 import { runDriftChecks } from "./runChecks";
 import { TaskRecord } from "../../core/validation/tasks";
 import { DecisionRecord } from "../../core/validation/decisions";

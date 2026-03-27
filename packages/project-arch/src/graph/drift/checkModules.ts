@@ -1,7 +1,7 @@
 import path from "path";
 import fg from "fast-glob";
 import { DecisionRecord } from "../../core/validation/decisions";
-import { pathExists, readJson } from "../../fs";
+import { pathExists, readJson } from "../../utils/fs";
 import { DriftFinding } from "./runChecks";
 import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 

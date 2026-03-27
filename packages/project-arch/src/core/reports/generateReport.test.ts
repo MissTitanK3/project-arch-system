@@ -5,9 +5,8 @@ import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
 import { createTask } from "../tasks/createTask";
 import { createDecision, setDecisionStatus } from "../decisions/createDecision";
-import { readMarkdownWithFrontmatter } from "../../fs";
-import { writeFile } from "../../fs";
-import { writeJsonDeterministic } from "../../fs";
+import { readMarkdownWithFrontmatter, writeJsonDeterministic } from "../../utils/fs";
+import { writeFile } from "../../fs/writeFile";
 import { generateReport } from "./generateReport";
 import { loadPhaseManifest, savePhaseManifest } from "../../graph/manifests";
 

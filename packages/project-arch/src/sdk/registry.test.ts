@@ -51,6 +51,16 @@ describe("sdk/registry", () => {
       expect(registry.check.checkRun).toBeDefined();
     });
 
+    it("should export context module", () => {
+      expect(registry.context).toBeDefined();
+      expect(registry.context.contextResolve).toBeDefined();
+    });
+
+    it("should export learn module", () => {
+      expect(registry.learn).toBeDefined();
+      expect(registry.learn.learnPath).toBeDefined();
+    });
+
     it("should export next module", () => {
       expect(registry.next).toBeDefined();
       expect(registry.next.nextResolve).toBeDefined();
@@ -69,6 +79,7 @@ describe("sdk/registry", () => {
     it("should export docs module", () => {
       expect(registry.docs).toBeDefined();
       expect(registry.docs.docsList).toBeDefined();
+      expect(registry.docs.docsCatalog).toBeDefined();
     });
 
     it("should export agents module", () => {

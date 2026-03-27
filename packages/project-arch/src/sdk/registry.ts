@@ -5,6 +5,8 @@ import * as milestones from "./milestones";
 import * as decisions from "./decisions";
 import * as graph from "./graph";
 import * as check from "./check";
+import * as context from "./context";
+import * as learn from "./learn";
 import * as next from "./next";
 import * as lint from "./lint";
 import * as report from "./report";
@@ -19,6 +21,8 @@ export const registry = {
   decisions,
   graph,
   check,
+  context,
+  learn,
   next,
   lint,
   report,

@@ -11,7 +11,7 @@ import {
   setDecisionStatus,
   supersedeDecision,
 } from "./createDecision";
-import { readMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter } from "../../utils/fs";
 
 function decisionIdFromPath(relativePath: string): string {
   const filename = path.basename(relativePath, ".md");

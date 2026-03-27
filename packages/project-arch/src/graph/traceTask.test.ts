@@ -9,7 +9,8 @@ import { createTask } from "../core/tasks/createTask";
 import { createDecision, linkDecision } from "../core/decisions/createDecision";
 import { buildGraph } from "./buildGraph";
 import { traceTask } from "./traceTask";
-import { readMarkdownWithFrontmatter, writeFile } from "../fs";
+import { readMarkdownWithFrontmatter } from "../utils/fs";
+import { writeFile } from "../fs/writeFile";
 
 describe.sequential("graph/traceTask", () => {
   let tempDir: string;

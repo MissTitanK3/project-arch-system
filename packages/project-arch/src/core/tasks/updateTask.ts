@@ -1,5 +1,5 @@
 import { currentDateISO } from "../../utils/date";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
 import { taskSchema, TaskStatus } from "../../schemas/task";
 import path from "path";
 import fs from "fs-extra";

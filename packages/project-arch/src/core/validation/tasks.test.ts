@@ -7,7 +7,7 @@ import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createTask } from "../tasks/createTask";
 import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
-import { writeFile } from "../../fs";
+import { writeFile } from "../../fs/writeFile";
 
 describe("core/validation/tasks", () => {
   let context: TestProjectContext;

@@ -27,7 +27,7 @@ describe("cli/commands/docs", () => {
 
       const docsCommand = program.commands.find((cmd) => cmd.name() === "docs");
       expect(docsCommand).toBeDefined();
-      expect(docsCommand?.description()).toBe("List all architecture documentation");
+      expect(docsCommand?.description()).toBe("Inspect architecture and linked documentation");
     });
 
     it("should include enhanced help text", () => {
@@ -44,11 +44,12 @@ describe("cli/commands/docs", () => {
       const helpText = output.join("");
 
       expect(helpText).toContain("pa docs");
-      expect(helpText).toContain("List all architecture documentation");
+      expect(helpText).toContain("Inspect documentation inventory");
       expect(helpText).toContain("pa report");
+      expect(helpText).toContain("--linked-only");
     });
 
-    it("should execute docs and list documentation references", async () => {
+    it("should execute docs and print inventory summary", async () => {
       const program = new Command();
       program.exitOverride();
       registerDocsCommand(program);
@@ -57,8 +58,7 @@ describe("cli/commands/docs", () => {
 
       await program.parseAsync(["node", "test", "docs"]);
 
-      // Command executes successfully - may or may not have output depending on docs
-      expect(program).toBeDefined();
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("docs:"));
 
       consoleSpy.mockRestore();
     });
@@ -77,13 +77,7 @@ describe("cli/commands/docs", () => {
 
       await program.parseAsync(["node", "test", "docs"]);
 
-      // Command should execute without error
-      // If architecture files exist, they should be logged
-      // In a freshly initialized project, there may not be any docs yet
-
-      // For a freshly-created arch doc, it might not be picked up if docsList filters by schema
-      // Just verify the command ran without throwing
-      expect(consoleSpy).toBeDefined();
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("architecture/custom.md"));
 
       consoleSpy.mockRestore();
     });
@@ -97,21 +91,46 @@ describe("cli/commands/docs", () => {
 
       await program.parseAsync(["node", "test", "docs"]);
 
-      // Command should execute without error even if no docs
-      expect(program).toBeDefined();
+      expect(consoleSpy).toHaveBeenCalled();
 
       consoleSpy.mockRestore();
     });
 
-    it("should print each documentation reference returned by SDK", async () => {
+    it("should print inventory entries returned by SDK", async () => {
       const program = new Command();
       program.exitOverride();
       registerDocsCommand(program);
 
-      vi.spyOn(docsSdk, "docsList").mockResolvedValue({
+      vi.spyOn(docsSdk, "docsCatalog").mockResolvedValue({
         success: true,
         data: {
-          refs: ["architecture/README.md", "roadmap/phases/phase-1/overview.md"],
+          summary: {
+            total: 2,
+            existing: 1,
+            missing: 1,
+            referenced: 2,
+            discoveredOnDisk: 1,
+            taskLinked: 1,
+            decisionLinked: 1,
+          },
+          entries: [
+            {
+              path: "architecture/README.md",
+              category: "architecture",
+              exists: true,
+              discoveredOnDisk: true,
+              taskRefs: 0,
+              decisionRefs: 0,
+            },
+            {
+              path: "docs/missing.md",
+              category: "docs",
+              exists: false,
+              discoveredOnDisk: false,
+              taskRefs: 1,
+              decisionRefs: 1,
+            },
+          ],
         },
       });
 
@@ -119,10 +138,50 @@ describe("cli/commands/docs", () => {
 
       await program.parseAsync(["node", "test", "docs"]);
 
-      expect(consoleSpy).toHaveBeenCalledWith("architecture/README.md");
-      expect(consoleSpy).toHaveBeenCalledWith("roadmap/phases/phase-1/overview.md");
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("docs: 2 total"));
+      expect(consoleSpy).toHaveBeenCalledWith("architecture/README.md [architecture, exists, file]");
+      expect(consoleSpy).toHaveBeenCalledWith("docs/missing.md [docs, missing, tasks:1, decisions:1]");
 
       consoleSpy.mockRestore();
+    });
+
+    it("should support json output", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerDocsCommand(program);
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "docs", "--json"]);
+
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("\"schemaVersion\": \"1.0\""));
+      consoleSpy.mockRestore();
+    });
+
+    it("should pass linked-only through to sdk docs catalog", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerDocsCommand(program);
+
+      const catalogSpy = vi.spyOn(docsSdk, "docsCatalog").mockResolvedValue({
+        success: true,
+        data: {
+          summary: {
+            total: 0,
+            existing: 0,
+            missing: 0,
+            referenced: 0,
+            discoveredOnDisk: 0,
+            taskLinked: 0,
+            decisionLinked: 0,
+          },
+          entries: [],
+        },
+      });
+
+      await program.parseAsync(["node", "test", "docs", "--linked-only"]);
+
+      expect(catalogSpy).toHaveBeenCalledWith({ linkedOnly: true });
     });
   });
 });

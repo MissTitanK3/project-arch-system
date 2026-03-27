@@ -1,5 +1,5 @@
 import path from "path";
-import { ensureDir, pathExists, writeMarkdownWithFrontmatter } from "../../fs";
+import { ensureDir, pathExists, writeMarkdownWithFrontmatter } from "../../utils/fs";
 import { currentDateISO } from "../../utils/date";
 import { assertSafeId } from "../../utils/safeId";
 import { assertWithinRoot } from "../../utils/assertWithinRoot";

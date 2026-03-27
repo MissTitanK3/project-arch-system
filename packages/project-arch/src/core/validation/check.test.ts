@@ -12,7 +12,8 @@ import { createTask } from "../tasks/createTask";
 import { createDecision } from "../decisions/createDecision";
 import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
-import { readMarkdownWithFrontmatter, writeFile, writeMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
+import { writeFile } from "../../fs/writeFile";
 import { readJson, writeJsonDeterministic } from "../../utils/fs";
 import { pruneReconciliationArtifacts } from "../reconciliation/lifecycle";
 
@@ -1787,15 +1788,13 @@ describe("runRepositoryChecks – planning coverage diagnostics", () => {
 
       if (path.basename(taskPath).startsWith("001-")) {
         updatedFrontmatter["codeTargets"] = [
-          "apps/web",
-          "apps/docs",
+          "architecture/product-framing",
           "packages/ui",
           "packages/types",
           "packages/config",
           "packages/database",
           "packages/api",
           "architecture/foundation",
-          "apps/web/app/dashboard",
           "packages/ui/components/dashboard",
         ];
       }

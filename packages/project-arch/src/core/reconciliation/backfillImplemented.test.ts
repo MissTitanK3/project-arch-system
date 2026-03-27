@@ -1,7 +1,7 @@
 import path from "path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ensureDir, writeJson } from "fs-extra";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";

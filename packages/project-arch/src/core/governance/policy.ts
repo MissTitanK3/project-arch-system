@@ -1,5 +1,5 @@
 import path from "path";
-import { pathExists, readJson, writeJsonDeterministic } from "../../fs";
+import { pathExists, readJson, writeJsonDeterministic } from "../../utils/fs";
 import { projectDocsRoot } from "../../utils/paths";
 import {
   CANONICAL_TASK_STATUSES,

@@ -7,7 +7,7 @@ import { createTask } from "../tasks/createTask";
 import { createDecision, linkDecision } from "../decisions/createDecision";
 import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
-import { writeFile } from "../../fs";
+import { writeFile } from "../../fs/writeFile";
 import { writeJsonDeterministic } from "../../utils/fs";
 
 describe.sequential("core/validation/check - branch coverage", () => {

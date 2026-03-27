@@ -7,7 +7,7 @@ import {
   readMarkdownWithFrontmatter,
   writeJsonDeterministic,
   writeMarkdownWithFrontmatter,
-} from "../../fs";
+} from "../../utils/fs";
 import { taskSchema } from "../../schemas/task";
 import { detectReconciliationTriggers } from "../reconciliation/triggerDetection";
 import { reconciliationReportSchema } from "../../schemas/reconciliationReport";

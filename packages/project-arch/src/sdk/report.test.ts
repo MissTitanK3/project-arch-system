@@ -4,7 +4,7 @@ import fs from "fs-extra";
 import fg from "fast-glob";
 import { reportGenerate } from "./report";
 import { createTestProject, resultAssertions, type TestProjectContext } from "../test/helpers";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../utils/fs";
 
 describe.sequential("sdk/report", () => {
   let context: TestProjectContext;
@@ -26,6 +26,9 @@ describe.sequential("sdk/report", () => {
     expect(result.data.text).toContain("Metric");
     expect(result.data.text).toContain("Value");
     expect(result.data.text).toContain("active phase");
+    expect(result.data.report.activePhase).toBeDefined();
+    expect(result.data.report.docsCoverage).toBeDefined();
+    expect(typeof result.data.graphSnapshotLoaded).toBe("boolean");
   }, 120_000);
 
   it("should support verbose mode option", async () => {
@@ -49,6 +52,19 @@ describe.sequential("sdk/report", () => {
 
     resultAssertions.assertSuccess(result);
     expect(result.data.text).toContain("graph sync status");
+    expect(result.data.graphSnapshotLoaded).toBe(true);
+    expect(result.data.report.graph.snapshotLoaded).toBe(true);
+  }, 120_000);
+
+  it("should continue generating report when graph snapshot is unavailable", async () => {
+    await fs.remove(path.join(process.cwd(), ".arch"));
+
+    const result = await reportGenerate();
+
+    resultAssertions.assertSuccess(result);
+    expect(result.data.text).toContain("graph sync status");
+    expect(result.data.graphSnapshotLoaded).toBe(false);
+    expect(result.data.report.graph.snapshotLoaded).toBe(false);
   }, 120_000);
 
   it("should include parity check summary", async () => {
@@ -59,6 +75,7 @@ describe.sequential("sdk/report", () => {
     expect(result.data.text).toContain("Status:");
     expect(result.data.text).toContain("Tasks checked:");
     expect(result.data.text).toContain("Status mismatches:");
+    expect(result.data.report.parity.total).toBeGreaterThanOrEqual(0);
   }, 120_000);
 
   it("should exclude sensitive docs from coverage while counting non-sensitive docs", async () => {
@@ -106,5 +123,26 @@ describe.sequential("sdk/report", () => {
 
     expect(afterExisting).toBe(beforeExisting + 1);
     expect(afterTotal).toBe(beforeTotal + 1);
+  }, 120_000);
+
+  it("should expose structured graph metadata and planning metrics", async () => {
+    const result = await reportGenerate();
+
+    resultAssertions.assertSuccess(result);
+    expect(result.data.report.planning).toEqual(
+      expect.objectContaining({
+        plannedCount: expect.any(Number),
+        discoveredCount: expect.any(Number),
+        backlogCount: expect.any(Number),
+        discoveredRatioPercent: expect.any(Number),
+        discoveredThresholdPercent: expect.any(Number),
+      }),
+    );
+    expect(result.data.report.graph).toEqual(
+      expect.objectContaining({
+        snapshotLoaded: expect.any(Boolean),
+        lastSync: expect.anything(),
+      }),
+    );
   }, 120_000);
 });

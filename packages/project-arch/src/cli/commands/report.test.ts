@@ -46,6 +46,7 @@ describe("cli/commands/report", () => {
       expect(helpText).toContain("pa report");
       expect(helpText).toContain("Generate architecture report");
       expect(helpText).toContain("pa check");
+      expect(helpText).toContain("--json");
     });
 
     it("should execute report and generate output", async () => {
@@ -254,6 +255,23 @@ describe("cli/commands/report", () => {
       const output = consoleSpy.mock.calls[0][0] as string;
       expect(output).toContain("graph sync status");
 
+      consoleSpy.mockRestore();
+    });
+
+    it("should support json output for structured report data", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerReportCommand(program);
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "report", "--json"]);
+
+      const output = consoleSpy.mock.calls[0][0] as string;
+      expect(output).toContain("\"schemaVersion\": \"1.0\"");
+      expect(output).toContain("\"report\":");
+      expect(output).toContain("\"docsCoverage\":");
+      expect(output).toContain("\"parity\":");
       consoleSpy.mockRestore();
     });
   });

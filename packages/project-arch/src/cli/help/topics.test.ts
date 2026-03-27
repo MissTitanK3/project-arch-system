@@ -125,6 +125,8 @@ describe("Help Topics", () => {
       const commandsTopic = getHelpTopic("commands");
 
       it("should document pa check with --json option", () => {
+        expect(commandsTopic).toContain("pa context [--json]");
+        expect(commandsTopic).toContain("pa learn --path <path> [--json]");
         expect(commandsTopic).toContain("pa next [--json]");
         expect(commandsTopic).toContain("pa check");
         expect(commandsTopic).toContain("--json");
@@ -168,6 +170,13 @@ describe("Help Topics", () => {
 
       it("should document pa doctor health command", () => {
         expect(commandsTopic).toContain("pa doctor health [--repair] [--json]");
+      });
+
+      it("should include runtime command metadata registry derived from sdk metadata", () => {
+        expect(commandsTopic).toContain("Runtime Command Metadata Registry:");
+        expect(commandsTopic).toContain("tasks.create");
+        expect(commandsTopic).toContain("Description: Create a planned task");
+        expect(commandsTopic).toContain("agents.check");
       });
     });
   });

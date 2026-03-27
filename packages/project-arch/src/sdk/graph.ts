@@ -1,7 +1,7 @@
 import path from "path";
 import { buildGraph } from "../graph/buildGraph";
 import { traceTask } from "../graph/traceTask";
-import { pathExists, readJson } from "../fs";
+import { pathExists, readJson } from "../utils/fs";
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
 import type { GraphLayerMode } from "../core/manifests/graph";

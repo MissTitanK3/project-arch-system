@@ -4,7 +4,7 @@ import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 import { createTempDir, createTestProject } from "../../test/helpers";
 import { resolveNextWorkflow } from "./next";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
 import { rebuildArchitectureGraph } from "../../graph/manifests";
 
 async function seedReconciliationArtifact(

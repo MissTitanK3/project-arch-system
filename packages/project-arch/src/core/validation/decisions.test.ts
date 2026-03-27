@@ -6,7 +6,7 @@ import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createDecision } from "../decisions/createDecision";
 import { createPhase } from "../phases/createPhase";
 import { createMilestone } from "../milestones/createMilestone";
-import { writeFile } from "../../fs";
+import { writeFile } from "../../fs/writeFile";
 
 describe.sequential("core/validation/decisions", () => {
   let context: TestProjectContext;

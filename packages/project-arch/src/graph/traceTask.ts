@@ -1,5 +1,5 @@
 import path from "path";
-import { pathExists, readJson } from "../fs";
+import { pathExists, readJson } from "../utils/fs";
 
 interface ArchGraph {
   schemaVersion: string;

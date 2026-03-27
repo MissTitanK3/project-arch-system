@@ -1,5 +1,5 @@
 import path from "path";
-import { pathExists, readJson } from "../../fs";
+import { pathExists, readJson } from "../../utils/fs";
 import { projectDocsRoot } from "../../utils/paths";
 
 export const DEFAULT_DISCOVERED_LOAD_THRESHOLD_PERCENT = 40;

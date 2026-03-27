@@ -28,16 +28,16 @@ export function detectChangedPaths(cwd = process.cwd()): ChangedScopeDetectionRe
     encoding: "utf8",
   });
 
-  if (gitResult.error) {
-    return { ok: false, paths: [], reason: gitResult.error.message };
-  }
-
   if (typeof gitResult.status === "number" && gitResult.status !== 0) {
     return {
       ok: false,
       paths: [],
       reason: (gitResult.stderr || "git status failed").trim() || "git status failed",
     };
+  }
+
+  if (gitResult.error && gitResult.status == null) {
+    return { ok: false, paths: [], reason: gitResult.error.message };
   }
 
   const changedPaths = new Set<string>();

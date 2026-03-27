@@ -10,7 +10,7 @@ import {
 import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 import { isSensitivePath } from "../../utils/sensitivePaths";
 import { loadPhaseManifest } from "../../graph/manifests";
-import { pathExists, readJson } from "../../fs";
+import { pathExists, readJson } from "../../utils/fs";
 
 interface ConsistencyDiagnostic {
   type: "activeMilestone" | "activePhase";
@@ -48,6 +48,40 @@ interface GraphTaskNode {
   milestone?: string;
   domain?: string | null;
   lane?: string;
+}
+
+export interface ReportData {
+  activePhase: string;
+  activeMilestone: string;
+  tasksByStatus: Record<string, number>;
+  decisionsByStatus: Record<string, number>;
+  planning: {
+    plannedCount: number;
+    discoveredCount: number;
+    backlogCount: number;
+    discoveredRatioPercent: number;
+    discoveredThresholdPercent: number;
+  };
+  docsCoverage: {
+    existing: number;
+    total: number;
+  };
+  graph: {
+    snapshotLoaded: boolean;
+    lastSync: string | null;
+    metadata: GraphMetadata | null;
+  };
+  consistency: {
+    diagnostics: ConsistencyDiagnostic[];
+    issues: string[];
+  };
+  governanceWarnings: string[];
+  parity: {
+    ok: boolean;
+    total: number;
+    mismatches: number;
+    diagnostics: ParityDiagnostic[];
+  };
 }
 
 function renderTable(rows: Array<[string, string]>): string {
@@ -330,10 +364,7 @@ function renderInconsistencyTable(diagnostics: ParityDiagnostic[]): string {
   return lines.join("\n");
 }
 
-export async function generateReport(
-  cwd = process.cwd(),
-  options: { verbose?: boolean } = {},
-): Promise<string> {
+export async function generateReportData(cwd = process.cwd()): Promise<ReportData> {
   const manifest = await loadPhaseManifest(cwd);
   const tasks = await collectTaskRecords(cwd);
   const decisions = await collectDecisionRecords(cwd);
@@ -390,55 +421,114 @@ export async function generateReport(
     }
   }
 
-  // Add provenance annotations
-  const lastSyncInfo = graphMeta?.lastSync
-    ? `(last sync: ${new Date(graphMeta.lastSync).toLocaleString()})`
+  const taskStatusRecord = Object.fromEntries(
+    [...taskStatusCounts.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+  );
+  const decisionStatusRecord = Object.fromEntries(
+    [...decisionStatusCounts.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+  );
+
+  const { diagnostics, issues } = await checkConsistency(cwd);
+  const parity = await checkParityDiagnostics(cwd, tasks);
+
+  return {
+    activePhase,
+    activeMilestone,
+    tasksByStatus: taskStatusRecord,
+    decisionsByStatus: decisionStatusRecord,
+    planning: {
+      plannedCount,
+      discoveredCount,
+      backlogCount,
+      discoveredRatioPercent: discoveredRatio,
+      discoveredThresholdPercent: discoveredThreshold,
+    },
+    docsCoverage: {
+      existing: existingDocs,
+      total: docRefs.size,
+    },
+    graph: {
+      snapshotLoaded: graphMeta !== null,
+      lastSync: graphMeta?.lastSync ?? null,
+      metadata: graphMeta,
+    },
+    consistency: {
+      diagnostics,
+      issues,
+    },
+    governanceWarnings,
+    parity,
+  };
+}
+
+export function renderReportData(
+  data: ReportData,
+  options: { verbose?: boolean } = {},
+): string {
+  const lastSyncInfo = data.graph.lastSync
+    ? `(last sync: ${new Date(data.graph.lastSync).toLocaleString()})`
     : "(graph not synced)";
 
   const rows: Array<[string, string]> = [
-    ["active phase", `${activePhase} [source: roadmap/manifest.json]`],
-    ["active milestone", `${activeMilestone} [source: roadmap/manifest.json]`],
+    ["active phase", `${data.activePhase} [source: roadmap/manifest.json]`],
+    ["active milestone", `${data.activeMilestone} [source: roadmap/manifest.json]`],
     [
       "tasks by status",
       `${
-        [...taskStatusCounts.entries()]
-          .sort((a, b) => a[0].localeCompare(b[0]))
+        Object.entries(data.tasksByStatus)
           .map(([status, count]) => `${status}:${count}`)
           .join(", ") || "none"
       } [source: roadmap/phases/*/milestones/*/tasks/**/*.md]`,
     ],
-    ["discovered tasks", `${discoveredCount} [source: roadmap task frontmatter]`],
+    ["discovered tasks", `${data.planning.discoveredCount} [source: roadmap task frontmatter]`],
     [
       "discovered ratio",
-      `${formatPercent(discoveredRatio)} (threshold ${formatPercent(discoveredThreshold)}) [source: calculated]`,
+      `${formatPercent(data.planning.discoveredRatioPercent)} (threshold ${formatPercent(data.planning.discoveredThresholdPercent)}) [source: calculated]`,
     ],
-    ["backlog ideas", `${backlogCount} [source: roadmap task frontmatter]`],
+    ["planned tasks", `${data.planning.plannedCount} [source: roadmap task frontmatter]`],
+    ["backlog ideas", `${data.planning.backlogCount} [source: roadmap task frontmatter]`],
     [
       "decisions by status",
       `${
-        [...decisionStatusCounts.entries()]
-          .sort((a, b) => a[0].localeCompare(b[0]))
+        Object.entries(data.decisionsByStatus)
           .map(([status, count]) => `${status}:${count}`)
           .join(", ") || "none"
       } [source: roadmap/decisions/**/*.md]`,
     ],
-    ["docs coverage", `${existingDocs}/${docRefs.size} [source: task/decision publicDocs fields]`],
+    [
+      "docs coverage",
+      `${data.docsCoverage.existing}/${data.docsCoverage.total} [source: task/decision publicDocs fields]`,
+    ],
     ["graph sync status", lastSyncInfo],
+    [
+      "graph nodes",
+      data.graph.metadata
+        ? `${Object.entries(data.graph.metadata.nodes)
+            .map(([key, value]) => `${key}:${value ?? 0}`)
+            .join(", ")} [source: .arch/graph.json]`
+        : "none [source: .arch/graph.json]",
+    ],
+    [
+      "graph edges",
+      data.graph.metadata
+        ? `${Object.entries(data.graph.metadata.edges)
+            .map(([key, value]) => `${key}:${value}`)
+            .join(", ")} [source: .arch/graph.json]`
+        : "none [source: .arch/graph.json]",
+    ],
   ];
 
   const report = renderTable(rows);
-
-  // Check and include consistency diagnostics
-  const { diagnostics } = await checkConsistency(cwd);
-  const diagnosticsTable = renderConsistencyDiagnostics(diagnostics);
-  const warningsSection = renderGovernanceWarnings(governanceWarnings);
-
-  // Add parity check
-  const parity = await checkParityDiagnostics(cwd, tasks);
-  const paritySummary = renderParitySummary(parity);
-
-  // Verbose mode: include full inconsistency table
-  const inconsistencyTable = options.verbose ? renderInconsistencyTable(parity.diagnostics) : "";
-
+  const diagnosticsTable = renderConsistencyDiagnostics(data.consistency.diagnostics);
+  const warningsSection = renderGovernanceWarnings(data.governanceWarnings);
+  const paritySummary = renderParitySummary(data.parity);
+  const inconsistencyTable = options.verbose ? renderInconsistencyTable(data.parity.diagnostics) : "";
   return report + diagnosticsTable + warningsSection + paritySummary + inconsistencyTable;
+}
+
+export async function generateReport(
+  cwd = process.cwd(),
+  options: { verbose?: boolean } = {},
+): Promise<string> {
+  return renderReportData(await generateReportData(cwd), options);
 }

@@ -1,7 +1,7 @@
 import path from "path";
 import fg from "fast-glob";
 import fs from "fs-extra";
-import { readMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter } from "../../utils/fs";
 import { taskSchema, TaskFrontmatter } from "../../schemas/task";
 import {
   ReconciliationReport,

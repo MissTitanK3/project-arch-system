@@ -4,6 +4,7 @@ import { registerTaskCommand } from "./task";
 import { createPhase } from "../../core/phases/createPhase";
 import { createMilestone } from "../../core/milestones/createMilestone";
 import { createTestProject, consoleAssertions, type TestProjectContext } from "../../test/helpers";
+import { tasks } from "../../sdk";
 
 describe("cli/commands/task", () => {
   let context: TestProjectContext;
@@ -113,6 +114,29 @@ describe("cli/commands/task", () => {
 
       process.exitCode = 0;
       consoleErrorSpy.mockRestore();
+    });
+
+    it("should route planned task creation through taskCreateInLane", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerTaskCommand(program);
+
+      const createInLaneSpy = vi
+        .spyOn(tasks, "taskCreateInLane")
+        .mockResolvedValue({ success: true, data: { path: "/tmp/planned-task.md" } });
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "task", "new", phaseId, milestoneId]);
+
+      expect(createInLaneSpy).toHaveBeenCalledWith({
+        phaseId,
+        milestoneId,
+        lane: "planned",
+        discoveredFromTask: null,
+      });
+
+      createInLaneSpy.mockRestore();
+      consoleSpy.mockRestore();
     });
   });
 
@@ -273,6 +297,38 @@ describe("cli/commands/task", () => {
       process.exitCode = 0;
       consoleErrorSpy.mockRestore();
     });
+
+    it("should route discovered task creation through taskCreateInLane", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerTaskCommand(program);
+
+      const createInLaneSpy = vi
+        .spyOn(tasks, "taskCreateInLane")
+        .mockResolvedValue({ success: true, data: { path: "/tmp/discovered-task.md" } });
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "task",
+        "discover",
+        phaseId,
+        milestoneId,
+        "--from",
+        "001",
+      ]);
+
+      expect(createInLaneSpy).toHaveBeenCalledWith({
+        phaseId,
+        milestoneId,
+        lane: "discovered",
+        discoveredFromTask: "001",
+      });
+
+      createInLaneSpy.mockRestore();
+      consoleSpy.mockRestore();
+    });
   });
 
   describe("task idea", () => {
@@ -325,6 +381,29 @@ describe("cli/commands/task", () => {
 
       process.exitCode = 0;
       consoleErrorSpy.mockRestore();
+    });
+
+    it("should route backlog idea creation through taskCreateInLane", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerTaskCommand(program);
+
+      const createInLaneSpy = vi
+        .spyOn(tasks, "taskCreateInLane")
+        .mockResolvedValue({ success: true, data: { path: "/tmp/backlog-task.md" } });
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "task", "idea", phaseId, milestoneId]);
+
+      expect(createInLaneSpy).toHaveBeenCalledWith({
+        phaseId,
+        milestoneId,
+        lane: "backlog",
+        discoveredFromTask: null,
+      });
+
+      createInLaneSpy.mockRestore();
+      consoleSpy.mockRestore();
     });
   });
 

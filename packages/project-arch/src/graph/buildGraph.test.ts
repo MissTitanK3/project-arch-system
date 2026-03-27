@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { initializeProject } from "../core/init/initializeProject";
 import { buildGraph } from "./buildGraph";
-import { pathExists, readJson } from "../fs";
+import { pathExists, readJson } from "../utils/fs";
 
 describe.sequential("graph/buildGraph", () => {
   let tempDir: string;

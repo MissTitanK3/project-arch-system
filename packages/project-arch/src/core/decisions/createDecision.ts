@@ -11,7 +11,11 @@ import {
 import { buildDecisionId, DecisionScope } from "../../core/ids/decision";
 import { defaultDecisionBody, defaultDecisionFrontmatter } from "../../core/templates/decision";
 import { decisionStatusSchema, decisionSchema } from "../../schemas/decision";
-import { pathExists, readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import {
+  pathExists,
+  readMarkdownWithFrontmatter,
+  writeMarkdownWithFrontmatter,
+} from "../../utils/fs";
 import { projectDocsRoot } from "../../utils/paths";
 import { assertSafeId } from "../../utils/safeId";
 

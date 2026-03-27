@@ -1,6 +1,6 @@
 import path from "path";
 import { TaskRecord } from "../../core/validation/tasks";
-import { pathExists, readJson } from "../../fs";
+import { pathExists, readJson } from "../../utils/fs";
 import { DriftFinding } from "./runChecks";
 
 interface DomainSpec {

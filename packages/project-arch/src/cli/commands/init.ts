@@ -10,10 +10,13 @@ export function registerInitCommand(program: Command): void {
     .description("Create base repository structure")
     .option("--force", "overwrite managed files on re-init", false)
     .option("--template <name>", "template", "nextjs-turbo")
-    .option("--apps <items>", "comma-separated apps", "web,docs")
     .option("--pm <name>", "package manager", "pnpm")
     .option("--with-ai", "create ai/indexing directory", false)
-    .option("--with-docs-site", "create docs app (default: enabled)", true)
+    .option(
+      "--with-workflows",
+      "materialize first-pass workflow files in .github/workflows (default: disabled)",
+      false,
+    )
     .addHelpText("after", () =>
       formatEnhancedHelp({
         usage: "pa init [options]",
@@ -25,10 +28,12 @@ export function registerInitCommand(program: Command): void {
               "Overwrite managed files on re-init (default: skip existing conflicting files)",
           },
           { flag: "--template <name>", description: "Project template (default: nextjs-turbo)" },
-          { flag: "--apps <items>", description: "Comma-separated app names (default: web,docs)" },
           { flag: "--pm <name>", description: "Package manager (default: pnpm)" },
           { flag: "--with-ai", description: "Create AI/indexing directory (default: false)" },
-          { flag: "--with-docs-site", description: "Create docs app (default: true)" },
+          {
+            flag: "--with-workflows",
+            description: "Create first-pass workflow files in .github/workflows (default: false)",
+          },
         ],
         examples: [
           { description: "Initialize with defaults", command: "pa init" },
@@ -36,11 +41,11 @@ export function registerInitCommand(program: Command): void {
             description: "Re-initialize and overwrite managed files",
             command: "pa init --force",
           },
-          {
-            description: "Initialize with custom apps",
-            command: "pa init --apps web,admin,mobile",
-          },
           { description: "Initialize with AI features", command: "pa init --with-ai" },
+          {
+            description: "Initialize with first-pass workflow files",
+            command: "pa init --with-workflows",
+          },
         ],
         agentMetadata: {
           outputFormat:

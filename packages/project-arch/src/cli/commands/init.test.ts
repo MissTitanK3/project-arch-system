@@ -4,7 +4,7 @@ import path from "path";
 import fs, { readdir } from "fs-extra";
 import { registerInitCommand } from "./init";
 import { createTempDir, fileAssertions, type TestProjectContext } from "../../test/helpers";
-import { readMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter } from "../../utils/fs";
 import { initializeProject } from "../../core/init/initializeProject";
 
 describe("cli/commands/init", () => {
@@ -48,6 +48,7 @@ describe("cli/commands/init", () => {
       expect(helpText).toContain("--force");
       expect(helpText).toContain("nextjs-turbo");
       expect(helpText).toContain("--with-ai");
+      expect(helpText).toContain("--with-workflows");
     });
 
     it("should execute init with default options", async () => {
@@ -76,17 +77,6 @@ describe("cli/commands/init", () => {
       await fileAssertions.assertFileExists(context.tempDir, "roadmap");
     });
 
-    it("should execute init with custom apps option", async () => {
-      const program = new Command();
-      program.exitOverride();
-      registerInitCommand(program);
-
-      await program.parseAsync(["node", "test", "init", "--apps", "web,admin,mobile"]);
-
-      await fileAssertions.assertFileExists(context.tempDir, "roadmap");
-      await fileAssertions.assertFileExists(context.tempDir, "architecture");
-    });
-
     it("should execute init with custom package manager", async () => {
       const program = new Command();
       program.exitOverride();
@@ -108,16 +98,6 @@ describe("cli/commands/init", () => {
       // AI directory should be created
     });
 
-    it("should execute init with docs site disabled", async () => {
-      const program = new Command();
-      program.exitOverride();
-      registerInitCommand(program);
-
-      await program.parseAsync(["node", "test", "init", "--with-docs-site", "false"]);
-
-      await fileAssertions.assertFileExists(context.tempDir, "roadmap");
-    });
-
     it("should execute init with all custom options", async () => {
       const program = new Command();
       program.exitOverride();
@@ -129,8 +109,6 @@ describe("cli/commands/init", () => {
         "init",
         "--template",
         "nextjs-turbo",
-        "--apps",
-        "web,api",
         "--pm",
         "pnpm",
         "--with-ai",
@@ -140,6 +118,30 @@ describe("cli/commands/init", () => {
       await fileAssertions.assertFileExists(context.tempDir, "architecture");
       await fileAssertions.assertFileExists(context.tempDir, "arch-domains");
       await fileAssertions.assertFileExists(context.tempDir, "arch-model");
+    });
+
+    it("should not create legacy apps directory", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await program.parseAsync(["node", "test", "init"]);
+
+      expect(await fs.pathExists(path.join(context.tempDir, "apps"))).toBe(false);
+    });
+
+    it("should execute init with workflow materialization enabled", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await program.parseAsync(["node", "test", "init", "--with-workflows"]);
+
+      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/before-coding.md");
+      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/after-coding.md");
+      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/complete-task.md");
+      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/new-module.md");
+      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/diagnose.md");
     });
 
     it("should pass --force through to re-init and overwrite managed files", async () => {
@@ -176,6 +178,23 @@ describe("cli/commands/init", () => {
 
       const policy = await fs.readJson(policyPath);
       expect(policy.defaultProfile).toBe("default");
+    });
+
+    it("should pass --force through to workflow regeneration and overwrite generated workflow files", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await program.parseAsync(["node", "test", "init", "--with-workflows"]);
+
+      const workflowPath = path.join(context.tempDir, ".github", "workflows", "before-coding.md");
+      await fs.writeFile(workflowPath, "# Custom Before Coding Workflow\n", "utf8");
+
+      await program.parseAsync(["node", "test", "init", "--with-workflows", "--force"]);
+
+      const workflowContent = await fs.readFile(workflowPath, "utf8");
+      expect(workflowContent).toContain("# Before Coding Workflow");
+      expect(workflowContent).not.toContain("# Custom Before Coding Workflow");
     });
   });
 
@@ -215,40 +234,40 @@ describe("cli/commands/init", () => {
       expect(taskFiles).toHaveLength(8);
     });
 
-    it("generates task 005 with slug finalize-architecture-foundation", async () => {
+    it("generates task 005 with slug define-system-boundaries", async () => {
       const dir = bootstrapDir(bootstrapContext.tempDir);
       const files = await readdir(dir);
       const task005 = files.find((f) => f.startsWith("005-"));
-      expect(task005).toBe("005-finalize-architecture-foundation.md");
+      expect(task005).toBe("005-define-system-boundaries.md");
     });
 
-    it("generates task 006 with slug define-system-boundaries", async () => {
+    it("generates task 006 with slug define-module-model", async () => {
       const dir = bootstrapDir(bootstrapContext.tempDir);
       const files = await readdir(dir);
       const task006 = files.find((f) => f.startsWith("006-"));
-      expect(task006).toBe("006-define-system-boundaries.md");
+      expect(task006).toBe("006-define-module-model.md");
     });
 
-    it("generates task 007 with slug define-module-model", async () => {
+    it("generates task 007 with slug define-runtime-architecture", async () => {
       const dir = bootstrapDir(bootstrapContext.tempDir);
       const files = await readdir(dir);
       const task007 = files.find((f) => f.startsWith("007-"));
-      expect(task007).toBe("007-define-module-model.md");
+      expect(task007).toBe("007-define-runtime-architecture.md");
     });
 
-    it("generates task 008 with slug define-runtime-architecture", async () => {
+    it("generates task 008 with slug finalize-architecture-foundation", async () => {
       const dir = bootstrapDir(bootstrapContext.tempDir);
       const files = await readdir(dir);
       const task008 = files.find((f) => f.startsWith("008-"));
-      expect(task008).toBe("008-define-runtime-architecture.md");
+      expect(task008).toBe("008-finalize-architecture-foundation.md");
     });
 
-    it("tasks 006, 007, and 008 include discover and greenfield tags", async () => {
+    it("tasks 005, 006, and 007 include discover and greenfield tags", async () => {
       const dir = bootstrapDir(bootstrapContext.tempDir);
       for (const slug of [
-        "006-define-system-boundaries",
-        "007-define-module-model",
-        "008-define-runtime-architecture",
+        "005-define-system-boundaries",
+        "006-define-module-model",
+        "007-define-runtime-architecture",
       ]) {
         const filePath = path.join(dir, `${slug}.md`);
         const result = await readMarkdownWithFrontmatter<{ tags?: string[] }>(filePath);
@@ -258,14 +277,14 @@ describe("cli/commands/init", () => {
       }
     });
 
-    it("task 005 dependsOn includes tasks 001 through 004 and 006 through 008", async () => {
+    it("task 008 dependsOn includes tasks 001 through 007", async () => {
       const dir = bootstrapDir(bootstrapContext.tempDir);
-      const filePath = path.join(dir, "005-finalize-architecture-foundation.md");
+      const filePath = path.join(dir, "008-finalize-architecture-foundation.md");
       const result = await readMarkdownWithFrontmatter<{ dependsOn?: string[] }>(filePath);
-      expect(result.data.dependsOn, "task 005 should have dependsOn").toBeDefined();
+      expect(result.data.dependsOn, "task 008 should have dependsOn").toBeDefined();
       const dependsOn = result.data.dependsOn ?? [];
-      for (const id of ["001", "002", "003", "004", "006", "007", "008"]) {
-        expect(dependsOn, `task 005 dependsOn should include ${id}`).toContain(id);
+      for (const id of ["001", "002", "003", "004", "005", "006", "007"]) {
+        expect(dependsOn, `task 008 dependsOn should include ${id}`).toContain(id);
       }
     });
 
@@ -285,6 +304,78 @@ describe("cli/commands/init", () => {
           (Array.isArray(dependsOn) && dependsOn.length === 0);
         expect(isEmpty, `task ${id} should not have non-empty dependsOn`).toBe(true);
       }
+    });
+
+    it("bootstrap tasks reference canonical taxonomy paths", async () => {
+      const dir = bootstrapDir(bootstrapContext.tempDir);
+      const checks: Array<[string, string[]]> = [
+        [
+          "001-define-project-overview.md",
+          ["architecture/product-framing/prompt.md", "architecture/product-framing/project-overview.md"],
+        ],
+        [
+          "008-finalize-architecture-foundation.md",
+          [
+            "architecture/product-framing/prompt.md",
+            "systems/system-boundaries.md",
+            "governance/module-model.md",
+            "runtime/runtime-architecture.md",
+          ],
+        ],
+        [
+          "005-define-system-boundaries.md",
+          ["architecture/systems/system-boundaries.md", "architecture/product-framing/prompt.md"],
+        ],
+        [
+          "006-define-module-model.md",
+          ["architecture/governance/module-model.md", "Read architecture/product-framing docs"],
+        ],
+        [
+          "007-define-runtime-architecture.md",
+          ["architecture/runtime/runtime-architecture.md", "architecture/product-framing/user-journey.md"],
+        ],
+      ];
+
+      for (const [fileName, expectedSnippets] of checks) {
+        const content = await fs.readFile(path.join(dir, fileName), "utf8");
+        for (const snippet of expectedSnippets) {
+          expect(content, `${fileName} should contain ${snippet}`).toContain(snippet);
+        }
+      }
+    });
+  });
+
+  describe("root sandbox init scripts", () => {
+    it("defines tier-specific sandbox init commands in package.json", async () => {
+      const repoRoot = path.resolve(originalCwd, "..", "..");
+      const packageJsonPath = path.join(repoRoot, "package.json");
+      const helperScriptPath = path.join(repoRoot, "scripts", "sandbox-init.mjs");
+      const packageJson = await fs.readJson(packageJsonPath);
+      const helperScript = await fs.readFile(helperScriptPath, "utf8");
+
+      expect(await fs.pathExists(helperScriptPath)).toBe(true);
+      expect(packageJson.scripts["sandbox:init"]).toBe("node scripts/sandbox-init.mjs default");
+      expect(packageJson.scripts["sandbox:init:default"]).toBe(
+        "node scripts/sandbox-init.mjs default",
+      );
+      expect(packageJson.scripts["sandbox:init:full"]).toBe("node scripts/sandbox-init.mjs full");
+      expect(packageJson.scripts["sandbox:init:tier-a"]).toBe(
+        "node scripts/sandbox-init.mjs tier-a",
+      );
+      expect(packageJson.scripts["sandbox:init:tier-b"]).toBe(
+        "node scripts/sandbox-init.mjs tier-b",
+      );
+      expect(packageJson.scripts["sandbox:init:tier-c"]).toBe(
+        "node scripts/sandbox-init.mjs tier-c",
+      );
+      expect(packageJson.scripts["sandbox:init:tier-d"]).toBe(
+        "node scripts/sandbox-init.mjs tier-d",
+      );
+      expect(packageJson.scripts["sandbox:smoke"]).toBe("node scripts/sandbox-init.mjs smoke");
+      expect(helperScript).toContain('const currentLink = path.join(sandboxRoot, "current");');
+      expect(helperScript).toContain("const profileLink = path.join(sandboxRoot, profile);");
+      expect(helperScript).toContain("fs.symlinkSync(sandboxDir, currentLink);");
+      expect(helperScript).toContain("fs.symlinkSync(sandboxDir, profileLink);");
     });
   });
 });

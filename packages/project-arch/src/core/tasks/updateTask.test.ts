@@ -3,7 +3,7 @@ import path from "path";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createTask } from "./createTask";
 import { updateTaskStatus } from "./updateTask";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
 import fs from "fs-extra";
 import * as graphManifests from "../../graph/manifests";
 

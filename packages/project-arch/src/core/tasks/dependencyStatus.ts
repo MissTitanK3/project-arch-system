@@ -1,6 +1,6 @@
 import path from "path";
 import fg from "fast-glob";
-import { readMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter } from "../../utils/fs";
 import { taskSchema, type TaskStatus, type TaskLane } from "../../schemas/task";
 
 export interface MilestoneTaskDependencyStatus {

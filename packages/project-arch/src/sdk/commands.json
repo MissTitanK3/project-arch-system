@@ -23,6 +23,18 @@
     "description": "Trace a task in the architecture graph",
     "inputs": ["task"]
   },
+  "context.resolve": {
+    "description": "Resolve active repository context",
+    "inputs": []
+  },
+  "learn.path": {
+    "description": "Analyze path-scoped repository drift and follow-up guidance",
+    "inputs": ["path"]
+  },
+  "next.resolve": {
+    "description": "Resolve the deterministic next workflow action",
+    "inputs": []
+  },
   "policy.check": {
     "description": "Detect policy conflicts between tasks and architecture",
     "inputs": []
@@ -34,5 +46,25 @@
   "lint.frontmatter": {
     "description": "Lint frontmatter for schema and YAML safety issues",
     "inputs": ["fix"]
+  },
+  "agents.list": {
+    "description": "List resolved agent skills",
+    "inputs": []
+  },
+  "agents.show": {
+    "description": "Show details for a skill by id",
+    "inputs": ["id"]
+  },
+  "agents.new": {
+    "description": "Scaffold a new user skill",
+    "inputs": ["id", "title", "summary", "overrides", "tags"]
+  },
+  "agents.sync": {
+    "description": "Sync derived skills registry",
+    "inputs": ["check"]
+  },
+  "agents.check": {
+    "description": "Run focused skill validation",
+    "inputs": []
   }
 }

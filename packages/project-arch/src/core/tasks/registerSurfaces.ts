@@ -1,6 +1,6 @@
 import path from "path";
 import fs from "fs-extra";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
 import { taskSchema } from "../../schemas/task";
 import { runRepositoryChecks } from "../validation/check";
 import { withAtomicTaskMutation } from "./atomicMutation";

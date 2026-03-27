@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "path";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
-import { writeFile } from "../../fs";
+import { writeFile } from "../../fs/writeFile";
 import { checkImports } from "./checkImports";
 
 describe("graph/drift/checkImports", () => {

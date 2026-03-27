@@ -85,6 +85,8 @@ describe("cli/index", () => {
         expect(commandNames).toContain("decision");
         expect(commandNames).toContain("docs");
         expect(commandNames).toContain("check");
+        expect(commandNames).toContain("context");
+        expect(commandNames).toContain("learn");
         expect(commandNames).toContain("lint");
         expect(commandNames).toContain("report");
         expect(commandNames).toContain("next");

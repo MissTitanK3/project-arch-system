@@ -4,7 +4,7 @@ import { registerMilestoneCommand } from "./milestone";
 import { createPhase } from "../../core/phases/createPhase";
 import { createMilestone } from "../../core/milestones/createMilestone";
 import { createTask } from "../../core/tasks/createTask";
-import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../utils/fs";
 import { createTestProject, consoleAssertions, type TestProjectContext } from "../../test/helpers";
 
 describe("cli/commands/milestone", () => {

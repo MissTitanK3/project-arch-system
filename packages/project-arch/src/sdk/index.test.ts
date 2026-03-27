@@ -10,6 +10,8 @@ describe("project-arch SDK", () => {
     expect(sdk.decisions).toBeDefined();
     expect(sdk.graph).toBeDefined();
     expect(sdk.check).toBeDefined();
+    expect(sdk.context).toBeDefined();
+    expect(sdk.learn).toBeDefined();
     expect(sdk.next).toBeDefined();
     expect(sdk.lint).toBeDefined();
     expect(sdk.report).toBeDefined();
@@ -31,6 +33,8 @@ describe("project-arch SDK", () => {
         "decisions",
         "graph",
         "check",
+        "context",
+        "learn",
         "next",
         "lint",
         "report",

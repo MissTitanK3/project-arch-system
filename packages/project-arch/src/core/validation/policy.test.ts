@@ -12,7 +12,7 @@ import {
   readMarkdownWithFrontmatter,
   writeJsonDeterministic,
   writeMarkdownWithFrontmatter,
-} from "../../fs";
+} from "../../utils/fs";
 
 describe.sequential("core/validation/policy", () => {
   let context: TestProjectContext;

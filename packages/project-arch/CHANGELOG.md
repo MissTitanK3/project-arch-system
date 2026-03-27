@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-03-26
+
+### Added
+
+#### **Canonical Scaffold And Governance Expansion**
+
+- Canonical `architecture/` taxonomy with normalized family structure, authority guidance, repo-model guidance, and migration support
+- Formal init tier model with documented Tier A / B / C / D behavior, including default vs full scaffold rules
+- Reusable setup-planning governance covering planning tranches, ordering, discovery boundaries, validation placement, and revised setup-template shape
+- Canonical agent-surface strategy, agent entry-point inventory, shared entry-point content model, and exclusions guidance
+- CLI context governance artifacts and later runtime implementation for `context` across CLI and SDK
+- Workflow scaffolding governance, supported workflow surface definition, workflow inventory, workflow content model, and workflow generation rules
+- Real workflow materialization under `.github/workflows/` with rendering and regeneration behavior
+- `learn` planning artifacts and later runtime implementation for `learn --path` across CLI and SDK
+
+#### **Package Surface Integration**
+
+- Runtime integration of previously dormant SDK surfaces into active flows
+- Runtime metadata consumption from `src/sdk/commands.json`
+- Expanded docs capability with richer repository document inventory and JSON output
+- Expanded reporting capability with structured machine-readable report output
+- Internal audit artifacts in `feedback/` for implemented, partial, unused, and deferred package surfaces
+
+### Changed
+
+- `pa init` now produces a much more complete architecture/governance scaffold aligned to the feedback milestone sequence
+- `pa init` workflow support is now explicit and add-on driven instead of governance-only
+- `pa context --json` is now a real runtime surface rather than a planned contract only
+- `pa learn --path` is now a real runtime surface rather than a planned contract only
+- `fs` is now private and no longer treated as a public package surface
+- Sandbox profile flows retain profile-specific outputs and are easier to review across default/full/tiered runs
+
+### Fixed
+
+- Removed legacy `apps/`, `packages/`, and `scripts/` directory generation from init scaffolding
+- Fixed sandbox flag forwarding so workflow/full-profile verification reflects real init flags instead of silently ignoring them
+- Normalized generated markdown output to eliminate repeated blank-line runs in scaffolded governance docs
+- Restored full green package verification after the scaffold, boundary, and runtime-surface changes
+
+### Docs
+
+- Added and completed feedback milestone documentation from milestone 1 through milestone 12
+- Added internal audit outputs and consolidated release-note tracking in `feedback/`
+- Added multi-user contribution model exploration in `feedback/pa-multi-user.md`
+
+### Test Coverage
+
+- Expanded init, workflow-generation, context, learn, docs, report, registry, and package-surface integration coverage
+- Full package verification is currently green for `test`, `typecheck`, and `lint`
+
 ## [1.6.0] - 2026-03-22
 
 ### Added
@@ -191,6 +241,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration with monorepo workflows
 
 [1.4.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.3.0...v1.4.0
+[1.7.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.4.0...v1.5.0
 [1.3.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.1.0...v1.3.0

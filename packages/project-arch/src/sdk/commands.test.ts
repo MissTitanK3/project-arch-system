@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { commandMetadata } from "./commands";
+import commandsJson from "./commands.json";
+import { commandMetadata, getCommandMetadata, listCommandMetadataKeys } from "./commands";
 
 describe("sdk/commands", () => {
   describe("commandMetadata", () => {
@@ -58,6 +59,14 @@ describe("sdk/commands", () => {
         "Resolve the deterministic next workflow action",
       );
       expect(commandMetadata["next.resolve"].inputs).toEqual([]);
+    });
+
+    it("should define metadata for learn.path", () => {
+      expect(commandMetadata["learn.path"]).toBeDefined();
+      expect(commandMetadata["learn.path"].description).toBe(
+        "Analyze path-scoped repository drift and follow-up guidance",
+      );
+      expect(commandMetadata["learn.path"].inputs).toEqual(["path"]);
     });
 
     it("should define metadata for policy.check", () => {
@@ -121,6 +130,22 @@ describe("sdk/commands", () => {
         expect(typeof cmd.description).toBe("string");
         expect(Array.isArray(cmd.inputs)).toBe(true);
       }
+    });
+
+    it("should use commands.json as the source of truth", () => {
+      expect(commandMetadata).toEqual(commandsJson);
+    });
+
+    it("should expose metadata lookup helper", () => {
+      expect(getCommandMetadata("tasks.create")).toEqual(commandsJson["tasks.create"]);
+      expect(getCommandMetadata("missing.command")).toBeNull();
+    });
+
+    it("should expose sorted metadata keys", () => {
+      const keys = listCommandMetadataKeys();
+      expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b)));
+      expect(keys).toContain("tasks.create");
+      expect(keys).toContain("agents.check");
     });
   });
 });

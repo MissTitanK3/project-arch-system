@@ -7,8 +7,8 @@ import { createMilestone } from "../milestones/createMilestone";
 import { createTask } from "../tasks/createTask";
 import { createDecision, linkDecision } from "../decisions/createDecision";
 import { rebuildArchitectureGraph } from "./graph";
-import { readJson, readMarkdownWithFrontmatter } from "../../fs";
-import { writeFile } from "../../fs";
+import { readJson, readMarkdownWithFrontmatter } from "../../utils/fs";
+import { writeFile } from "../../fs/writeFile";
 
 describe.sequential("core/manifests/graph - inference branches", () => {
   let context: TestProjectContext;

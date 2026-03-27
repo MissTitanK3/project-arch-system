@@ -3,13 +3,28 @@
  */
 
 import { colors } from "../../utils/colors";
+import { commandMetadata, listCommandMetadataKeys } from "../../sdk/commands";
+
+function renderCommandMetadataRegistry(): string {
+  const lines = ["Runtime Command Metadata Registry:"];
+
+  for (const commandKey of listCommandMetadataKeys()) {
+    const metadata = commandMetadata[commandKey];
+    const inputs = metadata.inputs.length > 0 ? metadata.inputs.join(", ") : "(none)";
+    lines.push(`  ${commandKey}`);
+    lines.push(`    Description: ${metadata.description}`);
+    lines.push(`    Inputs: ${inputs}`);
+  }
+
+  return lines.join("\n");
+}
 
 export const HELP_TOPICS = {
   commands: `Available Commands for AI Agents:
 
 Initialization:
   pa init [options]                    Initialize new project architecture
-    Options: --template, --pm, --apps, --with-ai, --with-docs-site
+    Options: --template, --pm, --with-ai, --with-workflows
     Output: Creates roadmap/, architecture/, arch-domains/ structure
 
 Task Management:
@@ -77,6 +92,14 @@ Phase & Milestone:
     Output: Success message or governance diagnostics
 
 Validation & Reporting:
+  pa context [--json]                  Resolve active repository context
+    Output: active phase + milestone + task + recommended action
+    --json: Machine-readable context payload
+
+  pa learn --path <path> [--json]      Interpret one or more explicit paths
+    Output: path-scoped findings + suggested follow-up commands
+    --json: Machine-readable learn report payload
+
   pa next [--json]                     Recommend next deterministic workflow action
     Output: status + recommended command + reason + evidence
     --json: Machine-readable routing decision payload
@@ -169,6 +192,8 @@ Validation Patterns:
   Phase ID:     ^phase-\\d+$       (e.g., phase-1, phase-2)
   Milestone ID: ^milestone-[\\w-]+$ (e.g., milestone-1-setup)
   Decision ID:  ^\\d{3}$           (e.g., 001, 042)
+
+${renderCommandMetadataRegistry()}
 `,
 
   agents: `Agent Skills:
@@ -914,9 +939,8 @@ ${separator}
 ${commandLine("pa init [options]", "Initialize project architecture")}
 ${optionLine("--template <type>", "Template to use (default, minimal, full)")}
 ${optionLine("--pm <manager>", "Package manager (npm, yarn, pnpm)")}
-${optionLine("--apps <...names>", "Application names to scaffold")}
 ${optionLine("--with-ai", "Include AI integration setup")}
-${optionLine("--with-docs-site", "Include documentation site")}
+${optionLine("--with-workflows", "Materialize first-pass workflow files")}
 
 ${separator}
 ${colors.heading("Phase Management:")}
@@ -984,6 +1008,8 @@ ${commandLine("pa decision migrate [--scan-only]", "Migrate legacy decision file
 ${separator}
 ${colors.heading("Validation & Reporting:")}
 ${separator}
+${commandLine("pa context [--json]", "Resolve active repository context")}
+${commandLine("pa learn --path <path> [--json]", "Interpret path-scoped drift and suggest follow-up work")}
 ${commandLine("pa next [--json]", "Recommend next deterministic workflow action")}
 ${commandLine("pa check", "Validate architecture integrity")}
                                        - Task/decision consistency

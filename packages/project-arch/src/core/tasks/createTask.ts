@@ -6,7 +6,11 @@ import { defaultTaskBody, defaultTaskFrontmatter } from "../../core/templates/ta
 import { taskSchema, TaskLane } from "../../schemas/task";
 import { currentDateISO } from "../../utils/date";
 import { milestoneDir, milestoneTaskLaneDir, projectDocsRoot } from "../../utils/paths";
-import { pathExists, readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../../fs";
+import {
+  pathExists,
+  readMarkdownWithFrontmatter,
+  writeMarkdownWithFrontmatter,
+} from "../../utils/fs";
 import { assertSafeId } from "../../utils/safeId";
 import { assertWithinRoot } from "../../utils/assertWithinRoot";
 import * as graphManifests from "../../graph/manifests";
