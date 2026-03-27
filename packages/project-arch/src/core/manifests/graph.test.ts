@@ -171,11 +171,11 @@ describe.sequential("core/manifests/graph", () => {
       expect(domains.domains[1].name).toBe("api");
     }, 120_000);
 
-    it("should handle project with ai-map/modules.json", async () => {
-      const aiMapDir = path.join(tempDir, "ai-map");
-      await fs.mkdir(aiMapDir, { recursive: true });
+    it("should handle project with arch-model/modules.json", async () => {
+      const archModelDir = path.join(tempDir, "arch-model");
+      await fs.mkdir(archModelDir, { recursive: true });
       await writeFile(
-        path.join(aiMapDir, "modules.json"),
+        path.join(archModelDir, "modules.json"),
         JSON.stringify({
           modules: [
             { name: "auth-service", type: "service", description: "Authentication service" },
@@ -191,7 +191,7 @@ describe.sequential("core/manifests/graph", () => {
       );
 
       expect(modules.modules.length).toBeGreaterThan(0);
-      // Modules from ai-map are included in the graph
+      // Modules from arch-model are included in the graph
       // Just verify the graph was built successfully
     }, 120_000);
 
@@ -217,10 +217,10 @@ describe.sequential("core/manifests/graph", () => {
     }, 120_000);
 
     it("should handle invalid data in modules.json", async () => {
-      const aiMapDir = path.join(tempDir, "ai-map");
-      await fs.mkdir(aiMapDir, { recursive: true });
+      const archModelDir = path.join(tempDir, "arch-model");
+      await fs.mkdir(archModelDir, { recursive: true });
       await writeFile(
-        path.join(aiMapDir, "modules.json"),
+        path.join(archModelDir, "modules.json"),
         JSON.stringify({
           modules: [
             { name: "valid-module" },
@@ -399,6 +399,23 @@ describe.sequential("core/manifests/graph", () => {
             suppress: ["package.json"],
             classify: [
               { pattern: "architecture/**", layer: "docs", module: "architecture/decisions" },
+            ],
+          },
+          null,
+          2,
+        ),
+      );
+      await writeFile(
+        path.join(tempDir, "arch-model", "modules.json"),
+        JSON.stringify(
+          {
+            modules: [
+              {
+                name: "packages/ui",
+                type: "library",
+                description: "Reusable UI components",
+                layer: "runtime",
+              },
             ],
           },
           null,

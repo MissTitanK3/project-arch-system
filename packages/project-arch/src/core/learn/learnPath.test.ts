@@ -15,10 +15,10 @@ describe.sequential("core/learn/learnPath", () => {
   });
 
   it("returns a path-scoped learn report with findings and suggested commands", async () => {
-    const report = await learnPath({ paths: ["packages/ui"] }, context.tempDir);
+    const report = await learnPath({ paths: ["architecture/governance"] }, context.tempDir);
 
     expect(report.schemaVersion).toBe("1.0");
-    expect(report.analyzedPaths).toEqual(["packages/ui"]);
+    expect(report.analyzedPaths).toEqual(["architecture/governance"]);
     expect(report.summary.totalGaps).toBeGreaterThan(0);
     expect(report.summary.byCategory["task-coverage"]).toBeGreaterThan(0);
     expect(report.summary.byCategory["decision-coverage"]).toBeGreaterThan(0);
@@ -30,12 +30,12 @@ describe.sequential("core/learn/learnPath", () => {
 
   it("supports multiple explicit paths in one report", async () => {
     const report = await learnPath(
-      { paths: ["packages/ui", "architecture/product-framing/project-overview.md"] },
+      { paths: ["architecture/governance", "architecture/product-framing/project-overview.md"] },
       context.tempDir,
     );
 
     expect(report.analyzedPaths).toEqual([
-      "packages/ui",
+      "architecture/governance",
       "architecture/product-framing/project-overview.md",
     ]);
   }, 120_000);
@@ -55,7 +55,7 @@ describe.sequential("core/learn/learnPath", () => {
   }, 120_000);
 
   it("renders a human-readable learn report", async () => {
-    const report = await learnPath({ paths: ["packages/ui"] }, context.tempDir);
+    const report = await learnPath({ paths: ["architecture/governance"] }, context.tempDir);
     const text = renderLearnReport(report);
 
     expect(text).toContain("Scope");
