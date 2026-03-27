@@ -264,7 +264,15 @@ export async function learnPath(
   const scopes = await Promise.all(
     providedPaths.map((value) => detectScopeKind(resolveInputPath(value, cwd))),
   );
-  const taskRecords = await collectTaskRecords(cwd);
+  let taskRecords: TaskRecord[] = [];
+  try {
+    taskRecords = await collectTaskRecords(cwd);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("legacy-only roadmap runtimes")) {
+      throw error;
+    }
+  }
   const decisionRecords = await collectDecisionRecords(cwd);
   const checkResult = await runCheck(cwd);
 

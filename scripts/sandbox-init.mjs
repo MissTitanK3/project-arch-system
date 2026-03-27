@@ -53,13 +53,34 @@ export function verifyProfile(profileName, sandboxDir, initArgs = []) {
     case "smoke":
     case "default":
       assertExists(sandboxDir, "architecture/governance/init-default-behavior.md", profileName);
+      assertExists(sandboxDir, "roadmap/projects/shared/manifest.json", profileName);
+      assertExists(sandboxDir, "roadmap/projects/shared/phases/phase-1/overview.md", profileName);
+      assertExists(
+        sandboxDir,
+        "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+        profileName,
+      );
       break;
     case "full":
       assertExists(sandboxDir, "architecture/governance/init-full-behavior.md", profileName);
       assertExists(sandboxDir, "architecture/governance/init-tier-model.md", profileName);
+      assertExists(sandboxDir, "roadmap/projects/shared/manifest.json", profileName);
+      assertExists(sandboxDir, "roadmap/projects/shared/phases/phase-1/overview.md", profileName);
+      assertExists(
+        sandboxDir,
+        "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+        profileName,
+      );
       break;
     case "tier-a":
       assertExists(sandboxDir, "roadmap/manifest.json", profileName);
+      assertExists(sandboxDir, "roadmap/projects/shared/manifest.json", profileName);
+      assertExists(sandboxDir, "roadmap/projects/shared/phases/phase-1/overview.md", profileName);
+      assertExists(
+        sandboxDir,
+        "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+        profileName,
+      );
       assertExists(sandboxDir, "architecture/README.md", profileName);
       assertExists(sandboxDir, "architecture/governance/init-tier-model.md", profileName);
       assertExists(sandboxDir, "architecture/standards/repo-structure.md", profileName);

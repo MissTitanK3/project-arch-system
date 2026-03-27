@@ -120,6 +120,14 @@ describe("cli/commands/check", () => {
               hint: null,
             },
           ],
+          compatibility: {
+            surface: "validation",
+            mode: "hybrid",
+            supported: true,
+            canonicalRootExists: true,
+            legacyRootExists: true,
+            reason: "Validation runs in hybrid mode and prefers canonical project-scoped roadmap paths.",
+          },
         },
       });
 
@@ -242,6 +250,7 @@ describe("cli/commands/check", () => {
         schemaVersion: string;
         status: string;
         summary: { errorCount: number; warningCount: number; diagnosticCount: number };
+        compatibility: { mode: string; supported: boolean; surface: string };
         diagnostics: Array<{
           code: string;
           severity: string;
@@ -251,6 +260,7 @@ describe("cli/commands/check", () => {
       };
       expect(payload.schemaVersion).toBe("1.0");
       expect(payload.status).toBe("invalid");
+      expect(payload.compatibility.mode).toBe("project-scoped-only");
       expect(payload.summary).toEqual({ errorCount: 1, warningCount: 1, diagnosticCount: 2 });
       expect(payload.diagnostics[0]).toMatchObject({
         code: "CHECK_ERROR",
@@ -262,6 +272,27 @@ describe("cli/commands/check", () => {
       logSpy.mockRestore();
       warnSpy.mockRestore();
       errorSpy.mockRestore();
+    });
+
+    it("should emit compatibility metadata in json output", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--json"]);
+
+      const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+        compatibility: { mode: string; supported: boolean; surface: string };
+      };
+
+      expect(payload.compatibility).toMatchObject({
+        surface: "validation",
+        supported: true,
+      });
+
+      logSpy.mockRestore();
     });
 
     it("should filter diagnostics by --only in text mode", async () => {
@@ -696,8 +727,8 @@ describe("cli/commands/check", () => {
               code: "MALFORMED_TASK_FILE",
               severity: "error",
               message:
-                "Malformed task file 'roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md': schema failure",
-              path: "roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md",
+                "Malformed task file 'roadmap/projects/shared/phases/p1/milestones/m1/tasks/planned/001-bad.md': schema failure",
+              path: "roadmap/projects/shared/phases/p1/milestones/m1/tasks/planned/001-bad.md",
               hint: null,
             },
             {
@@ -719,7 +750,7 @@ describe("cli/commands/check", () => {
         "check",
         "--json",
         "--file",
-        "roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md",
+        "roadmap/projects/shared/phases/p1/milestones/m1/tasks/planned/001-bad.md",
       ]);
 
       const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
@@ -751,15 +782,15 @@ describe("cli/commands/check", () => {
               code: "MALFORMED_TASK_FILE",
               severity: "error",
               message:
-                "Malformed task file 'roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md': schema failure",
-              path: "roadmap/phases/p1/milestones/m1/tasks/planned/001-bad.md",
+                "Malformed task file 'roadmap/projects/shared/phases/p1/milestones/m1/tasks/planned/001-bad.md': schema failure",
+              path: "roadmap/projects/shared/phases/p1/milestones/m1/tasks/planned/001-bad.md",
               hint: null,
             },
             {
               code: "MISSING_TASK_CODE_TARGET",
               severity: "error",
               message: "Missing code target ref in other milestone",
-              path: "roadmap/phases/p1/milestones/other-milestone/tasks/planned/002-task.md",
+              path: "roadmap/projects/shared/phases/p1/milestones/other-milestone/tasks/planned/002-task.md",
               hint: null,
             },
           ],

@@ -178,12 +178,19 @@ describe.sequential("core/validation/check - branch coverage", () => {
       await createMilestone("lane-phase", "lane-milestone", tempDir);
 
       // Remove discovered lane directory
-      const laneDir = path.join(
+      const canonicalLaneDir = path.join(
+        tempDir,
+        "roadmap/projects/shared/phases/lane-phase/milestones/lane-milestone/tasks/discovered",
+      );
+      const legacyLaneDir = path.join(
         tempDir,
         "roadmap/phases/lane-phase/milestones/lane-milestone/tasks/discovered",
       );
-      if (await fs.pathExists(laneDir)) {
-        await fs.remove(laneDir);
+      if (await fs.pathExists(canonicalLaneDir)) {
+        await fs.remove(canonicalLaneDir);
+      }
+      if (await fs.pathExists(legacyLaneDir)) {
+        await fs.remove(legacyLaneDir);
       }
 
       const result = await runRepositoryChecks(tempDir);
@@ -211,7 +218,10 @@ describe.sequential("core/validation/check - branch coverage", () => {
       await createPhase(phaseId, tempDir);
 
       // Create phase decision index
-      const phaseDecisionDir = path.join(tempDir, `roadmap/phases/${phaseId}/decisions`);
+      const phaseDecisionDir = path.join(
+        tempDir,
+        `roadmap/projects/shared/phases/${phaseId}/decisions`,
+      );
       await fs.mkdir(phaseDecisionDir, { recursive: true });
 
       await writeJsonDeterministic(path.join(phaseDecisionDir, "index.json"), {
@@ -239,7 +249,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       // Create milestone decision index
       const milestoneDecisionDir = path.join(
         tempDir,
-        `roadmap/phases/${phaseId}/milestones/${milestoneId}/decisions`,
+        `roadmap/projects/shared/phases/${phaseId}/milestones/${milestoneId}/decisions`,
       );
       await fs.mkdir(milestoneDecisionDir, { recursive: true });
 

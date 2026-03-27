@@ -98,6 +98,7 @@ describe("cli/commands/milestone", () => {
       await program.parseAsync(["node", "test", "milestone", "new", phaseId, "milestone-99-test"]);
 
       consoleAssertions.assertConsoleContains(consoleSpy, "Created milestone");
+      consoleAssertions.assertConsoleContains(consoleSpy, "shared");
       consoleAssertions.assertConsoleContains(consoleSpy, phaseId);
       consoleAssertions.assertConsoleContains(consoleSpy, "milestone-99-test");
 
@@ -152,9 +153,8 @@ describe("cli/commands/milestone", () => {
 
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls.map((call) => call[0]).join("\n");
-      expect(output).toContain(phaseId);
-      expect(output).toContain("milestone-1");
-      expect(output).toContain("milestone-2");
+      expect(output).toContain(`shared/${phaseId}/milestone-1`);
+      expect(output).toContain(`shared/${phaseId}/milestone-2`);
 
       consoleSpy.mockRestore();
     });
@@ -191,8 +191,8 @@ describe("cli/commands/milestone", () => {
       await program.parseAsync(["node", "test", "milestone", "list"]);
 
       const output = consoleSpy.mock.calls.map((call) => call[0]).join("\n");
-      expect(output).toContain(phase1);
-      expect(output).toContain(phase2);
+      expect(output).toContain(`shared/${phase1}/m1`);
+      expect(output).toContain(`shared/${phase2}/m2`);
 
       consoleSpy.mockRestore();
     });
@@ -236,6 +236,8 @@ describe("cli/commands/milestone", () => {
       const overviewPath = path.join(
         process.cwd(),
         "roadmap",
+        "projects",
+        "shared",
         "phases",
         phaseId,
         "milestones",
@@ -259,7 +261,7 @@ describe("cli/commands/milestone", () => {
         "m-activate-ready",
       ]);
 
-      consoleAssertions.assertConsoleContains(consoleSpy, "Activated milestone");
+      consoleAssertions.assertConsoleContains(consoleSpy, "Activated milestone shared/");
       consoleAssertions.assertConsoleContains(consoleSpy, `${phaseId}/m-activate-ready`);
       consoleSpy.mockRestore();
     });
@@ -387,6 +389,8 @@ describe("cli/commands/milestone", () => {
         path.join(
           process.cwd(),
           "roadmap",
+          "projects",
+          "shared",
           "phases",
           phaseId,
           "milestones",

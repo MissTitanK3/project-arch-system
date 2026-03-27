@@ -18,6 +18,7 @@ describe.sequential("sdk/context", () => {
 
     resultAssertions.assertSuccess(result);
     expect(result.data.version).toBe("1.0");
+    expect(result.data.active.project.id).toBe("shared");
     expect(result.data.active.phase.id).toBe("phase-1");
     expect(result.data.active.milestone.id).toBe("milestone-1-setup");
     expect(result.data.active.task.id).toContain("001-define-project-overview");

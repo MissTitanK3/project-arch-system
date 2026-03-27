@@ -10,6 +10,7 @@ import {
   ensureDecisionIndex,
   loadDecisionIndex,
   loadPhaseManifest,
+  resolvePhaseProjectId,
   savePhaseManifest,
   loadMilestoneManifest,
   saveMilestoneManifest,
@@ -49,15 +50,21 @@ describe.sequential("graph/manifests", () => {
     const current = await loadPhaseManifest(tempDir);
     const next = {
       ...current,
-      phases: [...current.phases, { id: "phase-x", createdAt: "2026-03-07" }],
+      phases: [
+        ...current.phases,
+        { id: "phase-x", projectId: "storefront", createdAt: "2026-03-07" },
+      ],
+      activeProject: "storefront",
       activePhase: "phase-x",
     };
 
     await savePhaseManifest(next, tempDir);
 
     const reloaded = await loadPhaseManifest(tempDir);
+    expect(reloaded.activeProject).toBe("storefront");
     expect(reloaded.activePhase).toBe("phase-x");
     expect(reloaded.phases.some((phase) => phase.id === "phase-x")).toBe(true);
+    expect(resolvePhaseProjectId(reloaded, "phase-x")).toBe("storefront");
   }, 120_000);
 
   it("should save and load milestone manifest through re-exported API", async () => {

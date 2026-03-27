@@ -78,6 +78,8 @@ Missing required fields.
       const tasksDir = path.join(
         tempDir,
         "roadmap",
+        "projects",
+        "shared",
         "phases",
         "phase-1",
         "milestones",
@@ -100,6 +102,19 @@ Missing required fields.
 
       // Task should be created
       expect(await fs.pathExists(taskPath)).toBe(true);
+      expect(taskPath).toContain(
+        path.join(
+          "roadmap",
+          "projects",
+          "shared",
+          "phases",
+          "phase-1",
+          "milestones",
+          "milestone-1-setup",
+          "tasks",
+          "planned",
+        ),
+      );
 
       // Count files after attempt
       const filesAfter = await fs.readdir(tasksDir);
@@ -199,6 +214,8 @@ Missing required title field.
       const plannedDir = path.join(
         tempDir,
         "roadmap",
+        "projects",
+        "shared",
         "phases",
         "phase-1",
         "milestones",

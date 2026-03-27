@@ -7,6 +7,24 @@ Deterministic architecture CLI + SDK for repository-native planning, architectur
 
 `project-arch` helps teams keep roadmap intent, task execution, architecture decisions, and graph/check artifacts aligned in one repository-native workflow.
 
+## Roadmap model
+
+`project-arch` now uses a single roadmap root with explicit project scopes:
+
+```text
+roadmap/
+└── projects/
+    ├── shared/
+    │   └── phases/
+    └── <project>/
+        └── phases/
+```
+
+- Canonical authoring happens under `roadmap/projects/<project>/phases/...`
+- `shared` is the reserved bootstrap and cross-cutting project
+- Additional projects can use repository-defined names such as `storefront`, `billing`, or `backoffice`
+- The legacy `roadmap/phases/...` surface remains only as a hybrid compatibility mirror
+
 ## Why teams use it
 
 - Deterministic task lanes (`planned`, `discovered`, `backlog`) with strict ID ranges
@@ -71,15 +89,21 @@ pa init
 # Optional: materialize first-pass workflow helper files
 pa init --with-workflows
 
-# 2) Inspect current execution context and next action
+# 2) Add a custom project scope
+pa project new storefront
+
+# 3) Start planning inside a named project
+pa phase new phase-2 --project storefront
+
+# 4) Inspect current execution context and next action
 pa context --json
 pa next
 
-# 3) Run validation and generate a state report
+# 5) Run validation and generate a state report
 pa check
 pa report --json
 
-# 4) Investigate a specific surface
+# 6) Investigate a specific surface
 pa learn --path packages/ui --json
 ```
 
@@ -87,6 +111,7 @@ pa learn --path packages/ui --json
 
 ### Planning and execution
 
+- `pa project new <projectId>`
 - `pa phase new <id>`, `pa phase list`
 - `pa milestone new <phaseId> <milestoneId>`, `pa milestone list`, `pa milestone status`, `pa milestone activate`, `pa milestone complete`
 - `pa task new|discover|idea <phaseId> <milestoneId>`
@@ -145,8 +170,27 @@ Reconciliation report schema: [docs/reconciliation-report-schema.md](docs/reconc
 - `pa init --force`
 - `pa init --with-ai`
 - `pa init --with-workflows`
+- `pa project new <projectId> [--title ...] [--type ...] [--summary ...] [--owned-path ...]`
 
 `pa init` now scaffolds the canonical architecture/governance model by default.
+
+`pa project new` scaffolds:
+
+```text
+roadmap/projects/<projectId>/
+├── manifest.json
+├── overview.md
+└── phases/
+```
+
+Supported project creation options:
+
+- `--title <title>`
+- `--type <type>`
+- `--summary <summary>`
+- `--owned-path <path...>`
+- `--shared-dependency <path...>`
+- `--tag <tag...>`
 
 `--with-workflows` explicitly materializes the first-pass generated workflow files under `.github/workflows/`.
 
@@ -254,6 +298,7 @@ This writes `.project-arch/release/release-check.json` unless `--dry-run` is use
 
 Recent releases added major workflow and safety capabilities:
 
+- **2.0.0**: single-roadmap project-scoped model, project-owned phase runtime, project-aware validation/reporting, init/documentation adoption, and `pa project new`
 - **1.7.0**: canonical scaffold/governance expansion, real `pa context --json`, real `pa learn --path`, explicit workflow generation, expanded docs/report JSON output, and scaffold/package-surface cleanup
 - **1.6.0**: `pa doctor health`, `pa next`, agents surface expansion, workflow profiles, graph completeness diagnostics, and hardening rails
 - **1.5.0**: bootstrap init expansion, milestone dependency enforcement, and blocked-task status signaling

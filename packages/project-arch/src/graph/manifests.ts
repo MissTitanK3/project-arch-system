@@ -11,6 +11,8 @@ export {
   phaseOverviewPath,
   projectDecisionIndexDir,
   rebuildArchitectureGraph,
+  resolvePhaseProjectId,
+  resolvePhaseRecord,
   saveMilestoneManifest,
   savePhaseManifest,
 } from "../core/manifests";

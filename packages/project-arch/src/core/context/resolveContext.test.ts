@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import fs from "fs-extra";
 import { createTempDir, createTestProject, type TestProjectContext } from "../../test/helpers";
 import { loadPhaseManifest, savePhaseManifest } from "../../graph/manifests";
 import { resolveContext } from "./resolveContext";
@@ -21,11 +22,13 @@ describe.sequential("core/context/resolveContext", () => {
 
     expect(resolved.version).toBe("1.0");
     expect(resolved.projectRoot).toBe(tempDir);
+    expect(resolved.active.project.id).toBe("shared");
+    expect(resolved.active.project.path).toBe("roadmap/projects/shared");
     expect(resolved.active.phase.id).toBe("phase-1");
     expect(resolved.active.milestone.id).toBe("milestone-1-setup");
     expect(resolved.active.task.id).toContain("001-define-project-overview");
     expect(resolved.active.task.path).toContain(
-      "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
     );
     expect(resolved.recommended?.action.command).toBeDefined();
   }, 120_000);
@@ -49,5 +52,18 @@ describe.sequential("core/context/resolveContext", () => {
   it("should include a recommended task when another actionable task exists", async () => {
     const resolved = await resolveContext(tempDir);
     expect(resolved.recommended?.task?.id).toContain("002-define-project-goals");
+  });
+
+  it("should fail when active project disagrees with phase ownership", async () => {
+    const manifest = await loadPhaseManifest(tempDir);
+    await savePhaseManifest({ ...manifest, activeProject: "storefront" }, tempDir);
+
+    await expect(resolveContext(tempDir)).rejects.toThrow(/active project .* does not own active phase/i);
+  });
+
+  it("should fail explicitly for legacy-only repositories", async () => {
+    await fs.remove(`${tempDir}/roadmap/projects`);
+
+    await expect(resolveContext(tempDir)).rejects.toThrow(/legacy-only roadmap runtimes/i);
   });
 });

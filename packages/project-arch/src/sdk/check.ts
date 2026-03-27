@@ -20,6 +20,14 @@ export async function checkRun(options: CheckRunOptions = {}): Promise<
       path: string | null;
       hint: string | null;
     }>;
+    compatibility?: {
+      surface: "validation" | "reporting";
+      mode: "project-scoped-only" | "hybrid" | "legacy-only";
+      supported: boolean;
+      canonicalRootExists: boolean;
+      legacyRootExists: boolean;
+      reason: string;
+    };
     graphDiagnostics?: {
       built: boolean;
       completeness: {

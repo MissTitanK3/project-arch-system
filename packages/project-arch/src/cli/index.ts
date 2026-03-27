@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { registerInitCommand } from "./commands/init";
+import { registerProjectCommand } from "./commands/project";
 import { registerPhaseCommand } from "./commands/phase";
 import { registerMilestoneCommand } from "./commands/milestone";
 import { registerTaskCommand } from "./commands/task";
@@ -43,7 +44,7 @@ function buildCommandChainFromAction(actionCommand: Command): string[] {
 
 export async function runCli(argv = process.argv): Promise<void> {
   const program = new Command();
-  program.name("pa").description("Project architecture CLI").version("1.0.0");
+  program.name("pa").description("Project architecture CLI").version("2.0.0");
   const archDir = getArchDir(process.cwd());
 
   program.hook("postAction", async (_thisCommand, actionCommand) => {
@@ -57,6 +58,7 @@ export async function runCli(argv = process.argv): Promise<void> {
   });
 
   registerInitCommand(program);
+  registerProjectCommand(program);
   registerPhaseCommand(program);
   registerMilestoneCommand(program);
   registerTaskCommand(program);

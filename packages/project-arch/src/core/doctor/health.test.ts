@@ -35,6 +35,8 @@ describe("core/doctor/health", () => {
       const plannedLane = path.join(
         context.tempDir,
         "roadmap",
+        "projects",
+        "shared",
         "phases",
         "phase-1",
         "milestones",
@@ -81,6 +83,60 @@ describe("core/doctor/health", () => {
       expect(repaired.issues).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ code: "PAH011", repairable: false, severity: "error" }),
+        ]),
+      );
+    } finally {
+      await context.cleanup();
+    }
+  });
+
+  it("reports missing project manifest under roadmap/projects", async () => {
+    const context = await createTestProject(originalCwd, undefined, { setCwd: false });
+    try {
+      const projectManifestPath = path.join(
+        context.tempDir,
+        "roadmap",
+        "projects",
+        "shared",
+        "manifest.json",
+      );
+      await fs.remove(projectManifestPath);
+
+      const result = await runDoctorHealth({ cwd: context.tempDir });
+      expect(result.status).toBe("broken");
+      expect(result.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "PAH013",
+            path: "roadmap/projects/shared/manifest.json",
+          }),
+        ]),
+      );
+    } finally {
+      await context.cleanup();
+    }
+  });
+
+  it("reports invalid project manifest under roadmap/projects", async () => {
+    const context = await createTestProject(originalCwd, undefined, { setCwd: false });
+    try {
+      const projectManifestPath = path.join(
+        context.tempDir,
+        "roadmap",
+        "projects",
+        "shared",
+        "manifest.json",
+      );
+      await fs.writeFile(projectManifestPath, JSON.stringify({ schemaVersion: "1.0", id: "" }), "utf8");
+
+      const result = await runDoctorHealth({ cwd: context.tempDir });
+      expect(result.status).toBe("broken");
+      expect(result.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "PAH014",
+            path: "roadmap/projects/shared/manifest.json",
+          }),
         ]),
       );
     } finally {

@@ -31,6 +31,7 @@ describe.sequential("SDK Milestones", () => {
       });
 
       resultAssertions.assertSuccess(result);
+      expect(result.data.projectId).toBe("shared");
       expect(result.data.phase).toBe("phase-2");
       expect(result.data.milestone).toBe("milestone-1-foundation");
     });
@@ -125,8 +126,16 @@ describe.sequential("SDK Milestones", () => {
 
       resultAssertions.assertSuccess(result);
       expect(result.data.length).toBeGreaterThanOrEqual(2);
-      expect(result.data).toContain("phase-2/milestone-1-foundation");
-      expect(result.data).toContain("phase-2/milestone-2-build");
+      expect(result.data).toContainEqual({
+        projectId: "shared",
+        phaseId: "phase-2",
+        milestoneId: "milestone-1-foundation",
+      });
+      expect(result.data).toContainEqual({
+        projectId: "shared",
+        phaseId: "phase-2",
+        milestoneId: "milestone-2-build",
+      });
     });
 
     it("should list milestones from multiple phases", async () => {
@@ -138,8 +147,35 @@ describe.sequential("SDK Milestones", () => {
       const result = await milestoneList({ cwd: testDir });
 
       resultAssertions.assertSuccess(result);
-      expect(result.data).toContain("phase-1/m1");
-      expect(result.data).toContain("phase-2/m1");
+      expect(result.data).toContainEqual({
+        projectId: "shared",
+        phaseId: "phase-1",
+        milestoneId: "m1",
+      });
+      expect(result.data).toContainEqual({
+        projectId: "shared",
+        phaseId: "phase-2",
+        milestoneId: "m1",
+      });
+    });
+
+    it("should filter milestones by project", async () => {
+      await phaseCreate({ id: "phase-2", cwd: testDir });
+      await milestoneCreate({
+        phase: "phase-2",
+        milestone: "milestone-1-foundation",
+        project: "shared",
+        cwd: testDir,
+      });
+
+      const result = await milestoneList({ project: "shared", cwd: testDir });
+
+      resultAssertions.assertSuccess(result);
+      expect(result.data).toContainEqual({
+        projectId: "shared",
+        phaseId: "phase-2",
+        milestoneId: "milestone-1-foundation",
+      });
     });
   });
 
@@ -170,6 +206,8 @@ describe.sequential("SDK Milestones", () => {
       const overviewPath = path.join(
         testDir,
         "roadmap",
+        "projects",
+        "shared",
         "phases",
         "phase-2",
         "milestones",
@@ -185,6 +223,7 @@ describe.sequential("SDK Milestones", () => {
       });
 
       resultAssertions.assertSuccess(result);
+      expect(result.data.projectId).toBe("shared");
       expect(result.data.phase).toBe("phase-2");
       expect(result.data.milestone).toBe("m-activation-ok");
     });
@@ -237,6 +276,8 @@ describe.sequential("SDK Milestones", () => {
         path.join(
           testDir,
           "roadmap",
+          "projects",
+          "shared",
           "phases",
           "phase-2",
           "milestones",

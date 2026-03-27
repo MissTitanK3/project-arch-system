@@ -6,9 +6,10 @@ describe("schemas/phase", () => {
     const validManifest: PhaseManifest = {
       schemaVersion: "1.0",
       phases: [
-        { id: "phase-1", createdAt: "2026-03-01" },
-        { id: "phase-2", createdAt: "2026-03-07" },
+        { id: "phase-1", projectId: "shared", createdAt: "2026-03-01" },
+        { id: "phase-2", projectId: "storefront", createdAt: "2026-03-07" },
       ],
+      activeProject: "storefront",
       activePhase: "phase-2",
       activeMilestone: null,
     };
@@ -27,23 +28,25 @@ describe("schemas/phase", () => {
     });
 
     it("should accept manifest with empty phases array", () => {
-      const withEmptyPhases = {
-        schemaVersion: "1.0" as const,
-        phases: [],
-        activePhase: null,
-        activeMilestone: null,
-      };
+        const withEmptyPhases = {
+          schemaVersion: "1.0" as const,
+          phases: [],
+          activeProject: null,
+          activePhase: null,
+          activeMilestone: null,
+        };
       const result = phaseManifestSchema.parse(withEmptyPhases);
       expect(result.phases).toEqual([]);
     });
 
     it("should accept manifest with single phase", () => {
-      const singlePhase = {
-        schemaVersion: "1.0" as const,
-        phases: [{ id: "phase-1", createdAt: "2026-03-07" }],
-        activePhase: "phase-1",
-        activeMilestone: null,
-      };
+        const singlePhase = {
+          schemaVersion: "1.0" as const,
+          phases: [{ id: "phase-1", projectId: "shared", createdAt: "2026-03-07" }],
+          activeProject: "shared",
+          activePhase: "phase-1",
+          activeMilestone: null,
+        };
       const result = phaseManifestSchema.parse(singlePhase);
       expect(result.phases).toHaveLength(1);
     });
@@ -81,26 +84,26 @@ describe("schemas/phase", () => {
 
     describe("phase entries", () => {
       it("should reject phase with empty id", () => {
-        const invalid = {
-          ...validManifest,
-          phases: [{ id: "", createdAt: "2026-03-07" }],
-        };
+          const invalid = {
+            ...validManifest,
+            phases: [{ id: "", projectId: "shared", createdAt: "2026-03-07" }],
+          };
         expect(() => phaseManifestSchema.parse(invalid)).toThrow();
       });
 
       it("should reject phase with missing id", () => {
-        const invalid = {
-          ...validManifest,
-          phases: [{ createdAt: "2026-03-07" }],
-        };
+          const invalid = {
+            ...validManifest,
+            phases: [{ projectId: "shared", createdAt: "2026-03-07" }],
+          };
         expect(() => phaseManifestSchema.parse(invalid)).toThrow();
       });
 
       it("should reject phase with missing createdAt", () => {
-        const invalid = {
-          ...validManifest,
-          phases: [{ id: "phase-1" }],
-        };
+          const invalid = {
+            ...validManifest,
+            phases: [{ id: "phase-1", projectId: "shared" }],
+          };
         expect(() => phaseManifestSchema.parse(invalid)).toThrow();
       });
 
@@ -111,7 +114,7 @@ describe("schemas/phase", () => {
         for (const format of invalidFormats) {
           const invalid = {
             ...validManifest,
-            phases: [{ id: "phase-1", createdAt: format }],
+            phases: [{ id: "phase-1", projectId: "shared", createdAt: format }],
           };
           expect(() => phaseManifestSchema.parse(invalid)).toThrow();
         }
@@ -124,11 +127,21 @@ describe("schemas/phase", () => {
         for (const date of validDates) {
           const valid = {
             ...validManifest,
-            phases: [{ id: "phase-1", createdAt: date }],
+            phases: [{ id: "phase-1", projectId: "shared", createdAt: date }],
           };
           const result = phaseManifestSchema.parse(valid);
           expect(result.phases[0].createdAt).toBe(date);
         }
+      });
+
+      it("should default missing projectId to shared", () => {
+        const valid = {
+          ...validManifest,
+          phases: [{ id: "phase-1", createdAt: "2026-03-07" }],
+        };
+
+        const result = phaseManifestSchema.parse(valid);
+        expect(result.phases[0].projectId).toBe("shared");
       });
     });
 
@@ -193,14 +206,36 @@ describe("schemas/phase", () => {
       });
     });
 
+    describe("activeProject field", () => {
+      it("should accept string activeProject", () => {
+        const result = phaseManifestSchema.parse(validManifest);
+        expect(result.activeProject).toBe("storefront");
+      });
+
+      it("should accept null activeProject", () => {
+        const result = phaseManifestSchema.parse({ ...validManifest, activeProject: null });
+        expect(result.activeProject).toBeNull();
+      });
+
+      it("should default missing activeProject to null", () => {
+        const missing = Object.fromEntries(
+          Object.entries(validManifest).filter(([key]) => key !== "activeProject"),
+        );
+        const result = phaseManifestSchema.parse(missing);
+        expect(result.activeProject).toBeNull();
+      });
+    });
+
     describe("multiple phases", () => {
       it("should handle many phases", () => {
         const manyPhases = {
           schemaVersion: "1.0" as const,
           phases: Array.from({ length: 10 }, (_, i) => ({
             id: `phase-${i + 1}`,
+            projectId: i < 5 ? "shared" : "storefront",
             createdAt: "2026-03-07",
           })),
+          activeProject: "storefront",
           activePhase: "phase-10",
           activeMilestone: null,
         };
@@ -215,10 +250,11 @@ describe("schemas/phase", () => {
         const ordered = {
           schemaVersion: "1.0" as const,
           phases: [
-            { id: "alpha", createdAt: "2026-03-01" },
-            { id: "beta", createdAt: "2026-03-02" },
-            { id: "gamma", createdAt: "2026-03-03" },
+            { id: "alpha", projectId: "shared", createdAt: "2026-03-01" },
+            { id: "beta", projectId: "shared", createdAt: "2026-03-02" },
+            { id: "gamma", projectId: "storefront", createdAt: "2026-03-03" },
           ],
+          activeProject: null,
           activePhase: null,
           activeMilestone: null,
         };

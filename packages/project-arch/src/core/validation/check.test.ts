@@ -7,7 +7,7 @@ import {
   runRepositoryChecks,
   toCheckDiagnosticsPayload,
 } from "./check";
-import { createTestProject, type TestProjectContext } from "../../test/helpers";
+import { createTempDir, createTestProject, type TestProjectContext } from "../../test/helpers";
 import { createTask } from "../tasks/createTask";
 import { createDecision } from "../decisions/createDecision";
 import { createPhase } from "../phases/createPhase";
@@ -81,6 +81,7 @@ describe.sequential("core/validation/check", () => {
       });
       expect(payload.graphDiagnostics).toBeDefined();
       expect(payload.graphDiagnostics.completeness.score).toBe(100);
+      expect(payload.compatibility.mode).toBe("project-scoped-only");
     });
   });
 
@@ -205,7 +206,7 @@ describe.sequential("core/validation/check", () => {
       // Manually create another task with the same ID (001 will be the first)
       const taskDir = path.join(
         tempDir,
-        "roadmap/phases/dup-phase/milestones/dup-milestone/tasks/planned",
+        "roadmap/projects/shared/phases/dup-phase/milestones/dup-milestone/tasks/planned",
       );
       const duplicateTaskPath = path.join(taskDir, "001-duplicate-task.md");
 
@@ -238,6 +239,9 @@ This task has a duplicate ID.
 
       expect(result.ok).toBe(false);
       expect(result.errors.some((e) => e.includes("Duplicate task id"))).toBe(true);
+      expect(result.errors.some((e) => e.includes("shared/dup-phase/dup-milestone/001"))).toBe(
+        true,
+      );
     }, 120_000);
 
     it("should detect missing code targets referenced by tasks", async () => {
@@ -1296,7 +1300,7 @@ completionCriteria: []
 
       const taskDir = path.join(
         tempDir,
-        "roadmap/phases/artifact-phase/milestones/artifact-milestone/tasks/planned",
+        "roadmap/projects/shared/phases/artifact-phase/milestones/artifact-milestone/tasks/planned",
       );
       const taskFiles = await walkDir(taskDir);
       const taskFile = taskFiles[0];
@@ -1617,7 +1621,7 @@ completionCriteria: []
 
       const taskPath = path.join(
         tempDir,
-        "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+        "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
       );
       const taskContent = await fs.readFile(taskPath, "utf8");
       const updatedTask = taskContent.replace(
@@ -1677,7 +1681,7 @@ describe("runRepositoryChecks – malformed task file resilience", () => {
     // Drop a malformed task file (schema-invalid frontmatter) into an existing lane.
     const laneDir = path.join(
       tempDir,
-      "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned",
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned",
     );
     const malformedPath = path.join(laneDir, "001-malformed-schema.md");
     await fs.ensureDir(laneDir);
@@ -1740,6 +1744,30 @@ describe("runRepositoryChecks – planning coverage diagnostics", () => {
   });
 
   it("emits PAC coverage warnings by default for uncovered targets and missing objective traces", async () => {
+    const targetsPath = path.join(
+      tempDir,
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/targets.md",
+    );
+    await writeFile(
+      targetsPath,
+      [
+        "# Targets",
+        "",
+        "- `packages/uncovered-surface`",
+      ].join("\n"),
+    );
+
+    const taskPath = path.join(
+      tempDir,
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+    );
+    const taskDoc = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskPath);
+    await writeMarkdownWithFrontmatter(
+      taskPath,
+      { ...taskDoc.data, traceLinks: [] },
+      taskDoc.content,
+    );
+
     const result = await runRepositoryChecks(tempDir);
 
     expect(result.ok).toBe(true);
@@ -1750,6 +1778,30 @@ describe("runRepositoryChecks – planning coverage diagnostics", () => {
   }, 120_000);
 
   it("escalates PAC coverage findings to errors in strict mode", async () => {
+    const targetsPath = path.join(
+      tempDir,
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/targets.md",
+    );
+    await writeFile(
+      targetsPath,
+      [
+        "# Targets",
+        "",
+        "- `packages/uncovered-surface`",
+      ].join("\n"),
+    );
+
+    const taskPath = path.join(
+      tempDir,
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+    );
+    const taskDoc = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskPath);
+    await writeMarkdownWithFrontmatter(
+      taskPath,
+      { ...taskDoc.data, traceLinks: [] },
+      taskDoc.content,
+    );
+
     const result = await runRepositoryChecks(tempDir, { coverageMode: "error" });
 
     expect(result.ok).toBe(false);
@@ -1762,7 +1814,7 @@ describe("runRepositoryChecks – planning coverage diagnostics", () => {
   it("avoids false positives when planned task links target areas and objective refs", async () => {
     const plannedTasksDir = path.join(
       tempDir,
-      "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned",
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned",
     );
 
     const taskPaths = (await walkDir(plannedTasksDir)).filter((filePath) =>
@@ -1780,8 +1832,8 @@ describe("runRepositoryChecks – planning coverage diagnostics", () => {
         traceLinks: Array.from(
           new Set([
             ...existingTraceLinks,
-            "roadmap/phases/phase-1/overview.md",
-            "roadmap/phases/phase-1/milestones/milestone-1-setup/targets.md",
+            "roadmap/projects/shared/phases/phase-1/overview.md",
+            "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/targets.md",
           ]),
         ),
       };
@@ -1825,14 +1877,23 @@ describe("runRepositoryChecks – validation contract", () => {
   });
 
   it("emits PAV_CONTRACT_MISSING when validation contract is absent", async () => {
-    const contractPath = path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json");
+    const contractPath = path.join(
+      tempDir,
+      "roadmap/projects/shared/phases/phase-1/validation-contract.json",
+    );
     await fs.remove(contractPath);
+    await fs.remove(path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json"));
 
-    const result = await runRepositoryChecks(tempDir);
+      const result = await runRepositoryChecks(tempDir);
 
-    expect(result.ok).toBe(false);
-    expect(result.errors.some((error) => error.includes("PAV_CONTRACT_MISSING"))).toBe(true);
-    expect(result.errors.some((error) => error.includes("phase-1"))).toBe(true);
+      expect(result.ok).toBe(false);
+      expect(result.errors.some((error) => error.includes("PAV_CONTRACT_MISSING"))).toBe(true);
+      expect(result.errors.some((error) => error.includes("phase-1"))).toBe(true);
+      expect(
+        result.errors.some((error) =>
+          error.includes("roadmap/projects/shared/phases/phase-1/validation-contract.json"),
+        ),
+      ).toBe(true);
   }, 120_000);
 
   it("accepts valid validation contract", async () => {
@@ -1843,7 +1904,10 @@ describe("runRepositoryChecks – validation contract", () => {
   }, 120_000);
 
   it("emits PAV_CONTRACT_INVALID_SCHEMA when contract has invalid schema", async () => {
-    const contractPath = path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json");
+    const contractPath = path.join(
+      tempDir,
+      "roadmap/projects/shared/phases/phase-1/validation-contract.json",
+    );
     const invalidContract = {
       schemaVersion: "2.0", // invalid version
       phaseId: "phase-1",
@@ -1858,10 +1922,19 @@ describe("runRepositoryChecks – validation contract", () => {
 
     expect(result.ok).toBe(false);
     expect(result.errors.some((error) => error.includes("PAV_CONTRACT_INVALID_SCHEMA"))).toBe(true);
+    expect(result.errors.some((error) => error.includes("shared/phase-1"))).toBe(true);
+    expect(
+      result.errors.some((error) =>
+        error.includes("roadmap/projects/shared/phases/phase-1/validation-contract.json"),
+      ),
+    ).toBe(true);
   }, 120_000);
 
   it("emits PAV_CONTRACT_INVALID_SCHEMA when check is missing required fields", async () => {
-    const contractPath = path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json");
+    const contractPath = path.join(
+      tempDir,
+      "roadmap/projects/shared/phases/phase-1/validation-contract.json",
+    );
     const incompleteContract = {
       schemaVersion: "1.0",
       phaseId: "phase-1",
@@ -1883,10 +1956,30 @@ describe("runRepositoryChecks – validation contract", () => {
     expect(result.ok).toBe(false);
     expect(result.errors.some((error) => error.includes("PAV_CONTRACT_INVALID_SCHEMA"))).toBe(true);
   }, 120_000);
+
+  it("fails explicitly for legacy-only runtime compatibility", async () => {
+    const emptyContext = await createTempDir();
+    try {
+      await fs.ensureDir(path.join(emptyContext.tempDir, "roadmap", "phases", "phase-1"));
+      const result = await runRepositoryChecks(emptyContext.tempDir);
+
+      expect(result.ok).toBe(false);
+      expect(result.compatibility?.mode).toBe("legacy-only");
+      expect(result.compatibility?.supported).toBe(false);
+      expect(
+        result.errors.some((error) => error.includes("RUNTIME_COMPATIBILITY_UNSUPPORTED")),
+      ).toBe(true);
+    } finally {
+      await emptyContext.cleanup();
+    }
+  }, 120_000);
 });
 
 async function scaffoldValidationContractForPhase(tempDir: string, phaseId: string): Promise<void> {
-  const contractPath = path.join(tempDir, `roadmap/phases/${phaseId}/validation-contract.json`);
+  const contractPath = path.join(
+    tempDir,
+    `roadmap/projects/shared/phases/${phaseId}/validation-contract.json`,
+  );
   await writeJsonDeterministic(contractPath, {
     schemaVersion: "1.0",
     phaseId,

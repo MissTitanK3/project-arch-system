@@ -1,8 +1,9 @@
 import path from "path";
 import fg from "fast-glob";
 import { pathExists } from "../../utils/fs";
-import { collectDecisionRecords } from "../validation/decisions";
-import { collectTaskRecords } from "../validation/tasks";
+import { projectDocsRoot } from "../../utils/paths";
+import { collectDecisionRecords, type DecisionRecord } from "../validation/decisions";
+import { collectTaskRecords, type TaskRecord } from "../validation/tasks";
 
 export type DocsCatalogEntry = {
   path: string;
@@ -73,10 +74,19 @@ export async function catalogDocs(cwd = process.cwd()): Promise<DocsCatalog> {
     ensureEntry(docPath).discoveredOnDisk = true;
   }
 
-  const [taskRecords, decisionRecords] = await Promise.all([
-    collectTaskRecords(cwd),
-    collectDecisionRecords(cwd),
-  ]);
+  let taskRecords: TaskRecord[] = [];
+  let decisionRecords: DecisionRecord[] = [];
+  if (await pathExists(projectDocsRoot(cwd))) {
+    decisionRecords = await collectDecisionRecords(cwd);
+    try {
+      taskRecords = await collectTaskRecords(cwd);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes("legacy-only roadmap runtimes")) {
+        throw error;
+      }
+    }
+  }
 
   for (const task of taskRecords) {
     for (const ref of task.frontmatter.publicDocs) {

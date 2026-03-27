@@ -24,6 +24,14 @@ describe.sequential("SDK Phases", () => {
 
       resultAssertions.assertSuccess(result);
       expect(result.data.id).toBe("phase-2");
+      expect(result.data.projectId).toBe("shared");
+    });
+
+    it("should create a phase in a named project", async () => {
+      const result = await phaseCreate({ id: "phase-2", project: "shared", cwd: testDir });
+
+      resultAssertions.assertSuccess(result);
+      expect(result.data.projectId).toBe("shared");
     });
 
     it("should create multiple phases", async () => {
@@ -71,6 +79,7 @@ describe.sequential("SDK Phases", () => {
       const phaseIds = result.data.map((p) => p.id);
       expect(phaseIds).toContain("phase-2");
       expect(phaseIds).toContain("phase-3");
+      expect(result.data.every((phase) => phase.projectId === "shared")).toBe(true);
     });
 
     it("should include active flag for phases", async () => {
@@ -81,9 +90,20 @@ describe.sequential("SDK Phases", () => {
       resultAssertions.assertSuccess(result);
       result.data.forEach((phase) => {
         expect(phase).toHaveProperty("id");
+        expect(phase).toHaveProperty("projectId");
         expect(phase).toHaveProperty("active");
         expect(typeof phase.active).toBe("boolean");
       });
+    });
+
+    it("should filter phases by project", async () => {
+      await phaseCreate({ id: "phase-2", project: "shared", cwd: testDir });
+
+      const result = await phaseList({ project: "shared", cwd: testDir });
+
+      resultAssertions.assertSuccess(result);
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
+      expect(result.data.every((phase) => phase.projectId === "shared")).toBe(true);
     });
 
     it("should fail without initialized project", async () => {

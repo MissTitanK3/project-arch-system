@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs-extra";
 import { createTestProject, createTempDir, type TestProjectContext } from "../../test/helpers";
 import { createPhase, listPhases } from "./createPhase";
-import { loadPhaseManifest } from "../manifests";
+import { defaultProjectManifest, loadPhaseManifest, saveProjectManifest } from "../manifests";
 
 describe("createPhase", () => {
   let context: TestProjectContext;
@@ -21,7 +21,7 @@ describe("createPhase", () => {
   it("creates a new phase and required directories", async () => {
     await createPhase("phase-2", tempDir);
 
-    const phaseRoot = path.join(tempDir, "roadmap", "phases", "phase-2");
+    const phaseRoot = path.join(tempDir, "roadmap", "projects", "shared", "phases", "phase-2");
     expect(await fs.pathExists(path.join(phaseRoot, "milestones"))).toBe(true);
     expect(await fs.pathExists(path.join(phaseRoot, "decisions", "index.json"))).toBe(true);
     expect(await fs.pathExists(path.join(phaseRoot, "overview.md"))).toBe(true);
@@ -40,6 +40,7 @@ describe("createPhase", () => {
 
     const manifest = await loadPhaseManifest(tempDir);
     expect(manifest.activePhase).toBe("phase-1");
+    expect(manifest.activeProject).toBe("shared");
     expect(manifest.phases.map((p) => p.id)).toEqual(["phase-1", "phase-2"]);
   });
 
@@ -56,7 +57,14 @@ describe("createPhase", () => {
     const customSlug = "planning-phase";
     await createPhase(customSlug, tempDir);
 
-    const phaseRoot = path.join(tempDir, "roadmap", "phases", customSlug);
+    const phaseRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      customSlug,
+    );
     expect(await fs.pathExists(phaseRoot)).toBe(true);
 
     const phases = await listPhases(tempDir);
@@ -66,7 +74,7 @@ describe("createPhase", () => {
   it("creates phase with all required subdirectories", async () => {
     await createPhase("phase-3", tempDir);
 
-    const phaseRoot = path.join(tempDir, "roadmap", "phases", "phase-3");
+    const phaseRoot = path.join(tempDir, "roadmap", "projects", "shared", "phases", "phase-3");
 
     // Check required directories
     expect(await fs.pathExists(path.join(phaseRoot, "milestones"))).toBe(true);
@@ -76,7 +84,15 @@ describe("createPhase", () => {
   it("creates phase overview.md with content", async () => {
     await createPhase("phase-4", tempDir);
 
-    const overviewPath = path.join(tempDir, "roadmap", "phases", "phase-4", "overview.md");
+    const overviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-4",
+      "overview.md",
+    );
     expect(await fs.pathExists(overviewPath)).toBe(true);
 
     const content = await fs.readFile(overviewPath, "utf-8");
@@ -88,7 +104,7 @@ describe("createPhase", () => {
 
     const manifest = await loadPhaseManifest(tempDir);
     expect(manifest.schemaVersion).toBe("1.0");
-    expect(manifest.phases.some((p) => p.id === "phase-5")).toBe(true);
+    expect(manifest.phases.some((p) => p.id === "phase-5" && p.projectId === "shared")).toBe(true);
   });
 
   it("maintains chronological order of phases", async () => {
@@ -135,6 +151,8 @@ describe("createPhase", () => {
     const indexPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-latest",
       "decisions",
@@ -151,10 +169,51 @@ describe("createPhase", () => {
     const specialSlug = "phase-2024-planning";
     await createPhase(specialSlug, tempDir);
 
-    const phaseRoot = path.join(tempDir, "roadmap", "phases", specialSlug);
+    const phaseRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      specialSlug,
+    );
     expect(await fs.pathExists(phaseRoot)).toBe(true);
 
     const phases = await listPhases(tempDir);
     expect(phases.some((p) => p.id === specialSlug)).toBe(true);
+  });
+
+  it("creates a phase inside a named project", async () => {
+    await fs.ensureDir(path.join(tempDir, "roadmap", "projects", "storefront"));
+    await saveProjectManifest(
+      defaultProjectManifest("storefront", {
+        title: "Storefront",
+        type: "application",
+        summary: "Customer-facing surface.",
+        ownedPaths: ["apps/storefront"],
+        sharedDependencies: ["shared"],
+        tags: [],
+      }),
+      "storefront",
+      tempDir,
+    );
+
+    await createPhase("phase-storefront", tempDir, { projectId: "storefront" });
+
+    const phaseRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "storefront",
+      "phases",
+      "phase-storefront",
+    );
+    expect(await fs.pathExists(phaseRoot)).toBe(true);
+
+    const manifest = await loadPhaseManifest(tempDir);
+    expect(manifest.phases.some((phase) => phase.id === "phase-storefront")).toBe(true);
+    expect(manifest.phases.find((phase) => phase.id === "phase-storefront")?.projectId).toBe(
+      "storefront",
+    );
   });
 });

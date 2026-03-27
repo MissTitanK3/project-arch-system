@@ -51,10 +51,13 @@ describe("core/workflow/next", () => {
   it("routes to check when critical validations fail", async () => {
     const context = await createTestProject(originalCwd, undefined, { setCwd: false });
     try {
-      const [brokenTaskPath] = await fg("roadmap/phases/*/milestones/*/tasks/planned/*.md", {
+      const [brokenTaskPath] = await fg(
+        "roadmap/projects/shared/phases/*/milestones/*/tasks/planned/*.md",
+        {
         cwd: context.tempDir,
         absolute: true,
-      });
+        },
+      );
       expect(brokenTaskPath).toBeDefined();
 
       await fs.writeFile(brokenTaskPath, "---\ninvalid yaml\n", "utf8");
@@ -83,10 +86,13 @@ describe("core/workflow/next", () => {
     try {
       await seedReconciliationArtifact(context.tempDir, "002", "2026-03-22");
 
-      const [taskPath] = await fg("roadmap/phases/*/milestones/*/tasks/planned/*.md", {
+      const [taskPath] = await fg(
+        "roadmap/projects/shared/phases/*/milestones/*/tasks/planned/*.md",
+        {
         cwd: context.tempDir,
         absolute: true,
-      });
+        },
+      );
       expect(taskPath).toBeDefined();
 
       const task = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskPath);

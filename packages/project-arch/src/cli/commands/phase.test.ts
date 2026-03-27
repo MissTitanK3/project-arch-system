@@ -68,7 +68,7 @@ describe("cli/commands/phase", () => {
 
       await program.parseAsync(["node", "test", "phase", "new", "phase-99"]);
 
-      consoleAssertions.assertConsoleContains(consoleSpy, "Created phase phase-99");
+      consoleAssertions.assertConsoleContains(consoleSpy, "Created phase shared/phase-99");
 
       consoleSpy.mockRestore();
     });
@@ -82,7 +82,7 @@ describe("cli/commands/phase", () => {
 
       await program.parseAsync(["node", "test", "phase", "new", "phase-90"]);
 
-      consoleAssertions.assertConsoleContains(consoleSpy, "Created phase phase-90");
+      consoleAssertions.assertConsoleContains(consoleSpy, "Created phase shared/phase-90");
 
       consoleSpy.mockRestore();
     });
@@ -99,6 +99,28 @@ describe("cli/commands/phase", () => {
       await program.parseAsync(["node", "test", "phase", "new", "phase-93"]);
 
       expect(consoleSpy).toHaveBeenCalledTimes(3);
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should create a phase in a named project", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerPhaseCommand(program);
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync([
+        "node",
+        "test",
+        "phase",
+        "new",
+        "phase-94",
+        "--project",
+        "shared",
+      ]);
+
+      consoleAssertions.assertConsoleContains(consoleSpy, "Created phase shared/phase-94");
 
       consoleSpy.mockRestore();
     });
@@ -120,8 +142,8 @@ describe("cli/commands/phase", () => {
 
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls.map((call) => call[0]).join("\n");
-      expect(output).toContain("phase-94");
-      expect(output).toContain("phase-95");
+      expect(output).toContain("shared/phase-94");
+      expect(output).toContain("shared/phase-95");
 
       consoleSpy.mockRestore();
     });
@@ -140,7 +162,7 @@ describe("cli/commands/phase", () => {
 
       const output = consoleSpy.mock.calls.map((call) => call[0]).join("\n");
       // At least one phase should be marked as active (or all should have a marker)
-      expect(output).toContain("phase");
+      expect(output).toContain("shared/phase");
 
       consoleSpy.mockRestore();
     });
@@ -176,9 +198,9 @@ describe("cli/commands/phase", () => {
       // Should list all phases
       expect(consoleSpy).toHaveBeenCalled();
       const output = consoleSpy.mock.calls.map((call) => call[0]).join("\n");
-      expect(output).toContain("phase-87");
-      expect(output).toContain("phase-88");
-      expect(output).toContain("phase-89");
+      expect(output).toContain("shared/phase-87");
+      expect(output).toContain("shared/phase-88");
+      expect(output).toContain("shared/phase-89");
 
       consoleSpy.mockRestore();
     });

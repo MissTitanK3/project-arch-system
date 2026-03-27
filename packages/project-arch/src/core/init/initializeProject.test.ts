@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import path from "path";
 import fs from "fs-extra";
+import matter from "gray-matter";
 import { createTempDir, type TestProjectContext } from "../../test/helpers";
 import { initializeProject } from "./initializeProject";
 import { agentSkillSchema } from "../../schemas/agentSkill";
@@ -293,10 +294,12 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(agentsContent).toContain("#### Project Architecture CLI (pa)");
 
     // Task lane commands present (code fence format uses <phase>/<milestone>)
-    expect(agentsContent).toContain("pa task new <phase> <milestone>");
-    expect(agentsContent).toContain("pa task discover <phase> <milestone> --from <taskId>");
-    expect(agentsContent).toContain("pa task idea <phase> <milestone>");
-    expect(agentsContent).toContain("pa task lanes <phase> <milestone>");
+    expect(agentsContent).toContain("pa task new <phase> <milestone> --project <projectId>");
+    expect(agentsContent).toContain(
+      "pa task discover <phase> <milestone> --project <projectId> --from <taskId>",
+    );
+    expect(agentsContent).toContain("pa task idea <phase> <milestone> --project <projectId>");
+    expect(agentsContent).toContain("pa task lanes <phase> <milestone> --project <projectId>");
 
     // Feedback commands present
     expect(agentsContent).toContain("pa feedback list");
@@ -355,6 +358,168 @@ describe.sequential("initializeProject - Standards Coverage", () => {
         }
       }
     }
+  });
+
+  it("creates the foundational shared project directory model", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    expect(await fs.pathExists(path.join(tempDir, "roadmap", "projects"))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, "roadmap", "projects", "shared"))).toBe(true);
+    expect(
+      await fs.pathExists(path.join(tempDir, "roadmap", "projects", "shared", "manifest.json")),
+    ).toBe(true);
+    expect(
+      await fs.pathExists(path.join(tempDir, "roadmap", "projects", "shared", "overview.md")),
+    ).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, "roadmap", "projects", "shared", "phases"))).toBe(
+      true,
+    );
+  });
+
+  it("creates a shared project overview with ownership contract sections", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const overviewPath = path.join(tempDir, "roadmap", "projects", "shared", "overview.md");
+    const overviewContent = await fs.readFile(overviewPath, "utf8");
+
+    expect(overviewContent).toContain("# Shared");
+    expect(overviewContent).toContain("## Project Type");
+    expect(overviewContent).toContain("## Purpose");
+    expect(overviewContent).toContain("## Owned Paths");
+    expect(overviewContent).toContain("## Shared Dependencies");
+    expect(overviewContent).toContain("## Delivery Notes");
+    expect(overviewContent).toContain("## Adding Custom Projects");
+    expect(overviewContent).toContain("- roadmap");
+    expect(overviewContent).toContain("- architecture");
+    expect(overviewContent).toContain("Create additional named projects");
+    expect(overviewContent).toContain("`storefront`, `backoffice`, `customer-portal`, or `ops-console`");
+    expect(overviewContent).toContain("Do not treat `app-*` as a required naming convention.");
+    expect(overviewContent).toContain("`manifest.json` with stable identity and ownership metadata");
+  });
+
+  it("documents the project-scoped roadmap model in seeded init guidance", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const promptContent = await fs.readFile(
+      path.join(tempDir, "architecture", "product-framing", "prompt.md"),
+      "utf8",
+    );
+    expect(promptContent).toContain(
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/*",
+    );
+
+    const repoModelContent = await fs.readFile(
+      path.join(tempDir, "architecture", "governance", "REPO-MODEL.md"),
+      "utf8",
+    );
+    expect(repoModelContent).toContain(
+      "Location: `roadmap/projects/<project>/phases/`, `roadmap/decisions/`",
+    );
+
+    const agentsContent = await fs.readFile(path.join(tempDir, "agents.md"), "utf8");
+    expect(agentsContent).toContain("`roadmap/projects/<project>/phases/*`");
+    expect(agentsContent).toContain(
+      "pa phase new <phaseId> --project <projectId>      # Create new phase (format: phase-1, phase-2)",
+    );
+    expect(agentsContent).toContain(
+      "roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/tasks/{lane}/{id}-{slug}.md",
+    );
+    const contextPayloadContent = await fs.readFile(
+      path.join(tempDir, "architecture", "governance", "cli-context-payload.md"),
+      "utf8",
+    );
+    expect(contextPayloadContent).toContain(
+      "- `active.project.id`, `active.project.path`, `active.project.title`",
+    );
+  });
+
+  it("seeds bootstrap tasks with target coverage and milestone objective trace links", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const taskRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-1",
+      "milestones",
+      "milestone-1-setup",
+      "tasks",
+      "planned",
+    );
+
+    const overviewTask = matter(
+      await fs.readFile(path.join(taskRoot, "001-define-project-overview.md"), "utf8"),
+    );
+    expect(overviewTask.data.publicDocs).toContain("architecture/product-framing/project-overview.md");
+    expect(overviewTask.data.traceLinks).toContain(
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/targets.md",
+    );
+
+    const systemTask = matter(
+      await fs.readFile(path.join(taskRoot, "005-define-system-boundaries.md"), "utf8"),
+    );
+    expect(systemTask.data.publicDocs).toContain("architecture/systems/system-boundaries.md");
+    expect(systemTask.data.traceLinks).toContain(
+      "roadmap/projects/shared/phases/phase-1/overview.md",
+    );
+
+    const runtimeTask = matter(
+      await fs.readFile(path.join(taskRoot, "007-define-runtime-architecture.md"), "utf8"),
+    );
+    expect(runtimeTask.data.publicDocs).toContain("architecture/runtime/runtime-architecture.md");
+
+    const finalTask = matter(
+      await fs.readFile(path.join(taskRoot, "008-finalize-architecture-foundation.md"), "utf8"),
+    );
+    expect(finalTask.data.traceLinks).toContain(
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/overview.md",
+    );
+
+    const targetsContent = await fs.readFile(
+      path.join(
+        tempDir,
+        "roadmap",
+        "projects",
+        "shared",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "targets.md",
+      ),
+      "utf8",
+    );
+    expect(targetsContent).toContain("- `architecture/product-framing`");
+    expect(targetsContent).toContain("- `architecture/systems`");
+    expect(targetsContent).toContain("- `architecture/governance`");
+    expect(targetsContent).toContain("- `architecture/runtime`");
+    expect(targetsContent).not.toContain("`packages/api`");
   });
 
   it("throws for unsupported template", async () => {
@@ -465,11 +630,26 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       tempDir,
     );
 
-    const phase1Dir = path.join(tempDir, "roadmap", "phases", "phase-1");
-    const milestone1Dir = path.join(phase1Dir, "milestones", "milestone-1-setup");
-
+    const phase1Dir = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-1",
+    );
     expect(await fs.pathExists(phase1Dir)).toBe(true);
-    expect(await fs.pathExists(milestone1Dir)).toBe(true);
+    expect(await fs.pathExists(path.join(phase1Dir, "milestones"))).toBe(true);
+    expect(
+      await fs.pathExists(
+        path.join(phase1Dir, "milestones", "milestone-1-setup", "tasks", "planned"),
+      ),
+    ).toBe(true);
+    expect(
+      await fs.pathExists(
+        path.join(tempDir, "roadmap", "phases", "phase-1", "milestones", "milestone-1-setup"),
+      ),
+    ).toBe(true);
   });
 
   it("creates all required architecture directories", async () => {
@@ -677,6 +857,16 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(defaultGuide).toContain("- Tier C catalog-only topics");
     expect(defaultGuide).toContain("- Tier D optional add-ons");
     expect(defaultGuide).toContain("## What Belongs In The Smallest Coherent Default Scaffold");
+    expect(defaultGuide).toContain("## Default Roadmap Layout");
+    expect(defaultGuide).toContain("`roadmap/projects/shared/phases/phase-1/...`");
+    expect(defaultGuide).toContain("## Reserved Bootstrap Project");
+    expect(defaultGuide).toContain("`shared` is the reserved bootstrap project created by default init.");
+    expect(defaultGuide).toContain("## Adding Custom Projects");
+    expect(defaultGuide).toContain("`roadmap/projects/<name>/manifest.json`");
+    expect(defaultGuide).toContain("examples include `storefront`, `backoffice`, `customer-portal`, and `ops-console`");
+    expect(defaultGuide).toContain("`app-*` naming is optional, not required");
+    expect(defaultGuide).toContain("use `ownedPaths` for the surfaces the project owns");
+    expect(defaultGuide).toContain("use `sharedDependencies` for cross-project dependencies rather than ownership");
     expect(defaultGuide).toContain("## What Must Stay Out Of Default Init");
     expect(defaultGuide).toContain("## Decision Rules");
     expect(defaultGuide).toContain("## Guardrails");
@@ -729,6 +919,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(mappingGuide).toContain("# Init Surface Tier Mapping");
     expect(mappingGuide).toContain("## Surface Category Map");
     expect(mappingGuide).toContain("Core roadmap and project-arch planning surfaces");
+    expect(mappingGuide).toContain("single roadmap root and reserved `shared` bootstrap project");
     expect(mappingGuide).toContain("Canonical architecture entry docs and recommended top-level architecture families");
     expect(mappingGuide).toContain("Core required standards");
     expect(mappingGuide).toContain("Template-specific required standards");
@@ -741,6 +932,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(mappingGuide).toContain("### Standards");
     expect(mappingGuide).toContain("### Governance And Operations");
     expect(mappingGuide).toContain("### Templates And Taxonomy Guidance");
+    expect(mappingGuide).toContain("### Roadmap Layout");
+    expect(mappingGuide).toContain("the canonical initialized planning model is `roadmap/projects/<project>/phases/...`");
+    expect(mappingGuide).toContain("the reserved `shared` project belongs in Tier A");
     expect(mappingGuide).toContain("### Agent-Related Surfaces");
   });
 
@@ -2141,7 +2335,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(reportGuide).toContain("`suggestedCommands: string[]`");
     expect(reportGuide).toContain("suggestions must not imply that `pa learn --path` mutates repository state");
     expect(reportGuide).toContain('"schemaVersion": "1.0"');
-    expect(reportGuide).toContain('"recommendedAction": "pa task new <phase> <milestone>"');
+    expect(reportGuide).toContain(
+      '"recommendedAction": "pa task new <phase> <milestone> --project <projectId>"',
+    );
     expect(architectureReadme).toContain(
       "[`governance/learn-report-contract.md`](governance/learn-report-contract.md)",
     );
@@ -2334,6 +2530,8 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     const manifest = await fs.readJson(phaseManifestPath);
     expect(manifest.phases).toBeDefined();
     expect(manifest.phases.length).toBeGreaterThan(0);
+    expect(manifest.phases[0].projectId).toBe("shared");
+    expect(manifest.activeProject).toBe("shared");
     expect(manifest.activePhase).toBe("phase-1");
   });
 

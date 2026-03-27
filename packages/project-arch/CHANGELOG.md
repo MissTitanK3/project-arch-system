@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-27
+
+### Added
+
+#### **Project-Scoped Roadmap Model**
+
+- Canonical single-roadmap planning model under `roadmap/projects/<project>/phases/...`
+- Reserved `shared` project scaffold for bootstrap and cross-cutting work
+- Project manifest contract and project overview ownership model
+- `pa project new <projectId>` command for scaffolding custom roadmap projects
+- Project-aware CLI and SDK planning flows for project-owned phase trees
+
+#### **Validation, Reporting, And Health Alignment**
+
+- Project-scoped roadmap discovery for validation and check collection
+- Project-aware diagnostics, remediation guidance, and runtime identity output
+- Reporting inventory for planning scopes plus active project metadata
+- Structural health checks for project manifests and project-owned phase trees
+
+### Changed
+
+- Canonical roadmap authoring now targets `roadmap/projects/<project>/phases/...`
+- Init and generated governance docs now teach the project-scoped roadmap model by default
+- Context, report, and check output now surface project identity explicitly
+- Example/reference docs now use project-aware commands and canonical project-owned paths
+
+### Fixed
+
+- Removed scaffold-caused PAC coverage warnings from the default initialized sandbox
+- Aligned default scaffold targets and bootstrap task surfaces with the initialized repository shape
+- Normalized runtime compatibility handling across `hybrid`, `project-scoped-only`, and `legacy-only` repository states
+
+### Docs
+
+- Added release-candidate implementation summary in `feedback/RC-2.0.md`
+- Added monorepo roadmap structure guidance and project manifest contract documentation in `feedback/`
+- Documented custom project creation and naming as part of init/adoption guidance
+
+### Compatibility
+
+- `hybrid`: supported
+- `project-scoped-only`: supported
+- `legacy-only`: reduced compatibility only; unsupported for milestone 2 runtime operations
+
+### Notes
+
+- This release reflects a valid `2.0` boundary because the canonical roadmap shape and runtime behavior changed materially.
+- The legacy `roadmap/phases/...` surface remains only as a compatibility mirror while hybrid support is still in place.
+
 ## [1.7.0] - 2026-03-26
 
 ### Added
@@ -241,6 +290,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration with monorepo workflows
 
 [1.4.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.3.0...v1.4.0
+[2.0.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.7.0...v2.0.0
 [1.7.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/MissTitanK3/project-arch-system/compare/v1.4.0...v1.5.0

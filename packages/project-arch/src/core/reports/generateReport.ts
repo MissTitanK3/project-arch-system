@@ -10,7 +10,10 @@ import {
 import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
 import { isSensitivePath } from "../../utils/sensitivePaths";
 import { loadPhaseManifest } from "../../graph/manifests";
+import { resolvePhaseProjectId } from "../manifests";
 import { pathExists, readJson } from "../../utils/fs";
+import { phaseDir, projectPhaseDir } from "../../utils/paths";
+import { resolveRuntimeCompatibilityContract } from "../runtime/compatibility";
 
 interface ConsistencyDiagnostic {
   type: "activeMilestone" | "activePhase";
@@ -51,8 +54,21 @@ interface GraphTaskNode {
 }
 
 export interface ReportData {
+  compatibility: {
+    surface: "validation" | "reporting";
+    mode: "project-scoped-only" | "hybrid" | "legacy-only";
+    supported: boolean;
+    canonicalRootExists: boolean;
+    legacyRootExists: boolean;
+    reason: string;
+  };
+  activeProject: string;
   activePhase: string;
   activeMilestone: string;
+  inventory: {
+    projects: string[];
+    phasesByProject: Record<string, number>;
+  };
   tasksByStatus: Record<string, number>;
   decisionsByStatus: Record<string, number>;
   planning: {
@@ -102,40 +118,63 @@ function renderTable(rows: Array<[string, string]>): string {
 /**
  * Discover active phase from filesystem by scanning phases directory.
  */
-async function discoverActivePhaseFromFilesystem(cwd: string): Promise<string | null> {
-  const phaseDirs = await fg("roadmap/phases/*", {
-    cwd,
-    onlyDirectories: true,
-    absolute: false,
-    followSymbolicLinks: false,
-  });
-  const safePhaseDirs = await filterGlobPathsBySymlinkPolicy(phaseDirs, cwd);
+async function discoverActivePhaseFromFilesystem(
+  manifest: Awaited<ReturnType<typeof loadPhaseManifest>>,
+  cwd: string,
+): Promise<{ projectId: string | null; phaseId: string | null }> {
+  const discovered: Array<{ projectId: string; phaseId: string }> = [];
 
-  if (safePhaseDirs.length === 0) {
-    return null;
+  for (const phase of [...manifest.phases].sort((a, b) => a.id.localeCompare(b.id))) {
+    const projectId = resolvePhaseProjectId(manifest, phase.id);
+    const canonicalPhasePath = projectPhaseDir(projectId, phase.id, cwd);
+    if (await pathExists(canonicalPhasePath)) {
+      discovered.push({ projectId, phaseId: phase.id });
+      continue;
+    }
+
+    const legacyPhasePath = phaseDir(phase.id, cwd);
+    if (await pathExists(legacyPhasePath)) {
+      discovered.push({ projectId, phaseId: phase.id });
+    }
   }
 
-  return path.basename(safePhaseDirs.sort()[0]);
+  if (discovered.length === 0) {
+    return { projectId: null, phaseId: null };
+  }
+
+  return discovered.sort((left, right) => {
+    const leftRef = `${left.projectId}/${left.phaseId}`;
+    const rightRef = `${right.projectId}/${right.phaseId}`;
+    return leftRef.localeCompare(rightRef);
+  })[0] ?? { projectId: null, phaseId: null };
 }
 
 /**
  * Discover active milestone from filesystem by scanning milestones directory.
  */
 async function discoverActiveMilestoneFromFilesystem(
+  projectId: string | null,
   activePhase: string | null,
   cwd: string,
 ): Promise<string | null> {
-  if (activePhase === null || activePhase === "none") {
+  if (projectId === null || activePhase === null || activePhase === "none") {
     return null;
   }
 
-  const milestoneDirs = await fg(`roadmap/phases/${activePhase}/milestones/*`, {
-    cwd,
+  const canonicalMilestoneRoot = path.join(projectPhaseDir(projectId, activePhase, cwd), "milestones");
+  const legacyMilestoneRoot = path.join(phaseDir(activePhase, cwd), "milestones");
+  const milestoneRoot = (await pathExists(canonicalMilestoneRoot))
+    ? canonicalMilestoneRoot
+    : legacyMilestoneRoot;
+
+  const milestoneDirs = await fg(path.join(milestoneRoot, "*").replace(/\\/g, "/"), {
     onlyDirectories: true,
-    absolute: false,
+    absolute: true,
     followSymbolicLinks: false,
   });
-  const safeMilestoneDirs = await filterGlobPathsBySymlinkPolicy(milestoneDirs, cwd);
+  const safeMilestoneDirs = await filterGlobPathsBySymlinkPolicy(milestoneDirs, cwd, {
+    pathsAreAbsolute: true,
+  });
 
   if (safeMilestoneDirs.length === 0) {
     return null;
@@ -155,39 +194,52 @@ async function checkConsistency(
   const issues: string[] = [];
 
   const manifestPhase = manifest.activePhase ?? null;
-  const discoveredPhase = await discoverActivePhaseFromFilesystem(cwd);
-  const phasePath = "roadmap/phases/*";
+  const manifestProject = manifestPhase ? resolvePhaseProjectId(manifest, manifestPhase) : null;
+  const discoveredPhase = await discoverActivePhaseFromFilesystem(manifest, cwd);
+  const phasePath = manifestProject
+    ? `roadmap/projects/${manifestProject}/phases/*`
+    : "roadmap/projects/<project>/phases/*";
 
-  if (discoveredPhase !== manifestPhase) {
+  if (discoveredPhase.phaseId !== manifestPhase || discoveredPhase.projectId !== manifestProject) {
     diagnostics.push({
       type: "activePhase",
-      canonical: manifestPhase,
+      canonical: manifestPhase && manifestProject ? `${manifestProject}/${manifestPhase}` : manifestPhase,
       secondarySurface: "filesystem",
-      secondaryValue: discoveredPhase,
+      secondaryValue:
+        discoveredPhase.phaseId && discoveredPhase.projectId
+          ? `${discoveredPhase.projectId}/${discoveredPhase.phaseId}`
+          : discoveredPhase.phaseId,
       offendingPath: phasePath,
     });
     issues.push(
-      `activePhase mismatch: manifest declares "${manifestPhase}", filesystem at "${phasePath}" resolves to "${discoveredPhase}"`,
+      `activePhase mismatch: manifest declares "${manifestProject ? `${manifestProject}/${manifestPhase}` : manifestPhase}", filesystem at "${phasePath}" resolves to "${discoveredPhase.projectId && discoveredPhase.phaseId ? `${discoveredPhase.projectId}/${discoveredPhase.phaseId}` : discoveredPhase.phaseId}"`,
     );
   }
 
   // Check activeMilestone consistency
-  const discoveredMilestone = await discoverActiveMilestoneFromFilesystem(manifestPhase, cwd);
+  const discoveredMilestone = await discoverActiveMilestoneFromFilesystem(
+    manifestProject,
+    manifestPhase,
+    cwd,
+  );
   const manifestMilestone = manifest.activeMilestone ?? null;
-  const milestonePath = manifestPhase
-    ? `roadmap/phases/${manifestPhase}/milestones/*`
-    : "roadmap/phases/<activePhase>/milestones/*";
+  const milestonePath = manifestProject && manifestPhase
+    ? `roadmap/projects/${manifestProject}/phases/${manifestPhase}/milestones/*`
+    : "roadmap/projects/<project>/phases/<activePhase>/milestones/*";
 
   if (discoveredMilestone !== manifestMilestone) {
     diagnostics.push({
       type: "activeMilestone",
-      canonical: manifestMilestone,
+      canonical:
+        manifestProject && manifestPhase && manifestMilestone
+          ? `${manifestProject}/${manifestPhase}/${manifestMilestone}`
+          : manifestMilestone,
       secondarySurface: "filesystem",
       secondaryValue: discoveredMilestone,
       offendingPath: milestonePath,
     });
     issues.push(
-      `activeMilestone mismatch: manifest declares "${manifestMilestone}", filesystem at "${milestonePath}" resolves to "${discoveredMilestone}"`,
+      `activeMilestone mismatch: manifest declares "${manifestProject && manifestPhase && manifestMilestone ? `${manifestProject}/${manifestPhase}/${manifestMilestone}` : manifestMilestone}", filesystem at "${milestonePath}" resolves to "${discoveredMilestone}"`,
     );
   }
 
@@ -366,12 +418,23 @@ function renderInconsistencyTable(diagnostics: ParityDiagnostic[]): string {
 
 export async function generateReportData(cwd = process.cwd()): Promise<ReportData> {
   const manifest = await loadPhaseManifest(cwd);
-  const tasks = await collectTaskRecords(cwd);
+  const compatibility = await resolveRuntimeCompatibilityContract("reporting", cwd);
+  const tasks = await collectTaskRecordsForReport(cwd);
   const decisions = await collectDecisionRecords(cwd);
   const graphMeta = await loadGraphMetadata(cwd);
 
+  const activeProject = manifest.activePhase
+    ? resolvePhaseProjectId(manifest, manifest.activePhase)
+    : manifest.activeProject ?? "none";
   const activePhase = manifest.activePhase ?? "none";
   const activeMilestone = manifest.activeMilestone ?? "none";
+  const inventoryProjects = [...new Set(manifest.phases.map((phase) => phase.projectId))].sort();
+  const phasesByProject = Object.fromEntries(
+    inventoryProjects.map((projectId) => [
+      projectId,
+      manifest.phases.filter((phase) => phase.projectId === projectId).length,
+    ]),
+  );
 
   const taskStatusCounts = new Map<string, number>();
   for (const task of tasks) {
@@ -390,7 +453,7 @@ export async function generateReportData(cwd = process.cwd()): Promise<ReportDat
 
   if (discoveredRatio > discoveredThreshold) {
     governanceWarnings.push(
-      `Discovered load ratio ${formatPercent(discoveredRatio)} exceeds threshold ${formatPercent(discoveredThreshold)}. Milestone completion requires roadmap/phases/<phase>/milestones/<milestone>/replan-checkpoint.md before completion.`,
+      `Discovered load ratio ${formatPercent(discoveredRatio)} exceeds threshold ${formatPercent(discoveredThreshold)}. Milestone completion requires roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/replan-checkpoint.md before completion.`,
     );
   }
 
@@ -432,8 +495,14 @@ export async function generateReportData(cwd = process.cwd()): Promise<ReportDat
   const parity = await checkParityDiagnostics(cwd, tasks);
 
   return {
+    compatibility,
+    activeProject,
     activePhase,
     activeMilestone,
+    inventory: {
+      projects: inventoryProjects,
+      phasesByProject,
+    },
     tasksByStatus: taskStatusRecord,
     decisionsByStatus: decisionStatusRecord,
     planning: {
@@ -470,15 +539,26 @@ export function renderReportData(
     : "(graph not synced)";
 
   const rows: Array<[string, string]> = [
+    [
+      "runtime compatibility",
+      `${data.compatibility.mode} (${data.compatibility.supported ? "supported" : "unsupported"}) [source: roadmap runtime detection]`,
+    ],
+    ["active project", `${data.activeProject} [source: roadmap/manifest.json + phase ownership]`],
     ["active phase", `${data.activePhase} [source: roadmap/manifest.json]`],
     ["active milestone", `${data.activeMilestone} [source: roadmap/manifest.json]`],
+    [
+      "planning scopes",
+      `${
+        data.inventory.projects.map((projectId) => `${projectId}:${data.inventory.phasesByProject[projectId] ?? 0} phases`).join(", ") || "none"
+      } [source: roadmap/manifest.json + roadmap/projects/*/phases/*]`,
+    ],
     [
       "tasks by status",
       `${
         Object.entries(data.tasksByStatus)
           .map(([status, count]) => `${status}:${count}`)
           .join(", ") || "none"
-      } [source: roadmap/phases/*/milestones/*/tasks/**/*.md]`,
+      } [source: roadmap/projects/*/phases/*/milestones/*/tasks/**/*.md]`,
     ],
     ["discovered tasks", `${data.planning.discoveredCount} [source: roadmap task frontmatter]`],
     [
@@ -521,9 +601,13 @@ export function renderReportData(
   const report = renderTable(rows);
   const diagnosticsTable = renderConsistencyDiagnostics(data.consistency.diagnostics);
   const warningsSection = renderGovernanceWarnings(data.governanceWarnings);
+  const compatibilitySection =
+    data.compatibility.mode === "legacy-only"
+      ? `\nRuntime Compatibility Note\n- ${data.compatibility.reason}`
+      : "";
   const paritySummary = renderParitySummary(data.parity);
   const inconsistencyTable = options.verbose ? renderInconsistencyTable(data.parity.diagnostics) : "";
-  return report + diagnosticsTable + warningsSection + paritySummary + inconsistencyTable;
+  return report + diagnosticsTable + warningsSection + compatibilitySection + paritySummary + inconsistencyTable;
 }
 
 export async function generateReport(
@@ -531,4 +615,18 @@ export async function generateReport(
   options: { verbose?: boolean } = {},
 ): Promise<string> {
   return renderReportData(await generateReportData(cwd), options);
+}
+
+async function collectTaskRecordsForReport(
+  cwd: string,
+): Promise<Awaited<ReturnType<typeof collectTaskRecords>>> {
+  try {
+    return await collectTaskRecords(cwd);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("not supported for legacy-only roadmap runtimes")) {
+      return [];
+    }
+    throw error;
+  }
 }

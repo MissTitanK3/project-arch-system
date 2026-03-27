@@ -1,9 +1,10 @@
 import path from "path";
-import { loadPhaseManifest } from "../../graph/manifests";
+import { loadPhaseManifest, resolvePhaseProjectId } from "../../graph/manifests";
 import { pathExists } from "../../utils/fs";
-import { projectDocsRoot } from "../../utils/paths";
+import { projectDocsRoot, projectDir, projectMilestoneDir, projectPhaseDir } from "../../utils/paths";
 import { collectTaskRecords, type TaskRecord } from "../validation/tasks";
 import { resolveNextWorkflow } from "../workflow/next";
+import { assertSupportedRuntimeCompatibility } from "../runtime/compatibility";
 
 export interface ContextTaskSummary {
   id: string;
@@ -19,11 +20,14 @@ export interface ContextLocationSummary {
   title: string;
 }
 
+export type ContextProjectSummary = ContextLocationSummary;
+
 export interface ResolvedContextPayload {
   version: "1.0";
   timestamp: string;
   projectRoot: string;
   active: {
+    project: ContextProjectSummary;
     phase: ContextLocationSummary;
     milestone: ContextLocationSummary;
     task: ContextTaskSummary;
@@ -95,6 +99,7 @@ export async function resolveContext(cwd = process.cwd()): Promise<ResolvedConte
   if (!(await pathExists(projectDocsRoot(cwd)))) {
     throw new Error("roadmap not found. Run 'pa init' first.");
   }
+  await assertSupportedRuntimeCompatibility("Context resolution", cwd);
 
   const manifest = await loadPhaseManifest(cwd);
   if (!manifest.activePhase) {
@@ -106,11 +111,24 @@ export async function resolveContext(cwd = process.cwd()): Promise<ResolvedConte
     );
   }
 
-  const activePhasePath = path.join(cwd, "roadmap", "phases", manifest.activePhase);
-  const activeMilestonePath = path.join(activePhasePath, "milestones", manifest.activeMilestone);
+  const derivedProjectId = resolvePhaseProjectId(manifest, manifest.activePhase);
+  if (manifest.activeProject && manifest.activeProject !== derivedProjectId) {
+    throw new Error(
+      `Context resolution is inconsistent: active project '${manifest.activeProject}' does not own active phase '${manifest.activePhase}'.`,
+    );
+  }
+
+  const activeProjectPath = projectDir(derivedProjectId, cwd);
+  const activePhasePath = projectPhaseDir(derivedProjectId, manifest.activePhase, cwd);
+  const activeMilestonePath = projectMilestoneDir(
+    derivedProjectId,
+    manifest.activePhase,
+    manifest.activeMilestone,
+    cwd,
+  );
   if (!(await pathExists(activeMilestonePath))) {
     throw new Error(
-      `Context resolution is incomplete: active milestone '${manifest.activePhase}/${manifest.activeMilestone}' does not exist on disk.`,
+      `Context resolution is incomplete: active milestone '${derivedProjectId}/${manifest.activePhase}/${manifest.activeMilestone}' does not exist on disk.`,
     );
   }
 
@@ -118,6 +136,7 @@ export async function resolveContext(cwd = process.cwd()): Promise<ResolvedConte
   const activeMilestoneTasks = sortTaskRecords(
     tasks.filter(
       (task) =>
+        task.projectId === derivedProjectId &&
         task.phaseId === manifest.activePhase &&
         task.milestoneId === manifest.activeMilestone &&
         task.frontmatter.status !== "done",
@@ -139,6 +158,11 @@ export async function resolveContext(cwd = process.cwd()): Promise<ResolvedConte
     timestamp: new Date().toISOString(),
     projectRoot: cwd,
     active: {
+      project: {
+        id: derivedProjectId,
+        path: toRelative(activeProjectPath, cwd),
+        title: humanizeId(derivedProjectId),
+      },
       phase: {
         id: manifest.activePhase,
         path: toRelative(activePhasePath, cwd),

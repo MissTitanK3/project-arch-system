@@ -7,6 +7,7 @@ import { withAtomicTaskMutation } from "./atomicMutation";
 import * as graphManifests from "../../graph/manifests";
 import { currentDateISO } from "../../utils/date";
 import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
+import { resolvePreferredMilestoneDir, taskIdGlob } from "../runtime/projectPaths";
 
 export interface RegisterSurfacesOptions {
   phase: string;
@@ -43,10 +44,10 @@ export async function registerSurfaces(
   } = options;
 
   // Build task file path
-  const taskPattern = `roadmap/phases/${phase}/milestones/${milestone}/tasks/*/${taskId}-*.md`;
+  const milestoneRoot = await resolvePreferredMilestoneDir(phase, milestone, cwd);
+  const taskPattern = taskIdGlob(milestoneRoot, taskId);
   const { default: fg } = await import("fast-glob");
   const matches = await fg(taskPattern, {
-    cwd,
     absolute: true,
     onlyFiles: true,
     followSymbolicLinks: false,

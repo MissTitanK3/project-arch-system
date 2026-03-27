@@ -3,8 +3,20 @@ import fg from "fast-glob";
 import fs from "fs-extra";
 import { collectDecisionRecords } from "./decisions";
 import { collectTaskRecords } from "./tasks";
-import { loadDecisionIndex, loadMilestoneManifest, loadPhaseManifest } from "../manifests";
-import { milestoneDir, milestoneTaskLaneDir, phaseDir, projectDocsRoot } from "../../utils/paths";
+import {
+  loadDecisionIndex,
+  loadMilestoneManifest,
+  loadPhaseManifest,
+  preferredMilestoneDecisionIndexDir,
+  preferredPhaseDecisionIndexDir,
+} from "../manifests";
+import {
+  phaseDir,
+  projectDocsRoot,
+  projectMilestoneTargetsPath,
+  projectPhaseDir,
+  projectPhaseValidationContractPath,
+} from "../../utils/paths";
 import { pathExists, readJson } from "../../utils/fs";
 import { runDriftChecks } from "../../graph/drift/runChecks";
 import { conceptMapSchema } from "../../schemas/conceptMap";
@@ -14,6 +26,12 @@ import { findReconcileConfigPath, loadReconcileConfig } from "../reconciliation/
 import { classifyModuleTarget, loadModuleGraphConfig } from "../../graph/moduleClassification";
 import { findDuplicateReconciliationOverrides } from "../reconciliation/lifecycle";
 import { filterGlobPathsBySymlinkPolicy } from "../../utils/symlinkPolicy";
+import { resolvePhaseProjectId } from "../manifests";
+import { resolvePreferredTaskLaneDir } from "../runtime/projectPaths";
+import {
+  resolveRuntimeCompatibilityContract,
+  type RuntimeCompatibilityContract,
+} from "../runtime/compatibility";
 
 export interface CheckResult {
   ok: boolean;
@@ -21,6 +39,7 @@ export interface CheckResult {
   warnings: string[];
   diagnostics: CheckDiagnostic[];
   graphDiagnostics?: CheckGraphDiagnostics;
+  compatibility?: RuntimeCompatibilityContract;
 }
 
 export type CheckDiagnosticSeverity = "error" | "warning";
@@ -43,6 +62,7 @@ export interface CheckDiagnosticsPayload {
   };
   diagnostics: CheckDiagnostic[];
   graphDiagnostics: CheckGraphDiagnostics;
+  compatibility: RuntimeCompatibilityContract;
 }
 
 export interface CheckDiagnosticFilters {
@@ -182,6 +202,7 @@ export async function runRepositoryChecks(
       threshold: completenessThreshold,
     },
   };
+  const compatibility = await resolveRuntimeCompatibilityContract("validation", cwd);
 
   const addError = (message: string): boolean => {
     errors.push(message);
@@ -197,7 +218,13 @@ export async function runRepositoryChecks(
       ...warnings.map((message) => toDiagnostic(message, "warning")),
     ],
     graphDiagnostics,
+    compatibility,
   });
+
+  if (!compatibility.supported) {
+    addError(`[RUNTIME_COMPATIBILITY_UNSUPPORTED] ${compatibility.reason} Detected runtime mode: ${compatibility.mode}.`);
+    return toResult();
+  }
 
   const taskParseErrors: Array<{ filePath: string; error: Error }> = [];
   const taskRecords = await collectTaskRecords(cwd, {
@@ -272,7 +299,7 @@ export async function runRepositoryChecks(
 
   const seenTaskKeys = new Set<string>();
   for (const task of taskRecords) {
-    const key = `${task.phaseId}/${task.milestoneId}/${task.frontmatter.id}`;
+    const key = formatTaskRef(task.projectId, task.phaseId, task.milestoneId, task.frontmatter.id);
     if (seenTaskKeys.has(key)) {
       if (addError(`Duplicate task id in milestone scope: ${key}`)) {
         return toResult();
@@ -414,30 +441,32 @@ export async function runRepositoryChecks(
     followSymbolicLinks: false,
   });
   const safePhaseDirs = await filterGlobPathsBySymlinkPolicy(phaseDirs, cwd);
-  for (const phasePath of safePhaseDirs) {
-    const phaseId = path.basename(phasePath);
+  const scannedPhaseIds = new Set<string>();
+  const manifestPhaseRecords = [...manifest.phases].sort((a, b) => a.id.localeCompare(b.id));
+
+  for (const phaseRecord of manifestPhaseRecords) {
+    const phaseId = phaseRecord.id;
+    scannedPhaseIds.add(phaseId);
+    const runtimePaths = await resolveMilestoneAwarePhaseDir(cwd, phaseId, phaseRecord.projectId);
+
     if (!phaseIdsFromManifest.has(phaseId)) {
       if (addError(`Phase directory '${phaseId}' is missing in roadmap/manifest.json`)) {
         return toResult();
       }
     }
 
-    const milestones = await fg(`roadmap/phases/${phaseId}/milestones/*`, {
-      cwd,
+    const milestones = await fg(path.join(runtimePaths.phaseDir, "milestones", "*").replace(/\\/g, "/"), {
       onlyDirectories: true,
-      absolute: false,
+      absolute: true,
       followSymbolicLinks: false,
     });
-    const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd);
+    const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd, {
+      pathsAreAbsolute: true,
+    });
 
     for (const milestonePath of safeMilestones.sort()) {
-      const parts = milestonePath.split("/");
       const pId = phaseId;
-      const mId = parts[4];
-
-      if (!(await pathExists(milestoneDir(pId, mId, cwd)))) {
-        continue;
-      }
+      const mId = path.basename(milestonePath);
 
       try {
         await loadMilestoneManifest(pId, mId, cwd);
@@ -449,12 +478,24 @@ export async function runRepositoryChecks(
       }
 
       for (const lane of ["planned", "discovered", "backlog"] as const) {
-        const laneDir = milestoneTaskLaneDir(pId, mId, lane, cwd);
+        const laneDir = await resolvePreferredTaskLaneDir(pId, mId, lane, cwd);
         if (!(await pathExists(laneDir))) {
           if (addError(`Missing lane directory '${laneDir}'`)) {
             return toResult();
           }
         }
+      }
+    }
+  }
+
+  for (const phasePath of safePhaseDirs) {
+    const phaseId = path.basename(phasePath);
+    if (scannedPhaseIds.has(phaseId)) {
+      continue;
+    }
+    if (!phaseIdsFromManifest.has(phaseId)) {
+      if (addError(`Phase directory '${phaseId}' is missing in roadmap/manifest.json`)) {
+        return toResult();
       }
     }
   }
@@ -471,32 +512,41 @@ export async function runRepositoryChecks(
   }
 
   for (const phaseId of phaseIdsFromManifest) {
-    const index = await loadDecisionIndex(path.join(phaseDir(phaseId, cwd), "decisions"));
+    const projectId = resolvePhaseProjectId(manifest, phaseId);
+    const index = await loadDecisionIndex(await preferredPhaseDecisionIndexDir(phaseId, cwd));
     for (const id of index.decisions) {
       if (!decisionIds.has(id)) {
-        if (addError(`Phase ${phaseId} decision index references missing decision '${id}'`)) {
+        if (
+          addError(
+            `Phase ${formatPhaseRef(projectId, phaseId)} decision index references missing decision '${id}'`,
+          )
+        ) {
           return toResult();
         }
       }
     }
 
-    const milestones = await fg(`roadmap/phases/${phaseId}/milestones/*`, {
+    const milestoneRuntimePaths = await resolveMilestoneAwarePhaseDir(
       cwd,
+      phaseId,
+      resolvePhaseProjectId(manifest, phaseId),
+    );
+    const milestones = await fg(path.join(milestoneRuntimePaths.phaseDir, "milestones", "*").replace(/\\/g, "/"), {
       onlyDirectories: true,
-      absolute: false,
+      absolute: true,
       followSymbolicLinks: false,
     });
-    const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd);
+    const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd, {
+      pathsAreAbsolute: true,
+    });
     for (const milestonePath of safeMilestones.sort()) {
       const mId = path.basename(milestonePath);
-      const mIndex = await loadDecisionIndex(
-        path.join(milestoneDir(phaseId, mId, cwd), "decisions"),
-      );
+      const mIndex = await loadDecisionIndex(await preferredMilestoneDecisionIndexDir(phaseId, mId, cwd));
       for (const id of mIndex.decisions) {
         if (!decisionIds.has(id)) {
           if (
             addError(
-              `Milestone ${phaseId}/${mId} decision index references missing decision '${id}'`,
+              `Milestone ${formatMilestoneRef(projectId, phaseId, mId)} decision index references missing decision '${id}'`,
             )
           ) {
             return toResult();
@@ -589,6 +639,7 @@ async function countOutstandingToolingFeedbackReports(cwd: string): Promise<numb
 
 export function toCheckDiagnosticsPayload(result: CheckResult): CheckDiagnosticsPayload {
   const graphDiagnostics = result.graphDiagnostics ?? buildDefaultGraphDiagnostics();
+  const compatibility = result.compatibility ?? buildDefaultValidationCompatibilityContract();
   return {
     schemaVersion: CHECK_DIAGNOSTICS_SCHEMA_VERSION,
     status: result.ok ? "ok" : "invalid",
@@ -599,6 +650,7 @@ export function toCheckDiagnosticsPayload(result: CheckResult): CheckDiagnostics
     },
     diagnostics: result.diagnostics,
     graphDiagnostics,
+    compatibility,
   };
 }
 
@@ -651,6 +703,7 @@ export function filterCheckResult(
     warnings,
     diagnostics,
     graphDiagnostics: result.graphDiagnostics,
+    compatibility: result.compatibility,
   };
 }
 
@@ -712,6 +765,10 @@ async function collectPlanningCoverageDiagnostics(
   )) {
     const [phaseId, milestoneId] = milestoneRef.split("/");
     const targetAreas = await loadDeclaredTargetAreas(cwd, phaseId, milestoneId);
+    const manifest = await loadPhaseManifest(cwd);
+    const phasePathPrefix = path
+      .relative(cwd, projectPhaseDir(resolvePhaseProjectId(manifest, phaseId), phaseId, cwd))
+      .replace(/\\/g, "/");
 
     for (const targetArea of targetAreas) {
       const covered = tasks.some((task) => taskLinksTargetArea(task.frontmatter, targetArea));
@@ -720,16 +777,21 @@ async function collectPlanningCoverageDiagnostics(
           code: "PAC_TARGET_UNCOVERED",
           severity,
           message:
-            `Coverage gap: milestone ${milestoneRef} target area '${targetArea}' has no planned task linkage. ` +
+            `Coverage gap: milestone ${formatMilestoneRef(resolvePhaseProjectId(manifest, phaseId), phaseId, milestoneId)} target area '${targetArea}' has no planned task linkage. ` +
             "Add a planned task with matching codeTargets/publicDocs/traceLinks.",
         });
       }
     }
 
     for (const task of tasks) {
-      const taskRef = `${task.phaseId}/${task.milestoneId}/${task.frontmatter.id}`;
+      const taskRef = formatTaskRef(
+        task.projectId,
+        task.phaseId,
+        task.milestoneId,
+        task.frontmatter.id,
+      );
       if (
-        !taskHasObjectiveTrace(task.phaseId, task.milestoneId, task.frontmatter.traceLinks ?? [])
+        !taskHasObjectiveTrace(phasePathPrefix, task.milestoneId, task.frontmatter.traceLinks ?? [])
       ) {
         diagnostics.push({
           code: "PAC_TASK_MISSING_OBJECTIVE_TRACE",
@@ -785,15 +847,15 @@ function taskLinksTargetArea(
 }
 
 function taskHasObjectiveTrace(
-  phaseId: string,
+  phasePathPrefix: string,
   milestoneId: string,
   traceLinks: string[],
 ): boolean {
   const normalizedLinks = traceLinks.map(normalizeRepoRef);
   const accepted = [
-    `roadmap/phases/${phaseId}/overview.md`,
-    `roadmap/phases/${phaseId}/milestones/${milestoneId}/overview.md`,
-    `roadmap/phases/${phaseId}/milestones/${milestoneId}/targets.md`,
+    `${phasePathPrefix}/overview.md`,
+    `${phasePathPrefix}/milestones/${milestoneId}/overview.md`,
+    `${phasePathPrefix}/milestones/${milestoneId}/targets.md`,
   ];
 
   return normalizedLinks.some((link) => accepted.includes(link));
@@ -812,12 +874,19 @@ async function collectValidationContractDiagnostics(
   const phaseIds = manifest.phases.map((p) => p.id).sort();
 
   for (const phaseId of phaseIds) {
-    const contractPath = path.join(cwd, "roadmap", "phases", phaseId, "validation-contract.json");
+    const projectId = resolvePhaseProjectId(manifest, phaseId);
+    const canonicalContractPath = projectPhaseValidationContractPath(projectId, phaseId, cwd);
+    const legacyContractPath = path.join(cwd, "roadmap", "phases", phaseId, "validation-contract.json");
+    const contractPath = (await pathExists(canonicalContractPath))
+      ? canonicalContractPath
+      : legacyContractPath;
 
     if (!(await pathExists(contractPath))) {
       diagnostics.push({
         code: "PAV_CONTRACT_MISSING",
-        message: `Validation contract not found for phase '${phaseId}' at roadmap/phases/${phaseId}/validation-contract.json`,
+        message:
+          `Validation contract not found for phase '${formatPhaseRef(projectId, phaseId)}' ` +
+          `at ${path.relative(cwd, canonicalContractPath).replace(/\\/g, "/")}`,
       });
       continue;
     }
@@ -829,7 +898,9 @@ async function collectValidationContractDiagnostics(
       const detail = error instanceof Error ? error.message : String(error);
       diagnostics.push({
         code: "PAV_CONTRACT_INVALID_SCHEMA",
-        message: `Invalid validation contract schema for phase '${phaseId}': ${detail}`,
+        message:
+          `Invalid validation contract schema for phase '${formatPhaseRef(projectId, phaseId)}' ` +
+          `at ${path.relative(cwd, contractPath).replace(/\\/g, "/")}: ${detail}`,
       });
     }
   }
@@ -849,15 +920,13 @@ async function loadDeclaredTargetAreas(
   phaseId: string,
   milestoneId: string,
 ): Promise<string[]> {
-  const targetsPath = path.join(
-    cwd,
-    "roadmap",
-    "phases",
-    phaseId,
-    "milestones",
-    milestoneId,
-    "targets.md",
-  );
+  const manifest = await loadPhaseManifest(cwd);
+  const projectId = resolvePhaseProjectId(manifest, phaseId);
+  const canonicalTargetsPath = projectMilestoneTargetsPath(projectId, phaseId, milestoneId, cwd);
+  const legacyTargetsPath = path.join(cwd, "roadmap", "phases", phaseId, "milestones", milestoneId, "targets.md");
+  const targetsPath = (await pathExists(canonicalTargetsPath))
+    ? canonicalTargetsPath
+    : legacyTargetsPath;
 
   if (!(await pathExists(targetsPath))) {
     return [];
@@ -871,6 +940,26 @@ async function loadDeclaredTargetAreas(
     );
 
   return [...new Set(matches)].sort((a, b) => a.localeCompare(b));
+}
+
+async function resolveMilestoneAwarePhaseDir(
+  cwd: string,
+  phaseId: string,
+  projectId: string,
+): Promise<{ phaseDir: string; phasePathPrefix: string }> {
+  const canonicalPhaseDir = projectPhaseDir(projectId, phaseId, cwd);
+  if (await pathExists(canonicalPhaseDir)) {
+    return {
+      phaseDir: canonicalPhaseDir,
+      phasePathPrefix: path.relative(cwd, canonicalPhaseDir).replace(/\\/g, "/"),
+    };
+  }
+
+  const legacyPhaseDir = phaseDir(phaseId, cwd);
+  return {
+    phaseDir: legacyPhaseDir,
+    phasePathPrefix: path.relative(cwd, legacyPhaseDir).replace(/\\/g, "/"),
+  };
 }
 
 function buildDefaultGraphDiagnostics(): CheckGraphDiagnostics {
@@ -1133,6 +1222,34 @@ function renderDiagnosticForTextOutput(diagnostic: CheckDiagnostic): string {
     return diagnostic.message;
   }
   return `[${diagnostic.code}] ${diagnostic.message}`;
+}
+
+function buildDefaultValidationCompatibilityContract(): RuntimeCompatibilityContract {
+  return {
+    surface: "validation",
+    mode: "project-scoped-only",
+    supported: true,
+    canonicalRootExists: true,
+    legacyRootExists: false,
+    reason: "Compatibility contract not supplied by caller.",
+  };
+}
+
+function formatPhaseRef(projectId: string, phaseId: string): string {
+  return `${projectId}/${phaseId}`;
+}
+
+function formatMilestoneRef(projectId: string, phaseId: string, milestoneId: string): string {
+  return `${formatPhaseRef(projectId, phaseId)}/${milestoneId}`;
+}
+
+function formatTaskRef(
+  projectId: string,
+  phaseId: string,
+  milestoneId: string,
+  taskId: string,
+): string {
+  return `${formatMilestoneRef(projectId, phaseId, milestoneId)}/${taskId}`;
 }
 
 function matchGlob(filePath: string, pattern: string): boolean {

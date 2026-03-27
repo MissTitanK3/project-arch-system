@@ -14,10 +14,11 @@ function taskRecord(
   decisions: string[] = [],
 ): TaskRecord {
   return {
+    projectId: "shared",
     phaseId: "phase-1",
     milestoneId: "milestone-1",
     lane: "planned",
-    filePath: "roadmap/phases/phase-1/milestones/milestone-1/tasks/planned/001-task.md",
+    filePath: "roadmap/projects/shared/phases/phase-1/milestones/milestone-1/tasks/planned/001-task.md",
     frontmatter: {
       schemaVersion: "1.0",
       id: "001",

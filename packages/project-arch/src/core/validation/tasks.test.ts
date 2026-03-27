@@ -31,6 +31,7 @@ describe("core/validation/tasks", () => {
 
       // Each record should have required fields
       for (const record of records) {
+        expect(record.projectId).toBeDefined();
         expect(record.phaseId).toBeDefined();
         expect(record.milestoneId).toBeDefined();
         expect(record.lane).toMatch(/^(planned|discovered|backlog)$/);
@@ -60,6 +61,7 @@ describe("core/validation/tasks", () => {
       );
 
       expect(testTask).toBeDefined();
+      expect(testTask?.projectId).toBe("shared");
       expect(testTask?.frontmatter.title).toBe("Test Task");
       expect(testTask?.lane).toBe("planned");
     }, 10_000);
@@ -71,7 +73,7 @@ describe("core/validation/tasks", () => {
       // Create a task with ID out of planned lane range (001-099)
       const taskDir = path.join(
         tempDir,
-        "roadmap/phases/invalid-phase/milestones/invalid-milestone/tasks/planned",
+        "roadmap/projects/shared/phases/invalid-phase/milestones/invalid-milestone/tasks/planned",
       );
       const invalidTaskPath = path.join(taskDir, "500-invalid-task.md");
 
@@ -110,7 +112,7 @@ This task has an ID out of range for the planned lane.
       // Create a task with filename that doesn't start with ID prefix
       const taskDir = path.join(
         tempDir,
-        "roadmap/phases/mismatch-phase/milestones/mismatch-milestone/tasks/planned",
+        "roadmap/projects/shared/phases/mismatch-phase/milestones/mismatch-milestone/tasks/planned",
       );
       const mismatchTaskPath = path.join(taskDir, "wrong-prefix.md");
 
@@ -149,7 +151,7 @@ This task filename doesn't match the ID prefix.
       // Create a task in planned directory but with discovered lane in frontmatter
       const taskDir = path.join(
         tempDir,
-        "roadmap/phases/lane-mismatch-phase/milestones/lane-mismatch-milestone/tasks/planned",
+        "roadmap/projects/shared/phases/lane-mismatch-phase/milestones/lane-mismatch-milestone/tasks/planned",
       );
       const mismatchTaskPath = path.join(taskDir, "043-lane-mismatch.md");
 
@@ -221,7 +223,7 @@ completionCriteria: []
 
         const linkedTaskPath = path.join(
           tempDir,
-          "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned/099-escape.md",
+          "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/099-escape.md",
         );
         await fs.symlink(outsideTask, linkedTaskPath);
 

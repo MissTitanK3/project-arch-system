@@ -144,10 +144,12 @@ describe("cli/index", () => {
         const taskDir = path.join(
           process.cwd(),
           "roadmap",
+          "projects",
+          "shared",
           "phases",
           "phase-1",
           "milestones",
-          "milestone-1-foundation",
+          "milestone-1-setup",
           "tasks",
           "planned",
         );

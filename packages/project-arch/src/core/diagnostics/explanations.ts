@@ -167,8 +167,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
     description:
       "A phase-level decision index references a decision ID with no corresponding file.",
     remediation: [
-      "Remove the stale entry from the phase decision index, or recreate the decision file. " +
-        "Run `pa decision list` to see all known decision IDs.",
+      "1. Open the reported phase decision index under `roadmap/projects/<project>/phases/<phase>/decisions/index.json`.",
+      "2. Remove the stale entry or recreate the missing decision file.",
+      "3. Run `pa decision list` to see all known decision IDs, then re-run `pa check`.",
     ].join("\n"),
   },
 
@@ -176,8 +177,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
     description:
       "A milestone-level decision index references a decision ID with no corresponding file.",
     remediation: [
-      "Remove the stale entry from the milestone decision index, or recreate the decision file. " +
-        "Run `pa decision list` to see all known decision IDs.",
+      "1. Open the reported milestone decision index under `roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/decisions/index.json`.",
+      "2. Remove the stale entry or recreate the missing decision file.",
+      "3. Run `pa decision list` to see all known decision IDs, then re-run `pa check`.",
     ].join("\n"),
   },
 
@@ -188,8 +190,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
       "A milestone is missing one of its three required lane directories " +
       "(planned, discovered, backlog).",
     remediation: [
-      "Create the missing directory manually: `mkdir -p <lane-dir>` and add a `.gitkeep` " +
-        "file so it is tracked in version control. Then re-run `pa check`.",
+      "1. Create the missing directory under the canonical project-owned milestone tree: `roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/tasks/<lane>/`.",
+      "2. Add a `.gitkeep` file if your repository tracks empty directories through placeholders.",
+      "3. Re-run `pa check` to confirm all three lanes are present.",
     ].join("\n"),
   },
 
@@ -362,7 +365,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   PAH004: {
     description: "A phase directory is missing its `milestones` directory.",
     remediation: [
-      "Create the missing milestones directory under the reported phase.",
+      "Create the missing milestones directory under the reported project-owned phase: `roadmap/projects/<project>/phases/<phase>/milestones/`.",
       "Use `pa doctor health --repair` for safe automatic directory creation.",
     ].join("\n"),
   },
@@ -370,7 +373,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   PAH005: {
     description: "A milestone directory is missing `manifest.json`.",
     remediation: [
-      "Restore the milestone manifest or regenerate it using safe repair mode.",
+      "Restore the milestone manifest under `roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/manifest.json` or regenerate it using safe repair mode.",
       "Verify milestone metadata and rerun health checks.",
     ].join("\n"),
   },
@@ -378,7 +381,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   PAH006: {
     description: "A milestone is missing one or more task lane directories.",
     remediation: [
-      "Ensure `tasks/planned`, `tasks/discovered`, and `tasks/backlog` all exist.",
+      "Ensure `tasks/planned`, `tasks/discovered`, and `tasks/backlog` all exist under the canonical project-owned milestone path.",
       "Run `pa doctor health --repair` to recreate missing lane directories.",
     ].join("\n"),
   },
@@ -386,7 +389,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   PAH007: {
     description: "A decision index file is missing.",
     remediation: [
-      "Create `decisions/index.json` with schemaVersion 1.0 and an empty decisions array.",
+      "Create the reported `decisions/index.json` file with schemaVersion 1.0 and an empty decisions array.",
       "Use `pa doctor health --repair` for safe index creation.",
     ].join("\n"),
   },
@@ -431,13 +434,33 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
     ].join("\n"),
   },
 
+  PAH013: {
+    description:
+      "A project directory under `roadmap/projects/` is missing its required `manifest.json` file.",
+    remediation: [
+      "1. Create `roadmap/projects/<project>/manifest.json` using the project manifest contract.",
+      "2. Ensure the manifest includes `schemaVersion`, `id`, `title`, `type`, `summary`, and at least one `ownedPaths` entry.",
+      "3. Re-run `pa doctor health` to confirm the project scope is structurally valid.",
+    ].join("\n"),
+  },
+
+  PAH014: {
+    description:
+      "A project manifest exists under `roadmap/projects/<project>/manifest.json` but does not conform to the expected schema.",
+    remediation: [
+      "1. Open the reported project manifest file.",
+      "2. Repair the JSON structure so it matches the project manifest contract.",
+      "3. Re-run `pa doctor health` to confirm the project manifest validates cleanly.",
+    ].join("\n"),
+  },
+
   // ── Planning coverage ───────────────────────────────────────────────────────
 
   PAC_TARGET_UNCOVERED: {
     description:
       "A milestone target area declared in targets.md is not linked by any planned task.",
     remediation: [
-      "1. Open the milestone targets.md file and identify the uncovered target area.",
+      "1. Open the milestone `targets.md` file under `roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/targets.md` and identify the uncovered target area.",
       "2. Add or update a planned task so codeTargets/publicDocs/traceLinks reference that area.",
       "3. Re-run `pa check` (or `pa check --coverage-mode error` in strict mode).",
     ].join("\n"),
@@ -460,7 +483,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
       "A phase is missing its `validation-contract.json` artifact. " +
       "This file specifies deterministic verification commands and expected outcomes for phase completion.",
     remediation: [
-      "1. Create `roadmap/phases/<phaseId>/validation-contract.json` with schema version 1.0.",
+      "1. Create `roadmap/projects/<project>/phases/<phaseId>/validation-contract.json` with schema version 1.0.",
       "2. Define checks with required fields: id, objectiveRef, verifyCommand, expectedSignal, owner.",
       "3. Run `pa init phase <phaseId>` to scaffold a contract with default checks, or manually craft one.",
       "4. Re-run `pa check` to validate the contract schema.",
@@ -472,7 +495,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
       "A phase's `validation-contract.json` file exists but does not conform to the validation contract schema.",
     remediation: [
       "1. Review the reported error details—it describes the schema violation.",
-      "2. Open `roadmap/phases/<phaseId>/validation-contract.json`.",
+      "2. Open `roadmap/projects/<project>/phases/<phaseId>/validation-contract.json`.",
       "3. Ensure all required fields are present: schemaVersion (1.0), phaseId, checks[], createdAt, updatedAt.",
       "4. For each check, verify: id, objectiveRef, verifyCommand, expectedSignal, owner (all required).",
       "5. Run `pa validate schema validation-contract <phaseId>` to check the file before re-running `pa check`.",

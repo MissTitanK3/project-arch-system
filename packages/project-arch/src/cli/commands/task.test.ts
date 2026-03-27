@@ -71,7 +71,7 @@ describe("cli/commands/task", () => {
 
       await program.parseAsync(["node", "test", "task", "new", phaseId, milestoneId]);
 
-      consoleAssertions.assertConsoleContains(consoleSpy, "roadmap/phases");
+      consoleAssertions.assertConsoleContains(consoleSpy, "roadmap/projects/shared/phases");
       consoleAssertions.assertConsoleContains(consoleSpy, phaseId);
       consoleAssertions.assertConsoleContains(consoleSpy, milestoneId);
       consoleAssertions.assertConsoleContains(consoleSpy, "001"); // First task ID
@@ -162,7 +162,7 @@ describe("cli/commands/task", () => {
         "001",
       ]);
 
-      consoleAssertions.assertConsoleContains(consoleSpy, "roadmap/phases");
+      consoleAssertions.assertConsoleContains(consoleSpy, "roadmap/projects/shared/phases");
       consoleAssertions.assertConsoleContains(consoleSpy, "101"); // First discovered task ID
 
       consoleSpy.mockRestore();
@@ -341,7 +341,7 @@ describe("cli/commands/task", () => {
 
       await program.parseAsync(["node", "test", "task", "idea", phaseId, milestoneId]);
 
-      consoleAssertions.assertConsoleContains(consoleSpy, "roadmap/phases");
+      consoleAssertions.assertConsoleContains(consoleSpy, "roadmap/projects/shared/phases");
       consoleAssertions.assertConsoleContains(consoleSpy, "901"); // First backlog task ID
 
       consoleSpy.mockRestore();

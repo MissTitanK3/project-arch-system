@@ -16,14 +16,14 @@ export function registerContextCommand(program: Command): void {
       formatEnhancedHelp({
         usage: "pa context [--json]",
         description:
-          "Resolve the current active phase, milestone, and task context without mutating repository state.",
+          "Resolve the current active project, phase, milestone, and task context without mutating repository state.",
         examples: [
           { description: "Print active repository context", command: "pa context" },
           { description: "Emit machine-readable context", command: "pa context --json" },
         ],
         agentMetadata: {
           outputFormat:
-            "Context payload with version, timestamp, projectRoot, active phase/milestone/task, and optional recommended action.",
+            "Context payload with version, timestamp, projectRoot, active project/phase/milestone/task, and optional recommended action.",
         },
         relatedCommands: [
           { command: "pa next", description: "Recommend next deterministic workflow action" },
@@ -39,6 +39,7 @@ export function registerContextCommand(program: Command): void {
         return;
       }
 
+      console.log(`project: ${resolved.active.project.id}`);
       console.log(`phase: ${resolved.active.phase.id}`);
       console.log(`milestone: ${resolved.active.milestone.id}`);
       console.log(`task: ${resolved.active.task.id}`);

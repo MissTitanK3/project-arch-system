@@ -3,7 +3,12 @@ import path from "path";
 import fs from "fs-extra";
 import fg from "fast-glob";
 import { reportGenerate } from "./report";
-import { createTestProject, resultAssertions, type TestProjectContext } from "../test/helpers";
+import {
+  createTempDir,
+  createTestProject,
+  resultAssertions,
+  type TestProjectContext,
+} from "../test/helpers";
 import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../utils/fs";
 
 describe.sequential("sdk/report", () => {
@@ -25,7 +30,10 @@ describe.sequential("sdk/report", () => {
     resultAssertions.assertSuccess(result);
     expect(result.data.text).toContain("Metric");
     expect(result.data.text).toContain("Value");
+    expect(result.data.text).toContain("active project");
     expect(result.data.text).toContain("active phase");
+    expect(result.data.report.compatibility.mode).toBe("hybrid");
+    expect(result.data.report.activeProject).toBeDefined();
     expect(result.data.report.activePhase).toBeDefined();
     expect(result.data.report.docsCoverage).toBeDefined();
     expect(typeof result.data.graphSnapshotLoaded).toBe("boolean");
@@ -45,6 +53,7 @@ describe.sequential("sdk/report", () => {
     resultAssertions.assertSuccess(result);
     expect(result.data.text).toContain("[source:");
     expect(result.data.text).toContain("roadmap/manifest.json");
+    expect(result.data.text).toContain("roadmap/projects/*/phases/*");
   }, 120_000);
 
   it("should include graph sync status", async () => {
@@ -67,6 +76,21 @@ describe.sequential("sdk/report", () => {
     expect(result.data.report.graph.snapshotLoaded).toBe(false);
   }, 120_000);
 
+  it("should expose legacy-only reporting compatibility explicitly", async () => {
+    const emptyContext = await createTempDir();
+
+    try {
+      const result = await reportGenerate({ cwd: emptyContext.tempDir });
+
+      resultAssertions.assertSuccess(result);
+      expect(result.data.report.compatibility.mode).toBe("legacy-only");
+      expect(result.data.report.compatibility.supported).toBe(true);
+      expect(result.data.text).toContain("Runtime Compatibility Note");
+    } finally {
+      await emptyContext.cleanup();
+    }
+  }, 120_000);
+
   it("should include parity check summary", async () => {
     const result = await reportGenerate();
 
@@ -85,7 +109,7 @@ describe.sequential("sdk/report", () => {
     const beforeMatch = before.data.text.match(/docs coverage\s*\|\s*(\d+)\/(\d+)/i);
     expect(beforeMatch).not.toBeNull();
 
-    const taskFiles = await fg("roadmap/phases/*/milestones/*/tasks/*/*.md", {
+    const taskFiles = await fg("roadmap/projects/*/phases/*/milestones/*/tasks/*/*.md", {
       cwd: process.cwd(),
       absolute: true,
       onlyFiles: true,

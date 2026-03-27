@@ -28,6 +28,7 @@ describe.sequential("core/reports/generateReport", () => {
 
     expect(report).toContain("Metric");
     expect(report).toContain("Value");
+    expect(report).toContain("active project");
     expect(report).toContain("active phase");
     expect(report).toContain("tasks by status");
     expect(report).toContain("decisions by status");
@@ -73,6 +74,9 @@ describe.sequential("core/reports/generateReport", () => {
 
     try {
       const report = await generateReport(emptyContext.tempDir);
+      expect(report).toContain("runtime compatibility");
+      expect(report).toContain("legacy-only (supported)");
+      expect(report).toContain("Runtime Compatibility Note");
       expect(report).toContain("active phase");
       expect(report).toContain("none");
       expect(report).toContain("docs coverage");
@@ -83,6 +87,10 @@ describe.sequential("core/reports/generateReport", () => {
   });
 
   it("should count docs coverage with existing and missing references", async () => {
+    const beforeReport = await generateReport(tempDir);
+    const beforeMatch = beforeReport.match(/docs coverage\s*\|\s*(\d+)\/(\d+)/i);
+    expect(beforeMatch).not.toBeNull();
+
     await createPhase("docs-phase", tempDir);
     await createMilestone("docs-phase", "docs-milestone", tempDir);
 
@@ -125,7 +133,10 @@ describe.sequential("core/reports/generateReport", () => {
     const report = await generateReport(tempDir);
 
     expect(report).toContain("docs coverage");
-    expect(report).toContain("1/2");
+    const afterMatch = report.match(/docs coverage\s*\|\s*(\d+)\/(\d+)/i);
+    expect(afterMatch).not.toBeNull();
+    expect(Number(afterMatch?.[1] ?? 0)).toBe(Number(beforeMatch?.[1] ?? 0) + 1);
+    expect(Number(afterMatch?.[2] ?? 0)).toBe(Number(beforeMatch?.[2] ?? 0) + 2);
   }, 120_000);
 
   it("should render sorted task and decision status buckets", async () => {
@@ -200,6 +211,7 @@ describe.sequential("core/reports/generateReport", () => {
 
     const report = await generateReport(tempDir);
 
+    expect(report).toContain("shared");
     expect(report).toContain("milestone-phase");
     expect(report).toContain("milestone-2-build");
   }, 120_000);
@@ -230,7 +242,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("Consistency Checks");
     expect(report).toContain("activeMilestone");
     expect(report).toContain("filesystem");
-    expect(report).toContain("roadmap/phases/mismatch-phase/milestones/*");
+    expect(report).toContain("roadmap/projects/shared/phases/mismatch-phase/milestones/*");
   }, 120_000);
 
   it("should emit consistency diagnostics when manifest activePhase mismatches filesystem", async () => {
@@ -253,7 +265,7 @@ describe.sequential("core/reports/generateReport", () => {
     expect(report).toContain("phase-z");
     expect(report).toContain("Consistency Checks");
     expect(report).toContain("activePhase");
-    expect(report).toContain("roadmap/phases/*");
+    expect(report).toContain("roadmap/projects/shared/phases/*");
   }, 120_000);
 
   it("should handle no active phase with manifest activeMilestone as none", async () => {
@@ -362,7 +374,9 @@ describe.sequential("core/reports/generateReport", () => {
       const report = await generateReport(tempDir);
 
       expect(report).toContain("[source: roadmap/manifest.json]");
-      expect(report).toContain("[source: roadmap/phases/*/milestones/*/tasks/**/*.md]");
+      expect(report).toContain("[source: roadmap/projects/*/phases/*/milestones/*/tasks/**/*.md]");
+      expect(report).toContain("[source: roadmap/manifest.json + phase ownership]");
+      expect(report).toContain("[source: roadmap/manifest.json + roadmap/projects/*/phases/*]");
       expect(report).toContain("[source: roadmap task frontmatter]");
       expect(report).toContain("[source: calculated]");
       expect(report).toContain("[source: roadmap/decisions/**/*.md]");

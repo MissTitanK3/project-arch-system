@@ -3,11 +3,14 @@ import path from "path";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 import { writeJsonDeterministic } from "../../utils/fs";
 import {
+  defaultProjectManifest,
   defaultMilestoneManifest,
   loadDecisionIndex,
   loadMilestoneManifest,
+  loadProjectManifest,
   milestoneManifestPath,
   projectDecisionIndexDir,
+  saveProjectManifest,
 } from "./index";
 
 describe.sequential("core/manifests/index", () => {
@@ -60,6 +63,61 @@ describe.sequential("core/manifests/index", () => {
     expect(typeof manifest.createdAt).toBe("string");
     expect(typeof manifest.updatedAt).toBe("string");
   });
+
+  it("creates default project manifest payload", () => {
+    const manifest = defaultProjectManifest("storefront", {
+      title: "Storefront",
+      type: "application",
+      summary: "Customer-facing commerce experience.",
+      ownedPaths: ["apps/storefront"],
+      sharedDependencies: ["packages/ui"],
+      defaultPhase: "phase-1-delivery",
+      tags: ["customer"],
+    });
+
+    expect(manifest.schemaVersion).toBe("1.0");
+    expect(manifest.id).toBe("storefront");
+    expect(manifest.type).toBe("application");
+    expect(manifest.ownedPaths).toEqual(["apps/storefront"]);
+  });
+
+  it("saves and loads a valid project manifest", async () => {
+    const manifest = defaultProjectManifest("storefront", {
+      title: "Storefront",
+      type: "application",
+      summary: "Customer-facing commerce experience.",
+      ownedPaths: ["apps/storefront"],
+      sharedDependencies: ["packages/ui"],
+      defaultPhase: "phase-1-delivery",
+      tags: ["customer"],
+    });
+
+    await saveProjectManifest(manifest, "storefront", tempDir);
+    await expect(loadProjectManifest("storefront", tempDir)).resolves.toEqual(manifest);
+  }, 120_000);
+
+  it("throws when project manifest file is missing", async () => {
+    const missingPath = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "missing-project",
+      "manifest.json",
+    );
+
+    await expect(loadProjectManifest("missing-project", tempDir)).rejects.toThrow(
+      `Missing project manifest: ${missingPath}`,
+    );
+  }, 120_000);
+
+  it("throws when project manifest has invalid schema", async () => {
+    await writeJsonDeterministic(path.join(tempDir, "roadmap", "projects", "broken", "manifest.json"), {
+      schemaVersion: "1.0",
+      id: "broken",
+    });
+
+    await expect(loadProjectManifest("broken", tempDir)).rejects.toThrow();
+  }, 120_000);
 
   it("throws when milestone manifest file is missing", async () => {
     const missingPath = path.join(

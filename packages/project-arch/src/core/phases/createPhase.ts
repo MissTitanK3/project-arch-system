@@ -3,47 +3,88 @@ import { ensureDir, pathExists, writeMarkdownWithFrontmatter } from "../../utils
 import { currentDateISO } from "../../utils/date";
 import { assertSafeId } from "../../utils/safeId";
 import { assertWithinRoot } from "../../utils/assertWithinRoot";
-import { phaseDir, projectDocsRoot } from "../../utils/paths";
+import {
+  phaseDecisionsRoot,
+  phaseDir,
+  projectDocsRoot,
+  projectPhaseDecisionsRoot,
+  projectPhaseDir,
+  projectPhaseMilestonesDir,
+  projectPhaseOverviewPath,
+  projectPhasesRoot,
+} from "../../utils/paths";
 import {
   ensureDecisionIndex,
   loadPhaseManifest,
-  phaseOverviewPath,
+  loadProjectManifest,
   rebuildArchitectureGraph,
+  resolvePhaseRecord,
   savePhaseManifest,
-} from "../../graph/manifests";
+} from "../manifests";
+import { DEFAULT_PHASE_PROJECT_ID } from "../../schemas/phase";
+import { assertSupportedRuntimeCompatibility } from "../runtime/compatibility";
 
 async function assertInitialized(cwd = process.cwd()): Promise<void> {
   const docsRoot = projectDocsRoot(cwd);
   if (!(await pathExists(docsRoot))) {
     throw new Error("roadmap not found. Run 'pa init' first.");
   }
+  await assertSupportedRuntimeCompatibility("Phase creation", cwd);
 }
 
-export async function createPhase(id: string, cwd = process.cwd()): Promise<void> {
+export async function createPhase(
+  id: string,
+  cwd = process.cwd(),
+  options: { projectId?: string } = {},
+): Promise<void> {
   assertSafeId(id, "phaseId");
   await assertInitialized(cwd);
 
+  const projectId = options.projectId ?? DEFAULT_PHASE_PROJECT_ID;
+  await loadProjectManifest(projectId, cwd);
+
   const manifest = await loadPhaseManifest(cwd);
-  if (manifest.phases.some((phase) => phase.id === id)) {
+  const existingPhase = resolvePhaseRecord(manifest, id);
+  if (existingPhase) {
     throw new Error(`Phase '${id}' already exists`);
   }
 
   const now = currentDateISO();
-  manifest.phases.push({ id, createdAt: now });
+  manifest.phases.push({ id, projectId, createdAt: now });
   manifest.phases.sort((a, b) => a.id.localeCompare(b.id));
   if (!manifest.activePhase) {
+    manifest.activeProject = projectId;
     manifest.activePhase = id;
   }
   await savePhaseManifest(manifest, cwd);
 
-  const pDir = phaseDir(id, cwd);
+  const pDir = projectPhaseDir(projectId, id, cwd);
   assertWithinRoot(pDir, cwd, "phase directory");
-  await ensureDir(path.join(pDir, "milestones"));
-  await ensureDir(path.join(pDir, "decisions"));
-  await ensureDecisionIndex(path.join(pDir, "decisions"));
+  await ensureDir(projectPhasesRoot(projectId, cwd));
+  await ensureDir(projectPhaseMilestonesDir(projectId, id, cwd));
+  await ensureDir(projectPhaseDecisionsRoot(projectId, id, cwd));
+  await ensureDecisionIndex(projectPhaseDecisionsRoot(projectId, id, cwd));
 
   await writeMarkdownWithFrontmatter(
-    phaseOverviewPath(id, cwd),
+    projectPhaseOverviewPath(projectId, id, cwd),
+    {
+      schemaVersion: "1.0",
+      type: "phase-overview",
+      id,
+      createdAt: now,
+      updatedAt: now,
+    },
+    phaseOverviewTemplate(id),
+  );
+
+  const legacyPhaseDir = phaseDir(id, cwd);
+  assertWithinRoot(legacyPhaseDir, cwd, "phase directory");
+  await ensureDir(path.join(legacyPhaseDir, "milestones"));
+  await ensureDir(phaseDecisionsRoot(id, cwd));
+  await ensureDecisionIndex(phaseDecisionsRoot(id, cwd));
+
+  await writeMarkdownWithFrontmatter(
+    path.join(legacyPhaseDir, "overview.md"),
     {
       schemaVersion: "1.0",
       type: "phase-overview",
@@ -59,12 +100,18 @@ export async function createPhase(id: string, cwd = process.cwd()): Promise<void
 
 export async function listPhases(
   cwd = process.cwd(),
-): Promise<Array<{ id: string; active: boolean }>> {
+  options: { projectId?: string } = {},
+): Promise<Array<{ id: string; projectId: string; active: boolean }>> {
   await assertInitialized(cwd);
   const manifest = await loadPhaseManifest(cwd);
   return manifest.phases
+    .filter((phase) => options.projectId === undefined || phase.projectId === options.projectId)
     .sort((a, b) => a.id.localeCompare(b.id))
-    .map((phase) => ({ id: phase.id, active: manifest.activePhase === phase.id }));
+    .map((phase) => ({
+      id: phase.id,
+      projectId: phase.projectId,
+      active: manifest.activePhase === phase.id,
+    }));
 }
 
 function phaseOverviewTemplate(phaseId: string): string {

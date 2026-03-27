@@ -15,7 +15,7 @@ describe("registerSurfaces - Scale Regression Tests", () => {
     // Seed tracked prefix for task
     const taskPath = path.join(
       tempDir,
-      "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
     );
     await fs.ensureDir(path.dirname(taskPath));
 
@@ -65,21 +65,20 @@ describe("registerSurfaces - Scale Regression Tests", () => {
       await fs.writeFile(path.join(dirPath, "index.ts"), `// module-${moduleId}`);
     }
 
-    // Register all paths (registerSurfaces retrieves untracked from check diagnostics which has a 50-item limit)
     const result = await registerSurfaces({
       phase: "phase-1",
       milestone: "milestone-1-setup",
       taskId: "001",
-      fromCheck: true,
+      fromCheck: false,
       include: ["packages/**"],
       exclude: [],
       dryRun: false,
       cwd: tempDir,
     });
 
-    // Verify behavior for large untracked set (limited by check diagnostic truncation)
+    // Verify behavior for a large include set without duplicates
     expect(result.addedPaths.length).toBeGreaterThan(0);
-    expect(result.addedPaths.length).toBeLessThanOrEqual(50);
+    expect(result.addedPaths.length).toBe(fileCount);
 
     // Verify no duplicates in added paths
     const uniquePaths = new Set(result.addedPaths);
@@ -88,7 +87,7 @@ describe("registerSurfaces - Scale Regression Tests", () => {
     // Verify task was updated with paths
     const taskPath = path.join(
       tempDir,
-      "roadmap/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
     );
     const updatedContent = await fs.readFile(taskPath, "utf8");
     expect(updatedContent).toContain("module-");

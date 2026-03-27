@@ -42,7 +42,7 @@ describe("cli/commands/context", () => {
 
     expect(helpText).toContain("pa context");
     expect(helpText).toContain("--json");
-    expect(helpText).toContain("active phase, milestone, and task");
+    expect(helpText).toContain("active project, phase, milestone, and task");
   });
 
   it("should execute context and print active repository context", async () => {
@@ -53,6 +53,7 @@ describe("cli/commands/context", () => {
 
     await program.parseAsync(["node", "test", "context"]);
 
+    expect(consoleSpy).toHaveBeenCalledWith("project: shared");
     expect(consoleSpy).toHaveBeenCalledWith("phase: phase-1");
     expect(consoleSpy).toHaveBeenCalledWith("milestone: milestone-1-setup");
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -84,10 +85,19 @@ describe("cli/commands/context", () => {
         timestamp: "2026-03-26T00:00:00.000Z",
         projectRoot: process.cwd(),
         active: {
-          phase: { id: "phase-x", path: "roadmap/phases/phase-x", title: "Phase X" },
+          project: {
+            id: "storefront",
+            path: "roadmap/projects/storefront",
+            title: "Storefront",
+          },
+          phase: {
+            id: "phase-x",
+            path: "roadmap/projects/storefront/phases/phase-x",
+            title: "Phase X",
+          },
           milestone: {
             id: "milestone-x",
-            path: "roadmap/phases/phase-x/milestones/milestone-x",
+            path: "roadmap/projects/storefront/phases/phase-x/milestones/milestone-x",
             title: "Milestone X",
           },
           task: {
@@ -113,6 +123,7 @@ describe("cli/commands/context", () => {
     await program.parseAsync(["node", "test", "context"]);
 
     expect(resolveSpy).toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith("project: storefront");
     expect(consoleSpy).toHaveBeenCalledWith("phase: phase-x");
   });
 });

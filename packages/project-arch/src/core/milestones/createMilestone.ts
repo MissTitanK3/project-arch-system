@@ -14,7 +14,15 @@ import { reconciliationReportSchema } from "../../schemas/reconciliationReport";
 import { currentDateISO } from "../../utils/date";
 import { assertSafeId } from "../../utils/safeId";
 import { assertWithinRoot } from "../../utils/assertWithinRoot";
-import { milestoneDir, phaseDir, projectDocsRoot } from "../../utils/paths";
+import {
+  milestoneDir,
+  projectDocsRoot,
+  projectMilestoneDecisionsRoot,
+  projectMilestoneDir,
+  projectMilestoneOverviewPath,
+  projectMilestoneTaskLaneDir,
+  projectMilestoneTargetsPath,
+} from "../../utils/paths";
 import {
   calculateDiscoveredRatioPercent,
   formatPercent,
@@ -25,17 +33,25 @@ import {
   loadPhaseManifest,
   milestoneOverviewPath,
   rebuildArchitectureGraph,
+  resolvePhaseProjectId,
   savePhaseManifest,
 } from "../../graph/manifests";
 import {
   getMilestoneDependencyStatuses,
   type MilestoneTaskDependencyStatus,
 } from "../tasks/dependencyStatus";
+import {
+  milestoneTaskGlob,
+  resolveMilestoneRuntimePaths,
+  resolvePreferredMilestoneDir,
+} from "../runtime/projectPaths";
+import { assertSupportedRuntimeCompatibility } from "../runtime/compatibility";
 
 async function assertInitialized(cwd = process.cwd()): Promise<void> {
   if (!(await pathExists(projectDocsRoot(cwd)))) {
     throw new Error("roadmap not found. Run 'pa init' first.");
   }
+  await assertSupportedRuntimeCompatibility("Milestone runtime", cwd);
 }
 
 export async function createMilestone(
@@ -47,32 +63,58 @@ export async function createMilestone(
   assertSafeId(milestoneId, "milestoneId");
   await assertInitialized(cwd);
 
-  const pDir = phaseDir(phaseId, cwd);
-  if (!(await pathExists(pDir))) {
+  const manifest = await loadPhaseManifest(cwd);
+  const phaseExists = manifest.phases.some((phase) => phase.id === phaseId);
+  if (!phaseExists) {
     throw new Error(`Phase '${phaseId}' does not exist`);
   }
 
-  const mDir = milestoneDir(phaseId, milestoneId, cwd);
-  assertWithinRoot(mDir, cwd, "milestone directory");
-  if (await pathExists(mDir)) {
+  const projectId = resolvePhaseProjectId(manifest, phaseId);
+  const canonicalMilestoneDir = projectMilestoneDir(projectId, phaseId, milestoneId, cwd);
+  const legacyMilestoneDir = milestoneDir(phaseId, milestoneId, cwd);
+  assertWithinRoot(canonicalMilestoneDir, cwd, "milestone directory");
+  if (
+    (await pathExists(canonicalMilestoneDir)) ||
+    (await pathExists(legacyMilestoneDir))
+  ) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' already exists`);
   }
 
-  await ensureDir(path.join(mDir, "tasks", "planned"));
-  await ensureDir(path.join(mDir, "tasks", "discovered"));
-  await ensureDir(path.join(mDir, "tasks", "backlog"));
-  await ensureDir(path.join(mDir, "decisions"));
-  await ensureDecisionIndex(path.join(mDir, "decisions"));
+  await ensureDir(projectMilestoneTaskLaneDir(projectId, phaseId, milestoneId, "planned", cwd));
+  await ensureDir(projectMilestoneTaskLaneDir(projectId, phaseId, milestoneId, "discovered", cwd));
+  await ensureDir(projectMilestoneTaskLaneDir(projectId, phaseId, milestoneId, "backlog", cwd));
+  await ensureDir(projectMilestoneDecisionsRoot(projectId, phaseId, milestoneId, cwd));
+  await ensureDecisionIndex(projectMilestoneDecisionsRoot(projectId, phaseId, milestoneId, cwd));
+
+  await ensureDir(path.join(legacyMilestoneDir, "tasks", "planned"));
+  await ensureDir(path.join(legacyMilestoneDir, "tasks", "discovered"));
+  await ensureDir(path.join(legacyMilestoneDir, "tasks", "backlog"));
+  await ensureDir(path.join(legacyMilestoneDir, "decisions"));
+  await ensureDecisionIndex(path.join(legacyMilestoneDir, "decisions"));
 
   const now = currentDateISO();
-  await writeJsonDeterministic(path.join(mDir, "manifest.json"), {
+  const milestoneManifest = {
     schemaVersion: "1.0",
     id: milestoneId,
     phaseId,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+  await writeJsonDeterministic(path.join(canonicalMilestoneDir, "manifest.json"), milestoneManifest);
+  await writeJsonDeterministic(path.join(legacyMilestoneDir, "manifest.json"), milestoneManifest);
 
+  await writeMarkdownWithFrontmatter(
+    projectMilestoneOverviewPath(projectId, phaseId, milestoneId, cwd),
+    {
+      schemaVersion: "1.0",
+      type: "milestone-overview",
+      id: milestoneId,
+      phaseId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    milestoneOverviewTemplate(phaseId, milestoneId),
+  );
   await writeMarkdownWithFrontmatter(
     milestoneOverviewPath(phaseId, milestoneId, cwd),
     {
@@ -86,9 +128,13 @@ export async function createMilestone(
     milestoneOverviewTemplate(phaseId, milestoneId),
   );
 
-  const targetsPath = path.join(mDir, "targets.md");
+  const targetsPath = projectMilestoneTargetsPath(projectId, phaseId, milestoneId, cwd);
   if (!(await pathExists(targetsPath))) {
     await fs.writeFile(targetsPath, `${milestoneTargetsTemplate()}\n`, "utf8");
+  }
+  const legacyTargetsPath = path.join(legacyMilestoneDir, "targets.md");
+  if (!(await pathExists(legacyTargetsPath))) {
+    await fs.writeFile(legacyTargetsPath, `${milestoneTargetsTemplate()}\n`, "utf8");
   }
 
   await rebuildArchitectureGraph(cwd);
@@ -96,11 +142,34 @@ export async function createMilestone(
 
 export async function listMilestones(cwd = process.cwd()): Promise<string[]> {
   await assertInitialized(cwd);
-  const milestoneDirs = await fg("roadmap/phases/*/milestones/*", { cwd, onlyDirectories: true });
-  return milestoneDirs.sort().map((item) => {
-    const parts = item.split("/");
-    return `${parts[2]}/${parts[4]}`;
-  });
+  const manifest = await loadPhaseManifest(cwd);
+  const milestoneIds = new Set<string>();
+
+  for (const phase of manifest.phases) {
+    const phaseMilestoneRoot = path.join(
+      cwd,
+      "roadmap",
+      "projects",
+      phase.projectId,
+      "phases",
+      phase.id,
+      "milestones",
+    );
+    const legacyMilestoneRoot = path.join(cwd, "roadmap", "phases", phase.id, "milestones");
+    const milestoneRoot = (await pathExists(phaseMilestoneRoot))
+      ? phaseMilestoneRoot
+      : legacyMilestoneRoot;
+    const dirs = await fg(path.join(milestoneRoot, "*").replace(/\\/g, "/"), {
+      onlyDirectories: true,
+      absolute: true,
+    });
+
+    for (const dir of dirs) {
+      milestoneIds.add(`${phase.id}/${path.basename(dir)}`);
+    }
+  }
+
+  return [...milestoneIds].sort();
 }
 
 export async function activateMilestone(
@@ -110,7 +179,10 @@ export async function activateMilestone(
 ): Promise<void> {
   await assertInitialized(cwd);
 
-  const mDir = milestoneDir(phaseId, milestoneId, cwd);
+  const paths = await resolveMilestoneRuntimePaths(phaseId, milestoneId, cwd);
+  const mDir = (await pathExists(paths.canonicalMilestoneDir))
+    ? paths.canonicalMilestoneDir
+    : paths.legacyMilestoneDir;
   if (!(await pathExists(mDir))) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
   }
@@ -118,29 +190,26 @@ export async function activateMilestone(
   const diagnostics: string[] = [];
 
   const plannedTasks = await fg(
-    `roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/planned/*.md`,
-    {
-      cwd,
-      onlyFiles: true,
-    },
+    path.join(mDir, "tasks", "planned", "*.md").replace(/\\/g, "/"),
+    { onlyFiles: true, absolute: true },
   );
   if (plannedTasks.length === 0) {
     diagnostics.push(
-      "at least one planned task is required in roadmap/phases/<phase>/milestones/<milestone>/tasks/planned",
+      "at least one planned task is required in roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/tasks/planned",
     );
   }
 
   const targetsPath = path.join(mDir, "targets.md");
   if (!(await pathExists(targetsPath))) {
     diagnostics.push(
-      "targets file is required: roadmap/phases/<phase>/milestones/<milestone>/targets.md",
+      "targets file is required: roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/targets.md",
     );
   }
 
-  const overviewPath = milestoneOverviewPath(phaseId, milestoneId, cwd);
+  const overviewPath = path.join(mDir, "overview.md");
   if (!(await pathExists(overviewPath))) {
     diagnostics.push(
-      "overview file is required: roadmap/phases/<phase>/milestones/<milestone>/overview.md",
+      "overview file is required: roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/overview.md",
     );
   } else {
     const overview = await fs.readFile(overviewPath, "utf8");
@@ -161,12 +230,8 @@ export async function activateMilestone(
   }
 
   const manifest = await loadPhaseManifest(cwd);
-  const phaseExists = manifest.phases.some((phase) => phase.id === phaseId);
-  if (!phaseExists) {
-    throw new Error(`Phase '${phaseId}' does not exist in roadmap/manifest.json`);
-  }
-
   manifest.activePhase = phaseId;
+  manifest.activeProject = paths.projectId;
   manifest.activeMilestone = milestoneId;
   await savePhaseManifest(manifest, cwd);
   await rebuildArchitectureGraph(cwd);
@@ -180,7 +245,7 @@ export async function completeMilestone(
 ): Promise<{ warnings: string[]; overrideLogPath: string | null }> {
   await assertInitialized(cwd);
 
-  const mDir = milestoneDir(phaseId, milestoneId, cwd);
+  const mDir = await resolvePreferredMilestoneDir(phaseId, milestoneId, cwd);
   if (!(await pathExists(mDir))) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
   }
@@ -208,18 +273,15 @@ export async function completeMilestone(
     });
   }
 
-  const plannedTasks = await fg(
-    `roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/planned/*.md`,
-    {
-      cwd,
-      onlyFiles: true,
-    },
-  );
+  const plannedTasks = await fg(path.join(mDir, "tasks", "planned", "*.md").replace(/\\/g, "/"), {
+    onlyFiles: true,
+    absolute: true,
+  });
   const discoveredTasks = await fg(
-    `roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/discovered/*.md`,
+    path.join(mDir, "tasks", "discovered", "*.md").replace(/\\/g, "/"),
     {
-      cwd,
       onlyFiles: true,
+      absolute: true,
     },
   );
 
@@ -236,7 +298,7 @@ export async function completeMilestone(
         [
           `Milestone completion blocked for '${phaseId}/${milestoneId}'.`,
           `Discovered load ratio ${formatPercent(discoveredRatio)} exceeds threshold ${formatPercent(threshold)}.`,
-          `Add explicit replan checkpoint marker: roadmap/phases/${phaseId}/milestones/${milestoneId}/replan-checkpoint.md`,
+          `Add explicit replan checkpoint marker: roadmap/projects/<project>/phases/${phaseId}/milestones/${milestoneId}/replan-checkpoint.md`,
         ].join("\n"),
       );
     }
@@ -263,7 +325,7 @@ export async function getMilestoneStatus(
 ): Promise<MilestoneTaskDependencyStatus[]> {
   await assertInitialized(cwd);
 
-  const mDir = milestoneDir(phaseId, milestoneId, cwd);
+  const mDir = await resolvePreferredMilestoneDir(phaseId, milestoneId, cwd);
   if (!(await pathExists(mDir))) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
   }
@@ -291,8 +353,8 @@ async function evaluateMilestoneReconciliationGate(
   milestoneId: string,
   cwd: string,
 ): Promise<MilestoneReconciliationGateResult> {
-  const taskFiles = await fg(`roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/*/*.md`, {
-    cwd,
+  const mDir = await resolvePreferredMilestoneDir(phaseId, milestoneId, cwd);
+  const taskFiles = await fg(milestoneTaskGlob(mDir), {
     absolute: true,
     onlyFiles: true,
   });

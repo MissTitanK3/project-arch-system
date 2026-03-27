@@ -7,10 +7,20 @@ import {
   milestoneDir,
   phaseDecisionsRoot,
   phaseDir,
+  projectMilestoneDecisionsRoot,
+  projectMilestoneDir,
+  projectPhaseDecisionsRoot,
+  projectPhaseDir,
+  projectManifestPath,
   projectDocsRoot,
 } from "../../utils/paths";
-import { PhaseManifest, phaseManifestSchema } from "../../schemas/phase";
+import {
+  DEFAULT_PHASE_PROJECT_ID,
+  PhaseManifest,
+  phaseManifestSchema,
+} from "../../schemas/phase";
 import { MilestoneManifest, milestoneManifestSchema } from "../../schemas/milestone";
+import { ProjectManifest, projectManifestSchema } from "../../schemas/project";
 
 export interface DecisionIndex {
   schemaVersion: "1.0";
@@ -21,6 +31,7 @@ export function defaultPhaseManifest(): PhaseManifest {
   return {
     schemaVersion: "1.0",
     phases: [],
+    activeProject: null,
     activePhase: null,
     activeMilestone: null,
   };
@@ -38,6 +49,17 @@ export async function loadPhaseManifest(cwd = process.cwd()): Promise<PhaseManif
 export async function savePhaseManifest(data: PhaseManifest, cwd = process.cwd()): Promise<void> {
   const manifestPath = path.join(projectDocsRoot(cwd), "manifest.json");
   await writeJsonDeterministic(manifestPath, data);
+}
+
+export function resolvePhaseRecord(
+  manifest: PhaseManifest,
+  phaseId: string,
+): PhaseManifest["phases"][number] | null {
+  return manifest.phases.find((phase) => phase.id === phaseId) ?? null;
+}
+
+export function resolvePhaseProjectId(manifest: PhaseManifest, phaseId: string): string {
+  return resolvePhaseRecord(manifest, phaseId)?.projectId ?? DEFAULT_PHASE_PROJECT_ID;
 }
 
 export async function ensureDecisionIndex(dirPath: string): Promise<void> {
@@ -93,7 +115,46 @@ export async function milestoneManifestPath(
   milestoneId: string,
   cwd = process.cwd(),
 ): Promise<string> {
+  const manifest = await loadPhaseManifest(cwd);
+  const projectId = resolvePhaseProjectId(manifest, phaseId);
+  const canonicalPath = path.join(projectMilestoneDir(projectId, phaseId, milestoneId, cwd), "manifest.json");
+  if (await pathExists(canonicalPath)) {
+    return canonicalPath;
+  }
   return path.join(milestoneDir(phaseId, milestoneId, cwd), "manifest.json");
+}
+
+export function defaultProjectManifest(
+  projectId: string,
+  data: Omit<ProjectManifest, "schemaVersion" | "id">,
+): ProjectManifest {
+  return {
+    schemaVersion: "1.0",
+    id: projectId,
+    ...data,
+  };
+}
+
+export async function loadProjectManifest(
+  projectId: string,
+  cwd = process.cwd(),
+): Promise<ProjectManifest> {
+  const manifestPath = projectManifestPath(projectId, cwd);
+  if (!(await pathExists(manifestPath))) {
+    throw new Error(`Missing project manifest: ${manifestPath}`);
+  }
+
+  const raw = await readJson<unknown>(manifestPath);
+  return projectManifestSchema.parse(raw);
+}
+
+export async function saveProjectManifest(
+  manifest: ProjectManifest,
+  projectId: string,
+  cwd = process.cwd(),
+): Promise<void> {
+  const manifestPath = projectManifestPath(projectId, cwd);
+  await writeJsonDeterministic(manifestPath, manifest);
 }
 
 export function defaultMilestoneManifest(phaseId: string, milestoneId: string): MilestoneManifest {
@@ -112,7 +173,7 @@ export async function loadMilestoneManifest(
   milestoneId: string,
   cwd = process.cwd(),
 ): Promise<MilestoneManifest> {
-  const manifestPath = path.join(milestoneDir(phaseId, milestoneId, cwd), "manifest.json");
+  const manifestPath = await milestoneManifestPath(phaseId, milestoneId, cwd);
   if (!(await pathExists(manifestPath))) {
     throw new Error(`Missing milestone manifest: ${manifestPath}`);
   }
@@ -126,7 +187,7 @@ export async function saveMilestoneManifest(
   milestoneId: string,
   cwd = process.cwd(),
 ): Promise<void> {
-  const manifestPath = path.join(milestoneDir(phaseId, milestoneId, cwd), "manifest.json");
+  const manifestPath = await milestoneManifestPath(phaseId, milestoneId, cwd);
   await writeJsonDeterministic(manifestPath, manifest);
 }
 
@@ -160,6 +221,60 @@ export function milestoneOverviewPath(
   cwd = process.cwd(),
 ): string {
   return path.join(milestoneDir(phaseId, milestoneId, cwd), "overview.md");
+}
+
+export async function preferredPhaseDecisionIndexDir(
+  phaseId: string,
+  cwd = process.cwd(),
+): Promise<string> {
+  const manifest = await loadPhaseManifest(cwd);
+  const projectId = resolvePhaseProjectId(manifest, phaseId);
+  const canonicalDir = projectPhaseDecisionsRoot(projectId, phaseId, cwd);
+  if (await pathExists(canonicalDir)) {
+    return canonicalDir;
+  }
+  return phaseDecisionsRoot(phaseId, cwd);
+}
+
+export async function preferredMilestoneDecisionIndexDir(
+  phaseId: string,
+  milestoneId: string,
+  cwd = process.cwd(),
+): Promise<string> {
+  const manifest = await loadPhaseManifest(cwd);
+  const projectId = resolvePhaseProjectId(manifest, phaseId);
+  const canonicalDir = projectMilestoneDecisionsRoot(projectId, phaseId, milestoneId, cwd);
+  if (await pathExists(canonicalDir)) {
+    return canonicalDir;
+  }
+  return milestoneDecisionsRoot(phaseId, milestoneId, cwd);
+}
+
+export async function preferredPhaseOverviewPath(
+  phaseId: string,
+  cwd = process.cwd(),
+): Promise<string> {
+  const manifest = await loadPhaseManifest(cwd);
+  const projectId = resolvePhaseProjectId(manifest, phaseId);
+  const canonicalPath = path.join(projectPhaseDir(projectId, phaseId, cwd), "overview.md");
+  if (await pathExists(canonicalPath)) {
+    return canonicalPath;
+  }
+  return phaseOverviewPath(phaseId, cwd);
+}
+
+export async function preferredMilestoneOverviewPath(
+  phaseId: string,
+  milestoneId: string,
+  cwd = process.cwd(),
+): Promise<string> {
+  const manifest = await loadPhaseManifest(cwd);
+  const projectId = resolvePhaseProjectId(manifest, phaseId);
+  const canonicalPath = path.join(projectMilestoneDir(projectId, phaseId, milestoneId, cwd), "overview.md");
+  if (await pathExists(canonicalPath)) {
+    return canonicalPath;
+  }
+  return milestoneOverviewPath(phaseId, milestoneId, cwd);
 }
 
 export { rebuildArchitectureGraph } from "./graph";

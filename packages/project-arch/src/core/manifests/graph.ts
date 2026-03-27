@@ -62,9 +62,11 @@ function uniqueSorted(values: string[]): string[] {
 
 function parseMilestoneFromTaskPath(taskPath: string): { phaseId: string; milestoneId: string } {
   const normalized = normalizePath(taskPath);
-  const match = normalized.match(
-    /roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/tasks\/[^/]+\/[^/]+\.md$/,
-  );
+  const match =
+    normalized.match(
+      /roadmap\/projects\/[^/]+\/phases\/([^/]+)\/milestones\/([^/]+)\/tasks\/[^/]+\/[^/]+\.md$/,
+    ) ??
+    normalized.match(/roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/tasks\/[^/]+\/[^/]+\.md$/);
   if (!match) {
     throw new Error(`Unexpected task path: ${taskPath}`);
   }
@@ -76,11 +78,19 @@ function parseMilestoneFromManifestPath(manifestPath: string): {
   milestoneId: string;
 } {
   const normalized = normalizePath(manifestPath);
-  const match = normalized.match(/roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/manifest\.json$/);
+  const match =
+    normalized.match(
+      /roadmap\/projects\/[^/]+\/phases\/([^/]+)\/milestones\/([^/]+)\/manifest\.json$/,
+    ) ??
+    normalized.match(/roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/manifest\.json$/);
   if (!match) {
     throw new Error(`Unexpected milestone manifest path: ${manifestPath}`);
   }
   return { phaseId: match[1], milestoneId: match[2] };
+}
+
+function isCanonicalRoadmapPath(filePath: string): boolean {
+  return normalizePath(filePath).includes("/roadmap/projects/");
 }
 
 export type GraphLayerMode = "runtime" | "all";
@@ -209,24 +219,36 @@ export async function rebuildArchitectureGraph(
         }))
     : [];
 
-  const taskFiles = await fg("roadmap/phases/*/milestones/*/tasks/*/*.md", {
+  const taskFiles = await fg(
+    [
+      "roadmap/projects/*/phases/*/milestones/*/tasks/*/*.md",
+      "roadmap/phases/*/milestones/*/tasks/*/*.md",
+    ],
+    {
     cwd,
     absolute: true,
     onlyFiles: true,
     followSymbolicLinks: false,
-  });
+    },
+  );
   const decisionFiles = await fg(["roadmap/decisions/**/*.md", "!roadmap/decisions/**/index.md"], {
     cwd,
     absolute: true,
     onlyFiles: true,
     followSymbolicLinks: false,
   });
-  const milestoneManifestFiles = await fg("roadmap/phases/*/milestones/*/manifest.json", {
+  const milestoneManifestFiles = await fg(
+    [
+      "roadmap/projects/*/phases/*/milestones/*/manifest.json",
+      "roadmap/phases/*/milestones/*/manifest.json",
+    ],
+    {
     cwd,
     absolute: true,
     onlyFiles: true,
     followSymbolicLinks: false,
-  });
+    },
+  );
 
   const safeTaskFiles = await filterGlobPathsBySymlinkPolicy(taskFiles, cwd, {
     pathsAreAbsolute: true,
@@ -257,21 +279,42 @@ export async function rebuildArchitectureGraph(
     moduleNodesFromMap.map((moduleNode) => [moduleNode.name, moduleNode]),
   );
 
+  const milestoneManifestByRef = new Map<string, string>();
   for (const manifestPath of safeMilestoneManifestFiles.sort()) {
     const { phaseId, milestoneId } = parseMilestoneFromManifestPath(manifestPath);
-    milestoneNodes.push({
-      id: `${phaseId}/${milestoneId}`,
-      phaseId,
-      milestoneId,
-    });
+    const milestoneRef = `${phaseId}/${milestoneId}`;
+    const existing = milestoneManifestByRef.get(milestoneRef);
+    if (!existing || (isCanonicalRoadmapPath(manifestPath) && !isCanonicalRoadmapPath(existing))) {
+      milestoneManifestByRef.set(milestoneRef, manifestPath);
+    }
   }
 
+  for (const milestoneRef of [...milestoneManifestByRef.keys()].sort((a, b) => a.localeCompare(b))) {
+    const [phaseId, milestoneId] = milestoneRef.split("/");
+    milestoneNodes.push({ id: milestoneRef, phaseId, milestoneId });
+  }
+
+  const taskFileByRef = new Map<string, string>();
   for (const taskFile of safeTaskFiles.sort()) {
     const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskFile);
     const parsed = taskSchema.parse(data);
     const { phaseId, milestoneId } = parseMilestoneFromTaskPath(taskFile);
+    const taskRef = `${phaseId}/${milestoneId}/${parsed.id}`;
+    const existing = taskFileByRef.get(taskRef);
+    if (!existing || (isCanonicalRoadmapPath(taskFile) && !isCanonicalRoadmapPath(existing))) {
+      taskFileByRef.set(taskRef, taskFile);
+    }
+  }
+
+  for (const taskRef of [...taskFileByRef.keys()].sort((a, b) => a.localeCompare(b))) {
+    const taskFile = taskFileByRef.get(taskRef);
+    if (!taskFile) {
+      continue;
+    }
+    const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskFile);
+    const parsed = taskSchema.parse(data);
+    const { phaseId, milestoneId } = parseMilestoneFromTaskPath(taskFile);
     const milestoneRef = `${phaseId}/${milestoneId}`;
-    const taskRef = `${milestoneRef}/${parsed.id}`;
     const inferredDomain = inferDomainForTask(
       parsed.tags,
       parsed.slug,

@@ -10,21 +10,26 @@ export function registerPhaseCommand(program: Command): void {
   command
     .command("new")
     .argument("<id>", "phase id")
+    .option("--project <projectId>", "Target project id", "shared")
     .description("Create a new phase")
     .addHelpText("after", () =>
       formatEnhancedHelp({
-        usage: "pa phase new <id>",
-        description: "Create a new phase in the project roadmap.",
+        usage: "pa phase new <id> [--project <projectId>]",
+        description: "Create a new phase in a named roadmap project.",
         examples: [
-          { description: "Create phase 1", command: "pa phase new phase-1" },
-          { description: "Create phase 2", command: "pa phase new phase-2" },
+          { description: "Create a shared phase", command: "pa phase new phase-1" },
+          {
+            description: "Create a storefront phase",
+            command: "pa phase new phase-2 --project storefront",
+          },
         ],
         agentMetadata: {
           inputValidation: {
             id: "string matching /^phase-\\d+$/",
+            projectId: "string matching /^[a-z0-9]+(?:-[a-z0-9]+)*$/",
           },
-          outputFormat: "Success message with phase ID",
-          fileLocation: "roadmap/phases/{id}/overview.md",
+          outputFormat: "Success message with project and phase ID",
+          fileLocation: "roadmap/projects/{project}/phases/{id}/overview.md",
         },
         relatedCommands: [
           { command: "pa milestone new --help", description: "Create a milestone" },
@@ -32,31 +37,40 @@ export function registerPhaseCommand(program: Command): void {
         ],
       }),
     )
-    .action(async (id: string) => {
+    .action(async (id: string, options: { project: string }) => {
       try {
         assertSafeId(id, "phaseId");
+        assertSafeId(options.project, "projectId");
       } catch (error) {
         console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
         console.error(
-          "Hint: phase ids must be lowercase alphanumeric with single hyphens, e.g. phase-1",
+          "Hint: phase and project ids must be lowercase alphanumeric with single hyphens, e.g. phase-1 storefront",
         );
         process.exitCode = 1;
         return;
       }
-      unwrap(await phases.phaseCreate({ id }));
-      console.log(`Created phase ${id}`);
+      const result = unwrap(await phases.phaseCreate({ id, project: options.project }));
+      console.log(`Created phase ${result.projectId}/${result.id}`);
     });
 
   command
     .command("list")
+    .option("--project <projectId>", "Filter phases by project id")
     .description("List all phases")
     .addHelpText("after", () =>
       formatEnhancedHelp({
-        usage: "pa phase list",
-        description: "List all phases in the project. Active phase is marked with *.",
-        examples: [{ description: "List all phases", command: "pa phase list" }],
+        usage: "pa phase list [--project <projectId>]",
+        description:
+          "List all phases in the roadmap. Active phase is marked with * and each phase is labeled with its owning project.",
+        examples: [
+          { description: "List all phases", command: "pa phase list" },
+          {
+            description: "List phases in one project",
+            command: "pa phase list --project storefront",
+          },
+        ],
         agentMetadata: {
-          outputFormat: "One phase per line, active phase prefixed with *",
+          outputFormat: "One phase per line as project/phase, active phase prefixed with *",
         },
         relatedCommands: [
           { command: "pa phase new --help", description: "Create a phase" },
@@ -64,11 +78,23 @@ export function registerPhaseCommand(program: Command): void {
         ],
       }),
     )
-    .action(async () => {
-      const all = unwrap(await phases.phaseList());
+    .action(async (options: { project?: string }) => {
+      if (options.project) {
+        try {
+          assertSafeId(options.project, "projectId");
+        } catch (error) {
+          console.error(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+          console.error(
+            "Hint: project ids must be lowercase alphanumeric with single hyphens, e.g. storefront",
+          );
+          process.exitCode = 1;
+          return;
+        }
+      }
+      const all = unwrap(await phases.phaseList({ project: options.project }));
       for (const phase of all) {
         const activeMark = phase.active ? "*" : " ";
-        console.log(`${activeMark} ${phase.id}`);
+        console.log(`${activeMark} ${phase.projectId}/${phase.id}`);
       }
     });
 }

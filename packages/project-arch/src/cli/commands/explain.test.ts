@@ -126,6 +126,8 @@ describe("cli/commands/explain", () => {
       "PAH010",
       "PAH011",
       "PAH012",
+      "PAH013",
+      "PAH014",
       "PAC_TARGET_UNCOVERED",
       "PAC_TASK_MISSING_OBJECTIVE_TRACE",
       "PAV_CONTRACT_MISSING",

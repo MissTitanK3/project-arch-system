@@ -29,6 +29,16 @@ describe("createMilestone", () => {
   it("creates milestone structure and manifest", async () => {
     await createMilestone("phase-2", "milestone-1-foundation", tempDir);
 
+    const projectRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-1-foundation",
+    );
     const mRoot = path.join(
       tempDir,
       "roadmap",
@@ -37,6 +47,14 @@ describe("createMilestone", () => {
       "milestones",
       "milestone-1-foundation",
     );
+
+    expect(await fs.pathExists(path.join(projectRoot, "tasks", "planned"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "tasks", "discovered"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "tasks", "backlog"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "decisions", "index.json"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "manifest.json"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "overview.md"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "targets.md"))).toBe(true);
 
     expect(await fs.pathExists(path.join(mRoot, "tasks", "planned"))).toBe(true);
     expect(await fs.pathExists(path.join(mRoot, "tasks", "discovered"))).toBe(true);
@@ -68,7 +86,16 @@ describe("createMilestone", () => {
     const customSlug = "my-custom-milestone";
     await createMilestone("phase-2", customSlug, tempDir);
 
-    const mRoot = path.join(tempDir, "roadmap", "phases", "phase-2", "milestones", customSlug);
+    const mRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-2",
+      "milestones",
+      customSlug,
+    );
     expect(await fs.pathExists(mRoot)).toBe(true);
   });
 
@@ -186,7 +213,16 @@ describe("createMilestone", () => {
     const specialSlug = "milestone-with-dashes-123";
     await createMilestone("phase-2", specialSlug, tempDir);
 
-    const mRoot = path.join(tempDir, "roadmap", "phases", "phase-2", "milestones", specialSlug);
+    const mRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-2",
+      "milestones",
+      specialSlug,
+    );
     expect(await fs.pathExists(mRoot)).toBe(true);
   });
 
@@ -196,6 +232,8 @@ describe("createMilestone", () => {
     const overviewPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -222,6 +260,8 @@ describe("createMilestone", () => {
     const milestoneRoot = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -252,6 +292,8 @@ describe("createMilestone", () => {
     const overviewPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -278,6 +320,8 @@ describe("createMilestone", () => {
     const overviewPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -335,6 +379,8 @@ describe("createMilestone", () => {
     const checkpointPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",

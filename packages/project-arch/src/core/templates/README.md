@@ -121,8 +121,8 @@ This document defines when agents should use each template type to maintain cons
 
 **Trigger Conditions**:
 
-1. All tasks in `roadmap/phases/{phase}/milestones/{milestone}/tasks/planned/` have `status: "done"`
-2. All tasks in `roadmap/phases/{phase}/milestones/{milestone}/tasks/discovered/` have `status: "done"`
+1. All tasks in `roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/tasks/planned/` have `status: "done"`
+2. All tasks in `roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/tasks/discovered/` have `status: "done"`
 3. Milestone objectives are met or formally deferred
 4. Team is ready to transition to next milestone
 

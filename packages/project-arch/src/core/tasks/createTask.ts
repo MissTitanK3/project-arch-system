@@ -5,7 +5,7 @@ import { nextTaskId } from "../../core/ids/task";
 import { defaultTaskBody, defaultTaskFrontmatter } from "../../core/templates/task";
 import { taskSchema, TaskLane } from "../../schemas/task";
 import { currentDateISO } from "../../utils/date";
-import { milestoneDir, milestoneTaskLaneDir, projectDocsRoot } from "../../utils/paths";
+import { milestoneTaskLaneDir, projectDocsRoot, projectMilestoneTaskLaneDir } from "../../utils/paths";
 import {
   pathExists,
   readMarkdownWithFrontmatter,
@@ -15,11 +15,19 @@ import { assertSafeId } from "../../utils/safeId";
 import { assertWithinRoot } from "../../utils/assertWithinRoot";
 import * as graphManifests from "../../graph/manifests";
 import { withAtomicTaskMutation } from "./atomicMutation";
+import {
+  milestoneTaskGlob,
+  resolveMilestoneRuntimePaths,
+  resolvePreferredMilestoneDir,
+  taskIdGlob,
+} from "../runtime/projectPaths";
+import { assertSupportedRuntimeCompatibility } from "../runtime/compatibility";
 
 async function assertInitialized(cwd = process.cwd()): Promise<void> {
   if (!(await pathExists(projectDocsRoot(cwd)))) {
     throw new Error("roadmap not found. Run 'pa init' first.");
   }
+  await assertSupportedRuntimeCompatibility("Task runtime", cwd);
 }
 
 async function assertMilestoneExists(
@@ -27,7 +35,8 @@ async function assertMilestoneExists(
   milestoneId: string,
   cwd = process.cwd(),
 ): Promise<void> {
-  if (!(await pathExists(milestoneDir(phaseId, milestoneId, cwd)))) {
+  const milestoneDirPath = await resolvePreferredMilestoneDir(phaseId, milestoneId, cwd);
+  if (!(await pathExists(milestoneDirPath))) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' does not exist`);
   }
 }
@@ -47,8 +56,8 @@ async function collectMilestoneTaskIds(
   milestoneId: string,
   cwd = process.cwd(),
 ): Promise<string[]> {
-  const files = await fg(`roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/*/*.md`, {
-    cwd,
+  const milestoneRoot = await resolvePreferredMilestoneDir(phaseId, milestoneId, cwd);
+  const files = await fg(milestoneTaskGlob(milestoneRoot), {
     absolute: true,
     onlyFiles: true,
   });
@@ -110,12 +119,23 @@ export async function createTask(input: {
   const ids = await collectMilestoneTaskIds(input.phaseId, input.milestoneId, cwd);
   const id = nextTaskId(ids, input.lane);
   const slug = normalizeSlug(slugBase || title);
+  const milestonePaths = await resolveMilestoneRuntimePaths(input.phaseId, input.milestoneId, cwd);
 
-  const targetPath = path.join(
+  const canonicalTargetPath = path.join(
+    projectMilestoneTaskLaneDir(
+      milestonePaths.projectId,
+      input.phaseId,
+      input.milestoneId,
+      input.lane,
+      cwd,
+    ),
+    `${id}-${slug}.md`,
+  );
+  const legacyTargetPath = path.join(
     milestoneTaskLaneDir(input.phaseId, input.milestoneId, input.lane, cwd),
     `${id}-${slug}.md`,
   );
-  assertWithinRoot(targetPath, cwd, "task file");
+  assertWithinRoot(canonicalTargetPath, cwd, "task file");
 
   const now = currentDateISO();
   const frontmatter = defaultTaskFrontmatter({
@@ -130,17 +150,19 @@ export async function createTask(input: {
   await withAtomicTaskMutation({
     cwd,
     mutateRoadmap: async () => {
-      await writeMarkdownWithFrontmatter(targetPath, frontmatter, defaultTaskBody());
+      await writeMarkdownWithFrontmatter(canonicalTargetPath, frontmatter, defaultTaskBody());
+      await writeMarkdownWithFrontmatter(legacyTargetPath, frontmatter, defaultTaskBody());
     },
     rollbackRoadmap: async () => {
-      await fs.remove(targetPath);
+      await fs.remove(canonicalTargetPath);
+      await fs.remove(legacyTargetPath);
     },
     syncGraph: async () => {
       await graphManifests.rebuildArchitectureGraph(cwd);
     },
   });
 
-  return targetPath;
+  return canonicalTargetPath;
 }
 
 export async function getTaskStatus(
@@ -152,14 +174,11 @@ export async function getTaskStatus(
   await assertInitialized(cwd);
   await assertMilestoneExists(phaseId, milestoneId, cwd);
 
-  const files = await fg(
-    `roadmap/phases/${phaseId}/milestones/${milestoneId}/tasks/*/${taskId}-*.md`,
-    {
-      cwd,
-      absolute: true,
-      onlyFiles: true,
-    },
-  );
+  const milestoneRoot = await resolvePreferredMilestoneDir(phaseId, milestoneId, cwd);
+  const files = await fg(taskIdGlob(milestoneRoot, taskId), {
+    absolute: true,
+    onlyFiles: true,
+  });
 
   if (files.length === 0) {
     throw new Error(`Task ${phaseId}/${milestoneId}/${taskId} not found`);

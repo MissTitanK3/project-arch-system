@@ -1,5 +1,6 @@
 export * as tasks from "./tasks";
 export * as init from "./init";
+export * as projects from "./projects";
 export * as phases from "./phases";
 export * as milestones from "./milestones";
 export * as decisions from "./decisions";
