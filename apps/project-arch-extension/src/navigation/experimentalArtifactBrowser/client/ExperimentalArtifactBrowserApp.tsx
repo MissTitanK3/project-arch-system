@@ -152,7 +152,9 @@ function applyStageChatRuntimeResponseMessage(
       stageId: message.stageId,
       stageTitle: message.stageTitle,
       runtimeState: message.append ? "sending" : "success",
-      statusMessage: message.append ? "Receiving response from selected runtime..." : "Response received.",
+      statusMessage: message.append
+        ? "Receiving response from selected runtime..."
+        : "Response received.",
       lastFailedMessage: "",
       threadKey: existing?.threadKey,
       runtimeClass: existing?.runtimeClass,
@@ -196,12 +198,16 @@ export function ExperimentalArtifactBrowserApp(props: ExperimentalArtifactBrowse
       }
 
       if (payload.type === "stageChatRuntimeState") {
-        setStageChatSessionsByKey((previous) => applyStageChatRuntimeStateMessage(previous, payload));
+        setStageChatSessionsByKey((previous) =>
+          applyStageChatRuntimeStateMessage(previous, payload),
+        );
         return;
       }
 
       if (payload.type === "stageChatRuntimeResponse") {
-        setStageChatSessionsByKey((previous) => applyStageChatRuntimeResponseMessage(previous, payload));
+        setStageChatSessionsByKey((previous) =>
+          applyStageChatRuntimeResponseMessage(previous, payload),
+        );
       }
     };
 
@@ -255,10 +261,10 @@ export function ExperimentalArtifactBrowserApp(props: ExperimentalArtifactBrowse
       isGuidanceRailOpen: props.initialGuidanceRailOpen,
       activeGuidance: props.initialGuidanceRailOpen
         ? createArtifactBrowserSurfaceGuidancePayload(
-          artifactBrowserShellNavigationItems.find(
-            (item) => item.id === props.initialActiveSurfaceId,
-          ) ?? artifactBrowserShellNavigationItems[0],
-        )
+            artifactBrowserShellNavigationItems.find(
+              (item) => item.id === props.initialActiveSurfaceId,
+            ) ?? artifactBrowserShellNavigationItems[0],
+          )
         : undefined,
     } satisfies Partial<ShellNavigationGuidanceState>,
   });
@@ -291,44 +297,36 @@ export function ExperimentalArtifactBrowserApp(props: ExperimentalArtifactBrowse
   };
   const surfaceSlots = useMemo(
     () =>
-      createArtifactBrowserShellSurfaceSlots(
-        {
-          artifactSurface: (
-            <ArtifactBrowserSurface
-              model={props.model}
-              runtimesModel={props.shellData?.runtimes}
-              runsModel={props.shellData?.runs}
-              viewState={viewState}
-              setViewState={setViewState}
-              stageChatSessionsByKey={stageChatSessionsByKey}
-              postMessage={props.postMessage}
-              onSendStageChatIntent={handleStageChatSendIntent}
-              onOpenGuidance={shellActions.openGuidance}
-            />
-          ),
-          runsSurface: (
-            <RunsShellSurface model={props.shellData?.runs} postMessage={props.postMessage} />
-          ),
-          runtimesSurface: (
-            <RuntimesShellSurface
-              model={props.shellData?.runtimes}
-              postMessage={props.postMessage}
-            />
-          ),
-          lifecycleSurface: (
-            <LifecycleShellSurface
-              model={props.shellData?.lifecycle}
-              postMessage={props.postMessage}
-            />
-          ),
-          commandsSurface: (
-            <CommandsShellSurface
-              model={props.shellData?.commands}
-              postMessage={props.postMessage}
-            />
-          ),
-        },
-      ),
+      createArtifactBrowserShellSurfaceSlots({
+        artifactSurface: (
+          <ArtifactBrowserSurface
+            model={props.model}
+            runtimesModel={props.shellData?.runtimes}
+            runsModel={props.shellData?.runs}
+            viewState={viewState}
+            setViewState={setViewState}
+            stageChatSessionsByKey={stageChatSessionsByKey}
+            postMessage={props.postMessage}
+            onSendStageChatIntent={handleStageChatSendIntent}
+            onOpenGuidance={shellActions.openGuidance}
+          />
+        ),
+        runsSurface: (
+          <RunsShellSurface model={props.shellData?.runs} postMessage={props.postMessage} />
+        ),
+        runtimesSurface: (
+          <RuntimesShellSurface model={props.shellData?.runtimes} postMessage={props.postMessage} />
+        ),
+        lifecycleSurface: (
+          <LifecycleShellSurface
+            model={props.shellData?.lifecycle}
+            postMessage={props.postMessage}
+          />
+        ),
+        commandsSurface: (
+          <CommandsShellSurface model={props.shellData?.commands} postMessage={props.postMessage} />
+        ),
+      }),
     [
       props.model,
       props.postMessage,

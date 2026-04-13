@@ -58,7 +58,9 @@ describe.sequential("core/context/resolveContext", () => {
     const manifest = await loadPhaseManifest(tempDir);
     await savePhaseManifest({ ...manifest, activeProject: "storefront" }, tempDir);
 
-    await expect(resolveContext(tempDir)).rejects.toThrow(/active project .* does not own active phase/i);
+    await expect(resolveContext(tempDir)).rejects.toThrow(
+      /active project .* does not own active phase/i,
+    );
   });
 
   it("should fail explicitly for legacy-only repositories", async () => {

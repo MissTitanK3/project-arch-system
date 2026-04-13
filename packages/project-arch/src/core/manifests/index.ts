@@ -14,11 +14,7 @@ import {
   projectManifestPath,
   projectDocsRoot,
 } from "../../utils/paths";
-import {
-  DEFAULT_PHASE_PROJECT_ID,
-  PhaseManifest,
-  phaseManifestSchema,
-} from "../../schemas/phase";
+import { DEFAULT_PHASE_PROJECT_ID, PhaseManifest, phaseManifestSchema } from "../../schemas/phase";
 import { MilestoneManifest, milestoneManifestSchema } from "../../schemas/milestone";
 import { ProjectManifest, projectManifestSchema } from "../../schemas/project";
 
@@ -117,7 +113,10 @@ export async function milestoneManifestPath(
 ): Promise<string> {
   const manifest = await loadPhaseManifest(cwd);
   const projectId = resolvePhaseProjectId(manifest, phaseId);
-  const canonicalPath = path.join(projectMilestoneDir(projectId, phaseId, milestoneId, cwd), "manifest.json");
+  const canonicalPath = path.join(
+    projectMilestoneDir(projectId, phaseId, milestoneId, cwd),
+    "manifest.json",
+  );
   if (await pathExists(canonicalPath)) {
     return canonicalPath;
   }
@@ -270,7 +269,10 @@ export async function preferredMilestoneOverviewPath(
 ): Promise<string> {
   const manifest = await loadPhaseManifest(cwd);
   const projectId = resolvePhaseProjectId(manifest, phaseId);
-  const canonicalPath = path.join(projectMilestoneDir(projectId, phaseId, milestoneId, cwd), "overview.md");
+  const canonicalPath = path.join(
+    projectMilestoneDir(projectId, phaseId, milestoneId, cwd),
+    "overview.md",
+  );
   if (await pathExists(canonicalPath)) {
     return canonicalPath;
   }

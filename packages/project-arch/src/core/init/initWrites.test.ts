@@ -93,7 +93,9 @@ describe("core/init/initWrites", () => {
     expect(await fs.readFile(jsonPath, "utf8")).toBe(
       '{\n  "id": "shared",\n  "title": "Shared"\n}\n',
     );
-    expect(await fs.readFile(markdownPath, "utf8")).toContain("---\nstatus: planned\n---\nTask body\n");
+    expect(await fs.readFile(markdownPath, "utf8")).toContain(
+      "---\nstatus: planned\n---\nTask body\n",
+    );
   });
 
   it("flushes managed write logs by category", () => {
@@ -111,6 +113,8 @@ describe("core/init/initWrites", () => {
     expect(logSpy).toHaveBeenCalledWith("Created: a.md");
     expect(logSpy).toHaveBeenCalledWith("Overwriting: b.md");
     expect(logSpy).toHaveBeenCalledWith("Skipped existing managed files:");
-    expect(logSpy).toHaveBeenCalledWith("Skipped (already exists): c.md — use --force to overwrite");
+    expect(logSpy).toHaveBeenCalledWith(
+      "Skipped (already exists): c.md — use --force to overwrite",
+    );
   });
 });

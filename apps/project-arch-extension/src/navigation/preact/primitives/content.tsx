@@ -70,19 +70,12 @@ interface InputProps extends JSX.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Input(props: InputProps) {
-  const {
-    className,
-    class: classToken,
-    ...inputProps
-  } = props;
+  const { className, class: classToken, ...inputProps } = props;
 
   const resolvedClassToken = typeof classToken === "string" ? classToken : undefined;
 
   return (
-    <input
-      {...inputProps}
-      class={joinClassNames("pa-input", resolvedClassToken, className)}
-    />
+    <input {...inputProps} class={joinClassNames("pa-input", resolvedClassToken, className)} />
   );
 }
 
@@ -92,20 +85,12 @@ interface SelectProps extends JSX.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export function Select(props: SelectProps) {
-  const {
-    children,
-    className,
-    class: classToken,
-    ...selectProps
-  } = props;
+  const { children, className, class: classToken, ...selectProps } = props;
 
   const resolvedClassToken = typeof classToken === "string" ? classToken : undefined;
 
   return (
-    <select
-      {...selectProps}
-      class={joinClassNames("pa-select", resolvedClassToken, className)}
-    >
+    <select {...selectProps} class={joinClassNames("pa-select", resolvedClassToken, className)}>
       {children}
     </select>
   );
@@ -150,7 +135,12 @@ export function BreadcrumbTrail(props: BreadcrumbTrailProps) {
               /
             </span>
           ) : null}
-          <Button type="button" variant="ghost" class="pa-breadcrumb-button" onClick={item.onSelect}>
+          <Button
+            type="button"
+            variant="ghost"
+            class="pa-breadcrumb-button"
+            onClick={item.onSelect}
+          >
             <span class="pa-code-text">{item.label}</span>
           </Button>
         </span>

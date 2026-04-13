@@ -126,7 +126,8 @@ describe("cli/commands/check", () => {
             supported: true,
             canonicalRootExists: true,
             legacyRootExists: true,
-            reason: "Validation runs in hybrid mode and prefers canonical project-scoped roadmap paths.",
+            reason:
+              "Validation runs in hybrid mode and prefers canonical project-scoped roadmap paths.",
           },
         },
       });

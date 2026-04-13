@@ -87,7 +87,10 @@ describe.sequential("sdk/docs", () => {
   it("should support linked-only docs catalog views", async () => {
     await writeFile(path.join(tempDir, "architecture", "guide.md"), "# Guide\n");
 
-    const decisionPath = await createDecision({ scope: "project", title: "Linked Docs Only" }, tempDir);
+    const decisionPath = await createDecision(
+      { scope: "project", title: "Linked Docs Only" },
+      tempDir,
+    );
     const decision = await readMarkdownWithFrontmatter<{ id: string }>(
       path.join(tempDir, decisionPath),
     );

@@ -5,7 +5,11 @@ import { nextTaskId } from "../../core/ids/task";
 import { defaultTaskBody, defaultTaskFrontmatter } from "../../core/templates/task";
 import { taskSchema, TaskLane } from "../../schemas/task";
 import { currentDateISO } from "../../utils/date";
-import { milestoneTaskLaneDir, projectDocsRoot, projectMilestoneTaskLaneDir } from "../../utils/paths";
+import {
+  milestoneTaskLaneDir,
+  projectDocsRoot,
+  projectMilestoneTaskLaneDir,
+} from "../../utils/paths";
 import {
   pathExists,
   readMarkdownWithFrontmatter,

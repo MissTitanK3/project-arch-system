@@ -81,8 +81,7 @@ function parseMilestoneFromManifestPath(manifestPath: string): {
   const match =
     normalized.match(
       /roadmap\/projects\/[^/]+\/phases\/([^/]+)\/milestones\/([^/]+)\/manifest\.json$/,
-    ) ??
-    normalized.match(/roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/manifest\.json$/);
+    ) ?? normalized.match(/roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/manifest\.json$/);
   if (!match) {
     throw new Error(`Unexpected milestone manifest path: ${manifestPath}`);
   }
@@ -225,10 +224,10 @@ export async function rebuildArchitectureGraph(
       "roadmap/phases/*/milestones/*/tasks/*/*.md",
     ],
     {
-    cwd,
-    absolute: true,
-    onlyFiles: true,
-    followSymbolicLinks: false,
+      cwd,
+      absolute: true,
+      onlyFiles: true,
+      followSymbolicLinks: false,
     },
   );
   const decisionFiles = await fg(["roadmap/decisions/**/*.md", "!roadmap/decisions/**/index.md"], {
@@ -243,10 +242,10 @@ export async function rebuildArchitectureGraph(
       "roadmap/phases/*/milestones/*/manifest.json",
     ],
     {
-    cwd,
-    absolute: true,
-    onlyFiles: true,
-    followSymbolicLinks: false,
+      cwd,
+      absolute: true,
+      onlyFiles: true,
+      followSymbolicLinks: false,
     },
   );
 
@@ -289,7 +288,9 @@ export async function rebuildArchitectureGraph(
     }
   }
 
-  for (const milestoneRef of [...milestoneManifestByRef.keys()].sort((a, b) => a.localeCompare(b))) {
+  for (const milestoneRef of [...milestoneManifestByRef.keys()].sort((a, b) =>
+    a.localeCompare(b),
+  )) {
     const [phaseId, milestoneId] = milestoneRef.split("/");
     milestoneNodes.push({ id: milestoneRef, phaseId, milestoneId });
   }

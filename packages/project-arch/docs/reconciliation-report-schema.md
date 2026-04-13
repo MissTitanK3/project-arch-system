@@ -48,45 +48,45 @@ Derives from the output contract described in `feedback/reconciliation-implement
 
 ## Field Semantics
 
-| Field | Required | Type | Description |
-| --- | --- | --- | --- |
-| `schemaVersion` | yes | `"1.0"` | Locked contract version. |
-| `id` | yes | `string` | Unique identifier for this report instance. |
-| `type` | yes | enum | `local-reconciliation` — scoped to the current repository. `tooling-feedback` — scoped to `project-arch` tooling. |
-| `status` | yes | enum | One of the four reconciliation statuses (see below). |
-| `taskId` | yes | `string` | The task ID that triggered this report. |
-| `date` | yes | `YYYY-MM-DD` | ISO 8601 date the report was produced. |
-| `author` | no | `string` | Agent or human who produced the report. |
-| `summary` | no | `string` | One or two sentences describing what triggered this report and what it covers. |
-| `changedFiles` | yes | `string[]` | Files changed by the source task. Empty array when none. |
-| `affectedAreas` | yes | `string[]` | Architecture areas, domains, model files, or `project-arch` components affected. |
-| `missingUpdates` | yes | `string[]` | Architecture docs, model files, trace links, or standards that need to be updated. |
-| `missingTraceLinks` | yes | `string[]` | Specific trace links that are absent and should be added. |
-| `decisionCandidates` | yes | `string[]` | Items that should become explicit architecture decisions. |
-| `standardsGaps` | yes | `string[]` | Standards implied or changed by this work that are not yet codified. |
-| `proposedActions` | yes | `string[]` | Concrete next steps (update file X, add decision for Y). |
-| `feedbackCandidates` | yes | `string[]` | Systemic gaps that should become `project-arch` tooling improvements. |
-| `notes` | no | `string` | Optional freeform context, caveats, or reviewer instructions. |
+| Field                | Required | Type         | Description                                                                                                       |
+| -------------------- | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion`      | yes      | `"1.0"`      | Locked contract version.                                                                                          |
+| `id`                 | yes      | `string`     | Unique identifier for this report instance.                                                                       |
+| `type`               | yes      | enum         | `local-reconciliation` — scoped to the current repository. `tooling-feedback` — scoped to `project-arch` tooling. |
+| `status`             | yes      | enum         | One of the four reconciliation statuses (see below).                                                              |
+| `taskId`             | yes      | `string`     | The task ID that triggered this report.                                                                           |
+| `date`               | yes      | `YYYY-MM-DD` | ISO 8601 date the report was produced.                                                                            |
+| `author`             | no       | `string`     | Agent or human who produced the report.                                                                           |
+| `summary`            | no       | `string`     | One or two sentences describing what triggered this report and what it covers.                                    |
+| `changedFiles`       | yes      | `string[]`   | Files changed by the source task. Empty array when none.                                                          |
+| `affectedAreas`      | yes      | `string[]`   | Architecture areas, domains, model files, or `project-arch` components affected.                                  |
+| `missingUpdates`     | yes      | `string[]`   | Architecture docs, model files, trace links, or standards that need to be updated.                                |
+| `missingTraceLinks`  | yes      | `string[]`   | Specific trace links that are absent and should be added.                                                         |
+| `decisionCandidates` | yes      | `string[]`   | Items that should become explicit architecture decisions.                                                         |
+| `standardsGaps`      | yes      | `string[]`   | Standards implied or changed by this work that are not yet codified.                                              |
+| `proposedActions`    | yes      | `string[]`   | Concrete next steps (update file X, add decision for Y).                                                          |
+| `feedbackCandidates` | yes      | `string[]`   | Systemic gaps that should become `project-arch` tooling improvements.                                             |
+| `notes`              | no       | `string`     | Optional freeform context, caveats, or reviewer instructions.                                                     |
 
 ---
 
 ## Status Enum
 
-| Value | Meaning |
-| --- | --- |
-| `no reconciliation needed` | Work is complete. No architecture drift or update is required. |
-| `reconciliation suggested` | Minor gaps exist. Reconciliation is recommended but not blocking. |
-| `reconciliation required` | Significant drift, boundary change, or standards gap detected. Mandatory before dependent work proceeds. |
-| `reconciliation complete` | Reconciliation has been performed and all required outputs are updated. |
+| Value                      | Meaning                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `no reconciliation needed` | Work is complete. No architecture drift or update is required.                                           |
+| `reconciliation suggested` | Minor gaps exist. Reconciliation is recommended but not blocking.                                        |
+| `reconciliation required`  | Significant drift, boundary change, or standards gap detected. Mandatory before dependent work proceeds. |
+| `reconciliation complete`  | Reconciliation has been performed and all required outputs are updated.                                  |
 
 ---
 
 ## Type Enum
 
-| Value | Scope of `affectedAreas` |
-| --- | --- |
-| `local-reconciliation` | Current repository (`architecture/`, `arch-model/`, `roadmap/decisions/`, etc.) |
-| `tooling-feedback` | `project-arch` components (CLI, schemas, standards scaffolding, reasoning structure) |
+| Value                  | Scope of `affectedAreas`                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| `local-reconciliation` | Current repository (`architecture/`, `arch-model/`, `roadmap/decisions/`, etc.)      |
+| `tooling-feedback`     | `project-arch` components (CLI, schemas, standards scaffolding, reasoning structure) |
 
 ---
 
@@ -105,22 +105,22 @@ Accepted reconciliation reports are promoted to:
 
 The Markdown report template defined in `architecture/workflows/implementation-reconciliation.md` maps directly to this schema. Each section heading corresponds to a field:
 
-| Markdown section | Schema field |
-| --- | --- |
-| `## Summary` | `summary` |
-| `## Changed Files` | `changedFiles` |
-| `## Affected Areas` | `affectedAreas` |
-| `## Missing Updates` | `missingUpdates` |
-| `## Decision Candidates` | `decisionCandidates` |
-| `## Standards Affected` | `standardsGaps` |
-| `## Proposed Actions` | `proposedActions` |
-| `## Feedback Candidates` | `feedbackCandidates` |
-| `## Notes` | `notes` |
-| frontmatter `Status` | `status` |
-| frontmatter `Type` | `type` |
-| frontmatter `Source Task` | `taskId` |
-| frontmatter `Date` | `date` |
-| frontmatter `Author` | `author` |
+| Markdown section          | Schema field         |
+| ------------------------- | -------------------- |
+| `## Summary`              | `summary`            |
+| `## Changed Files`        | `changedFiles`       |
+| `## Affected Areas`       | `affectedAreas`      |
+| `## Missing Updates`      | `missingUpdates`     |
+| `## Decision Candidates`  | `decisionCandidates` |
+| `## Standards Affected`   | `standardsGaps`      |
+| `## Proposed Actions`     | `proposedActions`    |
+| `## Feedback Candidates`  | `feedbackCandidates` |
+| `## Notes`                | `notes`              |
+| frontmatter `Status`      | `status`             |
+| frontmatter `Type`        | `type`               |
+| frontmatter `Source Task` | `taskId`             |
+| frontmatter `Date`        | `date`               |
+| frontmatter `Author`      | `author`             |
 
 ---
 
@@ -140,10 +140,7 @@ The Markdown report template defined in `architecture/workflows/implementation-r
     "testProject/architecture/workflows/implementation-reconciliation.md",
     "packages/project-arch/src/schemas/reconciliationReport.ts"
   ],
-  "affectedAreas": [
-    "architecture/workflows",
-    "packages/project-arch/src/schemas"
-  ],
+  "affectedAreas": ["architecture/workflows", "packages/project-arch/src/schemas"],
   "missingUpdates": [],
   "missingTraceLinks": [],
   "decisionCandidates": [],

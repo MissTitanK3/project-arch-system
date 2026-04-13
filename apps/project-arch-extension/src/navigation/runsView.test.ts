@@ -713,5 +713,4 @@ describe("runsView", () => {
 
     expect(executeCommand).toHaveBeenCalledWith("projectArch.runtimes.focus");
   });
-
 });

@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "fs-extra";
 import path from "path";
-import {
-  assertSupportedRuntimeCompatibility,
-  detectRuntimeCompatibility,
-} from "./compatibility";
+import { assertSupportedRuntimeCompatibility, detectRuntimeCompatibility } from "./compatibility";
 import { createTestProject, type TestProjectContext } from "../../test/helpers";
 
 describe("core/runtime/compatibility", () => {
@@ -54,8 +51,8 @@ describe("core/runtime/compatibility", () => {
   it("rejects runtime operations for legacy-only repositories", async () => {
     await fs.remove(path.join(tempDir, "roadmap", "projects"));
 
-    await expect(assertSupportedRuntimeCompatibility("Context resolution", tempDir)).rejects.toThrow(
-      /legacy-only roadmap runtimes/i,
-    );
+    await expect(
+      assertSupportedRuntimeCompatibility("Context resolution", tempDir),
+    ).rejects.toThrow(/legacy-only roadmap runtimes/i);
   });
 });

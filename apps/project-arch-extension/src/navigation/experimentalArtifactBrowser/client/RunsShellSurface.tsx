@@ -18,8 +18,8 @@ export function RunsShellSurface(props: RunsShellSurfaceProps) {
       <Surface>
         <SurfaceSection title="Runs">
           <EmptyState>
-            Runs data is unavailable in this shell snapshot. Use panel refresh to reload shared-shell
-            runs content.
+            Runs data is unavailable in this shell snapshot. Use panel refresh to reload
+            shared-shell runs content.
           </EmptyState>
         </SurfaceSection>
       </Surface>
@@ -36,15 +36,13 @@ export function RunsShellSurface(props: RunsShellSurfaceProps) {
           Generated at <CodeText>{props.model.generatedAt}</CodeText>
         </p>
         <p>
-          <strong>{props.model.runCount}</strong> runs · <strong>{props.model.needsAttentionCount}</strong>{" "}
-          need attention · <strong>{props.model.auditErrorCount}</strong> audit errors ·{" "}
+          <strong>{props.model.runCount}</strong> runs ·{" "}
+          <strong>{props.model.needsAttentionCount}</strong> need attention ·{" "}
+          <strong>{props.model.auditErrorCount}</strong> audit errors ·{" "}
           <strong>{props.model.orchestratedCount}</strong> orchestration-linked
         </p>
         <ActionRow>
-          <button
-            type="button"
-            onClick={() => props.postMessage({ type: "refreshRunsShellData" })}
-          >
+          <button type="button" onClick={() => props.postMessage({ type: "refreshRunsShellData" })}>
             Refresh Runs
           </button>
           <button
@@ -65,7 +63,8 @@ export function RunsShellSurface(props: RunsShellSurfaceProps) {
       <SurfaceSection title="Runtime Profile Readiness">
         <p>
           Source: <CodeText>{runtimeProfiles.sourceAuthority}</CodeText> · ready{" "}
-          <strong>{runtimeProfiles.readyCount}</strong> · blocked <strong>{runtimeProfiles.blockedCount}</strong>
+          <strong>{runtimeProfiles.readyCount}</strong> · blocked{" "}
+          <strong>{runtimeProfiles.blockedCount}</strong>
         </p>
         <p>{runtimeProfiles.decisionReason}</p>
         <p>{runtimeProfiles.nextStep}</p>
@@ -138,7 +137,9 @@ export function RunsShellSurface(props: RunsShellSurfaceProps) {
                   ) : null}
                   {card.orchestrationSummary ? <p>{card.orchestrationSummary}</p> : null}
                   <p>{card.auditSummary}</p>
-                  <p>{card.hasAuditErrors ? "Audit errors detected." : "No audit errors detected."}</p>
+                  <p>
+                    {card.hasAuditErrors ? "Audit errors detected." : "No audit errors detected."}
+                  </p>
                 </li>
               );
             })}

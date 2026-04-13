@@ -42,7 +42,10 @@ describe.sequential("core/docs/catalogDocs", () => {
       parsedTask.content,
     );
 
-    const decisionPath = await createDecision({ scope: "project", title: "Docs Decision" }, tempDir);
+    const decisionPath = await createDecision(
+      { scope: "project", title: "Docs Decision" },
+      tempDir,
+    );
     const decisionId = path.basename(decisionPath, ".md");
     await linkDecision(decisionId, { doc: "docs/missing.md" }, tempDir);
 
@@ -56,9 +59,30 @@ describe.sequential("core/docs/catalogDocs", () => {
     expect(catalog.summary.discoveredOnDisk).toBeGreaterThanOrEqual(2);
     expect(catalog.entries).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ path: "architecture/guide.md", category: "architecture", exists: true, discoveredOnDisk: true, taskRefs: 0, decisionRefs: 0 }),
-        expect.objectContaining({ path: "docs/a.md", category: "docs", exists: true, discoveredOnDisk: true, taskRefs: 1, decisionRefs: 0 }),
-        expect.objectContaining({ path: "docs/missing.md", category: "docs", exists: false, discoveredOnDisk: false, taskRefs: 0, decisionRefs: 1 }),
+        expect.objectContaining({
+          path: "architecture/guide.md",
+          category: "architecture",
+          exists: true,
+          discoveredOnDisk: true,
+          taskRefs: 0,
+          decisionRefs: 0,
+        }),
+        expect.objectContaining({
+          path: "docs/a.md",
+          category: "docs",
+          exists: true,
+          discoveredOnDisk: true,
+          taskRefs: 1,
+          decisionRefs: 0,
+        }),
+        expect.objectContaining({
+          path: "docs/missing.md",
+          category: "docs",
+          exists: false,
+          discoveredOnDisk: false,
+          taskRefs: 0,
+          decisionRefs: 1,
+        }),
       ]),
     );
   }, 120_000);

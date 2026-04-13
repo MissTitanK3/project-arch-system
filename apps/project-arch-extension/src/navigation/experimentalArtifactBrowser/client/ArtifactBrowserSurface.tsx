@@ -99,12 +99,7 @@ interface ArtifactContextMenuTarget {
   y: number;
 }
 
-type RelatedMetadataBucket =
-  | "codeTargets"
-  | "publicDocs"
-  | "decisions"
-  | "evidence"
-  | "traceLinks";
+type RelatedMetadataBucket = "codeTargets" | "publicDocs" | "decisions" | "evidence" | "traceLinks";
 
 interface RelatedFileEntry {
   relativePath: string;
@@ -174,12 +169,12 @@ const RELATED_METADATA_BUCKETS: ReadonlyArray<{
   key: RelatedMetadataBucket;
   label: string;
 }> = [
-    { key: "codeTargets", label: "codeTargets" },
-    { key: "publicDocs", label: "publicDocs" },
-    { key: "decisions", label: "decisions" },
-    { key: "evidence", label: "evidence" },
-    { key: "traceLinks", label: "traceLinks" },
-  ];
+  { key: "codeTargets", label: "codeTargets" },
+  { key: "publicDocs", label: "publicDocs" },
+  { key: "decisions", label: "decisions" },
+  { key: "evidence", label: "evidence" },
+  { key: "traceLinks", label: "traceLinks" },
+];
 
 function toPathLeafLabel(path: string, fallback: string): string {
   if (path.length === 0) {
@@ -275,9 +270,7 @@ function extractCommandParameters(command: string): string[] {
 }
 
 function toCommandParameterLabel(parameter: string): string {
-  return parameter
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return parameter.replace(/[-_]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function toCommandParameterControl(parameter: string): CommandParameterControl {
@@ -403,13 +396,18 @@ function toStageChatSessionKey(relativePath: string, stageId: string): string {
 }
 
 export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
-  const [contextMenuTarget, setContextMenuTarget] = useState<ArtifactContextMenuTarget | undefined>(undefined);
-  const [workflowChecklistChatSession, setWorkflowChecklistChatSession] =
-    useState<WorkflowChecklistChatSession | undefined>(undefined);
-  const [commandParameterValuesByActionId, setCommandParameterValuesByActionId] =
-    useState<Record<string, Record<string, string>>>({});
-  const [commandParameterUnitsByActionId, setCommandParameterUnitsByActionId] =
-    useState<Record<string, Record<string, string>>>({});
+  const [contextMenuTarget, setContextMenuTarget] = useState<ArtifactContextMenuTarget | undefined>(
+    undefined,
+  );
+  const [workflowChecklistChatSession, setWorkflowChecklistChatSession] = useState<
+    WorkflowChecklistChatSession | undefined
+  >(undefined);
+  const [commandParameterValuesByActionId, setCommandParameterValuesByActionId] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  const [commandParameterUnitsByActionId, setCommandParameterUnitsByActionId] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const rootNode = props.model.nodes[""];
   const roots = useMemo(() => rootNode?.directories ?? [], [rootNode]);
@@ -437,10 +435,7 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
     () => resolveReadyRuntimeEndpointOptions(props.runtimesModel),
     [props.runtimesModel],
   );
-  const runIdOptions = useMemo(
-    () => resolveRecentRunIdOptions(props.runsModel),
-    [props.runsModel],
-  );
+  const runIdOptions = useMemo(() => resolveRecentRunIdOptions(props.runsModel), [props.runsModel]);
   const taskWorkflowContext = useMemo(
     () => (selectedFile ? resolveTaskWorkflowContext(selectedFile.relativePath) : undefined),
     [selectedFile],
@@ -455,8 +450,8 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
   const activeWorkflowChecklistChatState =
     workflowChecklistChatSession && selectedFile
       ? props.stageChatSessionsByKey[
-      toStageChatSessionKey(selectedFile.relativePath, workflowChecklistChatSession.stageId)
-      ]
+          toStageChatSessionKey(selectedFile.relativePath, workflowChecklistChatSession.stageId)
+        ]
       : undefined;
   const hasParent = Boolean(activeNode.parentRelativePath);
   const navigationGuidance = useMemo(
@@ -591,11 +586,14 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
       return [];
     }
 
-    const relatedByPath = new Map<string, {
-      relativePath: string;
-      file?: HierarchyFile;
-      buckets: Set<RelatedMetadataBucket>;
-    }>();
+    const relatedByPath = new Map<
+      string,
+      {
+        relativePath: string;
+        file?: HierarchyFile;
+        buckets: Set<RelatedMetadataBucket>;
+      }
+    >();
     const selectedPath = selectedFile.relativePath;
     const allFiles = Object.values(props.model.nodes).flatMap((node) => node.files);
     const filesByPath = new Map(allFiles.map((file) => [file.relativePath, file]));
@@ -635,9 +633,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
       .map((entry) => ({
         relativePath: entry.relativePath,
         ...(entry.file ? { file: entry.file } : {}),
-        buckets: RELATED_METADATA_BUCKETS
-          .map((bucket) => bucket.key)
-          .filter((bucket) => entry.buckets.has(bucket)),
+        buckets: RELATED_METADATA_BUCKETS.map((bucket) => bucket.key).filter((bucket) =>
+          entry.buckets.has(bucket),
+        ),
       }));
   }, [props.model.nodes, selectedFile]);
   const breadcrumbItems = useMemo<BreadcrumbItem[]>(
@@ -685,7 +683,7 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
         for (const parameter of parameters) {
           const defaultValue =
             parameter.toLowerCase() === "runtime"
-              ? runtimeOptions[0] ?? "local"
+              ? (runtimeOptions[0] ?? "local")
               : toDefaultCommandParameterValue(parameter);
           parameterValues[parameter] = previousValues[parameter] ?? defaultValue;
         }
@@ -741,9 +739,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
     setWorkflowChecklistChatSession((previous) =>
       previous
         ? {
-          ...previous,
-          runtime: nextRuntime,
-        }
+            ...previous,
+            runtime: nextRuntime,
+          }
         : previous,
     );
   }, [readyRuntimeEndpointOptions, workflowChecklistChatSession]);
@@ -777,7 +775,12 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
     selectedFile && workflowChecklistChatSession && activeWorkflowChecklistChatStage,
   );
 
-  if (isWorkflowChecklistChatMode && selectedFile && workflowChecklistChatSession && activeWorkflowChecklistChatStage) {
+  if (
+    isWorkflowChecklistChatMode &&
+    selectedFile &&
+    workflowChecklistChatSession &&
+    activeWorkflowChecklistChatStage
+  ) {
     const defaultChecklistChatIntent =
       `For checklist item ${workflowChecklistChatSession.itemId} (${workflowChecklistChatSession.itemLabel}), ` +
       "summarize current status and recommend next steps.";
@@ -832,16 +835,20 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                   Task: <CodeText>{selectedFile.relativePath}</CodeText>
                 </p>
                 <p>
-                  Stage: <CodeText>{activeWorkflowChecklistChatStage.title}</CodeText> (<CodeText>{activeWorkflowChecklistChatStage.id}</CodeText>)
+                  Stage: <CodeText>{activeWorkflowChecklistChatStage.title}</CodeText> (
+                  <CodeText>{activeWorkflowChecklistChatStage.id}</CodeText>)
                 </p>
                 <p>
-                  Checklist Item: <CodeText>{workflowChecklistChatSession.itemId}</CodeText> {workflowChecklistChatSession.itemLabel}
+                  Checklist Item: <CodeText>{workflowChecklistChatSession.itemId}</CodeText>{" "}
+                  {workflowChecklistChatSession.itemLabel}
                 </p>
                 <p>
                   Session: <CodeText>{toStageChatSessionStatusLabel(sessionStatus)}</CodeText>
                   {activeWorkflowChecklistChatState?.runtimeClass ? (
                     <>
-                      {" "}· Runtime Class: <CodeText>{activeWorkflowChecklistChatState.runtimeClass}</CodeText>
+                      {" "}
+                      · Runtime Class:{" "}
+                      <CodeText>{activeWorkflowChecklistChatState.runtimeClass}</CodeText>
                     </>
                   ) : null}
                 </p>
@@ -901,7 +908,8 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                       Endpoint: <CodeText>{workflowChecklistChatSession.runtime}</CodeText>
                     </p>
                     <p>
-                      No messages yet. Use the composer below to start a stage-chat conversation for this checklist item.
+                      No messages yet. Use the composer below to start a stage-chat conversation for
+                      this checklist item.
                     </p>
                   </div>
                 )}
@@ -916,15 +924,18 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                       setWorkflowChecklistChatSession((previous) =>
                         previous
                           ? {
-                            ...previous,
-                            runtime: (event.currentTarget as HTMLSelectElement).value,
-                          }
+                              ...previous,
+                              runtime: (event.currentTarget as HTMLSelectElement).value,
+                            }
                           : previous,
                       )
                     }
                   >
                     {readyRuntimeEndpointOptions.map((runtimeOption) => (
-                      <option key={`workflow-checklist-chat-runtime-${runtimeOption}`} value={runtimeOption}>
+                      <option
+                        key={`workflow-checklist-chat-runtime-${runtimeOption}`}
+                        value={runtimeOption}
+                      >
                         {runtimeOption}
                       </option>
                     ))}
@@ -935,7 +946,10 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                   value={props.viewState.stageChatIntentDraft ?? ""}
                   onInput={(event) =>
                     props.setViewState((state) =>
-                      setStageChatIntentDraft(state, (event.currentTarget as HTMLTextAreaElement).value),
+                      setStageChatIntentDraft(
+                        state,
+                        (event.currentTarget as HTMLTextAreaElement).value,
+                      ),
                     )
                   }
                   placeholder="Describe what you need for this checklist item"
@@ -984,7 +998,8 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                     variant="secondary"
                     onClick={() =>
                       sendChecklistChatIntent(
-                        (props.viewState.stageChatIntentDraft ?? "").trim() || defaultChecklistChatIntent,
+                        (props.viewState.stageChatIntentDraft ?? "").trim() ||
+                          defaultChecklistChatIntent,
                       )
                     }
                   >
@@ -1054,7 +1069,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                 variant="secondary"
                 type="button"
                 onClick={() =>
-                  props.setViewState((state) => openDirectory(props.model, state, root.relativePath))
+                  props.setViewState((state) =>
+                    openDirectory(props.model, state, root.relativePath),
+                  )
                 }
               >
                 {root.relativePath}
@@ -1163,7 +1180,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                 variant="secondary"
                 class="pa-artifact-file-card"
                 title={file.relativePath}
-                data-pa-selected={props.viewState.selectedFilePath === file.relativePath ? "true" : "false"}
+                data-pa-selected={
+                  props.viewState.selectedFilePath === file.relativePath ? "true" : "false"
+                }
                 onContextMenu={(event) =>
                   openContextMenuForTarget(event, {
                     type: "file",
@@ -1222,9 +1241,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
             onClick={() =>
               selectedFile
                 ? props.postMessage({
-                  type: "openEdit",
-                  relativePath: selectedFile.relativePath,
-                })
+                    type: "openEdit",
+                    relativePath: selectedFile.relativePath,
+                  })
                 : undefined
             }
             disabled={!selectedFile}
@@ -1237,9 +1256,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
             onClick={() =>
               selectedFile
                 ? props.postMessage({
-                  type: "copyPath",
-                  relativePath: selectedFile.relativePath,
-                })
+                    type: "copyPath",
+                    relativePath: selectedFile.relativePath,
+                  })
                 : undefined
             }
             disabled={!selectedFile}
@@ -1252,9 +1271,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
             onClick={() =>
               selectedFile
                 ? props.postMessage({
-                  type: "openPreview",
-                  relativePath: selectedFile.relativePath,
-                })
+                    type: "openPreview",
+                    relativePath: selectedFile.relativePath,
+                  })
                 : undefined
             }
             disabled={!selectedFile}
@@ -1267,9 +1286,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
             onClick={() =>
               selectedFile
                 ? props.postMessage({
-                  type: "revealInExplorer",
-                  relativePath: selectedFile.relativePath,
-                })
+                    type: "revealInExplorer",
+                    relativePath: selectedFile.relativePath,
+                  })
                 : undefined
             }
             disabled={!selectedFile}
@@ -1289,7 +1308,6 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                       {toPathLeafLabel(entry.relativePath, entry.relativePath)}
                     </span>
                     <div>
-
                       <Button
                         type="button"
                         variant="secondary"
@@ -1430,7 +1448,11 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
               const parameters = extractCommandParameters(action.command);
               const parameterValues = commandParameterValuesByActionId[action.id] ?? {};
               const parameterUnits = commandParameterUnitsByActionId[action.id] ?? {};
-              const resolvedCommand = resolveCommandTemplate(action.command, parameterValues, parameterUnits);
+              const resolvedCommand = resolveCommandTemplate(
+                action.command,
+                parameterValues,
+                parameterUnits,
+              );
               const hasMissingParameters = parameters.some(
                 (parameter) => (parameterValues[parameter] ?? "").trim().length === 0,
               );
@@ -1446,8 +1468,15 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                         const unit = parameterUnits[parameter] ?? "ms";
 
                         return (
-                          <label key={`${action.id}-${parameter}`} class="pa-command-staging-parameter-field">
-                            <span>{control === "timeout" ? "Timeout" : toCommandParameterLabel(parameter)}</span>
+                          <label
+                            key={`${action.id}-${parameter}`}
+                            class="pa-command-staging-parameter-field"
+                          >
+                            <span>
+                              {control === "timeout"
+                                ? "Timeout"
+                                : toCommandParameterLabel(parameter)}
+                            </span>
                             {control === "select" ? (
                               parameter.toLowerCase() === "runid" ? (
                                 runIdOptions.length > 0 ? (
@@ -1458,21 +1487,26 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                                         ...previous,
                                         [action.id]: {
                                           ...(previous[action.id] ?? {}),
-                                          [parameter]: (event.currentTarget as HTMLSelectElement).value,
+                                          [parameter]: (event.currentTarget as HTMLSelectElement)
+                                            .value,
                                         },
                                       }))
                                     }
                                   >
                                     <option value="">Select a run...</option>
                                     {runIdOptions.map((runId) => (
-                                      <option key={`${action.id}-${parameter}-${runId}`} value={runId}>
+                                      <option
+                                        key={`${action.id}-${parameter}-${runId}`}
+                                        value={runId}
+                                      >
                                         {runId}
                                       </option>
                                     ))}
                                   </Select>
                                 ) : (
                                   <div class="pa-command-parameter-empty-state">
-                                    No recent runs available. Check the Runs panel to see recent activity.
+                                    No recent runs available. Check the Runs panel to see recent
+                                    activity.
                                   </div>
                                 )
                               ) : (
@@ -1483,13 +1517,17 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                                       ...previous,
                                       [action.id]: {
                                         ...(previous[action.id] ?? {}),
-                                        [parameter]: (event.currentTarget as HTMLSelectElement).value,
+                                        [parameter]: (event.currentTarget as HTMLSelectElement)
+                                          .value,
                                       },
                                     }))
                                   }
                                 >
                                   {runtimeOptions.map((runtimeOption) => (
-                                    <option key={`${action.id}-${parameter}-${runtimeOption}`} value={runtimeOption}>
+                                    <option
+                                      key={`${action.id}-${parameter}-${runtimeOption}`}
+                                      value={runtimeOption}
+                                    >
                                       {runtimeOption}
                                     </option>
                                   ))}
@@ -1506,7 +1544,8 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                                       ...previous,
                                       [action.id]: {
                                         ...(previous[action.id] ?? {}),
-                                        [parameter]: (event.currentTarget as HTMLInputElement).value,
+                                        [parameter]: (event.currentTarget as HTMLInputElement)
+                                          .value,
                                       },
                                     }))
                                   }
@@ -1519,7 +1558,8 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                                       ...previous,
                                       [action.id]: {
                                         ...(previous[action.id] ?? {}),
-                                        [parameter]: (event.currentTarget as HTMLSelectElement).value,
+                                        [parameter]: (event.currentTarget as HTMLSelectElement)
+                                          .value,
                                       },
                                     }))
                                   }
@@ -1597,8 +1637,8 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
               const isSelectedStage = props.viewState.selectedWorkflowStageId === stage.id;
               const stageChatState = selectedFile
                 ? props.stageChatSessionsByKey[
-                toStageChatSessionKey(selectedFile.relativePath, stage.id)
-                ]
+                    toStageChatSessionKey(selectedFile.relativePath, stage.id)
+                  ]
                 : undefined;
               const stageChatSessionStatus = stageChatState?.sessionStatus ?? "none";
               const stageChatLifecycleActions =
@@ -1613,13 +1653,17 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                   <h4 class="pa-command-staging-subsection-title">{stage.title}</h4>
                   <p>
                     Stage ID: <CodeText>{stage.id}</CodeText>
-                    {isSelectedStage ? <span class="pa-selected-stage-badge">Selected Stage</span> : null}
+                    {isSelectedStage ? (
+                      <span class="pa-selected-stage-badge">Selected Stage</span>
+                    ) : null}
                   </p>
                   <p>
-                    Chat Session: <CodeText>{toStageChatSessionStatusLabel(stageChatSessionStatus)}</CodeText>
+                    Chat Session:{" "}
+                    <CodeText>{toStageChatSessionStatusLabel(stageChatSessionStatus)}</CodeText>
                     {stageChatState?.runtimeClass ? (
                       <>
-                        {" "}· Runtime Class: <CodeText>{stageChatState.runtimeClass}</CodeText>
+                        {" "}
+                        · Runtime Class: <CodeText>{stageChatState.runtimeClass}</CodeText>
                       </>
                     ) : null}
                   </p>
@@ -1628,7 +1672,9 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                       type="button"
                       variant="secondary"
                       onClick={() =>
-                        props.setViewState((state) => selectWorkflowStage(props.model, state, stage.id))
+                        props.setViewState((state) =>
+                          selectWorkflowStage(props.model, state, stage.id),
+                        )
                       }
                     >
                       Select Stage
@@ -1687,7 +1733,10 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                                     relativePath: selectedFile.relativePath,
                                     stageId: stage.id,
                                     stageTitle: stage.title,
-                                    runtime: workflowChecklistChatSession?.runtime ?? readyRuntimeEndpointOptions[0] ?? "local",
+                                    runtime:
+                                      workflowChecklistChatSession?.runtime ??
+                                      readyRuntimeEndpointOptions[0] ??
+                                      "local",
                                     action: "reset",
                                   })
                                 }
@@ -1706,7 +1755,10 @@ export function ArtifactBrowserSurface(props: ArtifactBrowserSurfaceProps) {
                                     relativePath: selectedFile.relativePath,
                                     stageId: stage.id,
                                     stageTitle: stage.title,
-                                    runtime: workflowChecklistChatSession?.runtime ?? readyRuntimeEndpointOptions[0] ?? "local",
+                                    runtime:
+                                      workflowChecklistChatSession?.runtime ??
+                                      readyRuntimeEndpointOptions[0] ??
+                                      "local",
                                     action: "discard",
                                   })
                                 }

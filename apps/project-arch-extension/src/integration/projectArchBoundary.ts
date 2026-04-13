@@ -520,7 +520,13 @@ export function createProjectArchBoundary(
 
         if (error instanceof Error && error.name === "AbortError") {
           if (abortedByUser) {
-            throw new Error("Stage chat response interrupted by user.");
+            const interruptedError = new Error(
+              "Stage chat response interrupted by user.",
+            ) as Error & {
+              cause?: unknown;
+            };
+            interruptedError.cause = error;
+            throw interruptedError;
           }
 
           const timeoutError = new Error(
@@ -669,7 +675,11 @@ export function createProjectArchBoundary(
           }
           if (error instanceof Error && error.name === "AbortError") {
             if (abortedByUser) {
-              throw new Error("Stage chat response interrupted by user.");
+              const interruptedError = new Error(
+                "Stage chat response interrupted by user.",
+              ) as Error & { cause?: unknown };
+              interruptedError.cause = error;
+              throw interruptedError;
             }
 
             const timeoutError = new Error(

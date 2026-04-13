@@ -1,7 +1,9 @@
 import { ActionRow, CodeText, EmptyState, Surface, SurfaceSection } from "../../preact";
 import type { ExperimentalArtifactBrowserBootstrap, WebviewToHostMessage } from "./types";
 
-type LifecycleShellData = NonNullable<ExperimentalArtifactBrowserBootstrap["shellData"]>["lifecycle"];
+type LifecycleShellData = NonNullable<
+  ExperimentalArtifactBrowserBootstrap["shellData"]
+>["lifecycle"];
 
 interface LifecycleShellSurfaceProps {
   readonly model?: LifecycleShellData;
@@ -28,14 +30,18 @@ export function LifecycleShellSurface(props: LifecycleShellSurfaceProps) {
     <Surface>
       <SurfaceSection title="Lifecycle Status">
         <p>
-          State: <CodeText>{status.state}</CodeText> · detected at <CodeText>{status.detectedAt}</CodeText>
+          State: <CodeText>{status.state}</CodeText> · detected at{" "}
+          <CodeText>{status.detectedAt}</CodeText>
         </p>
         <p>
           CLI: {status.cliAvailable ? "available" : "missing"} · initialized:{" "}
           {status.initialized ? "yes" : "no"}
         </p>
         <ActionRow>
-          <button type="button" onClick={() => props.postMessage({ type: "refreshLifecycleShellData" })}>
+          <button
+            type="button"
+            onClick={() => props.postMessage({ type: "refreshLifecycleShellData" })}
+          >
             Refresh Lifecycle
           </button>
           <button
@@ -100,7 +106,8 @@ export function LifecycleShellSurface(props: LifecycleShellSurfaceProps) {
 
       <SurfaceSection title="Removal">
         <p>
-          Use host-routed removal flow to remove <CodeText>project-arch</CodeText> scaffold directories.
+          Use host-routed removal flow to remove <CodeText>project-arch</CodeText> scaffold
+          directories.
         </p>
         <ActionRow>
           <button type="button" onClick={() => props.postMessage({ type: "lifecycleStageRemove" })}>

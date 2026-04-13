@@ -69,7 +69,9 @@ function readBootstrap(): ExperimentalArtifactBrowserBootstrap {
   return parsed as ExperimentalArtifactBrowserBootstrap;
 }
 
-function resolveWebviewApi(windowRef: ExperimentalArtifactBrowserWindow): ExperimentalArtifactBrowserWebviewApi {
+function resolveWebviewApi(
+  windowRef: ExperimentalArtifactBrowserWindow,
+): ExperimentalArtifactBrowserWebviewApi {
   if (!windowRef.acquireVsCodeApi) {
     return {
       postMessage: () => undefined,

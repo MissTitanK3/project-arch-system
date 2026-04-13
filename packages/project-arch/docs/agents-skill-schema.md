@@ -66,14 +66,8 @@ Current contract version: `1.0`
   "source": "builtin",
   "version": "1.0.0",
   "summary": "Create a deterministic map of repository surfaces and authority order.",
-  "whenToUse": [
-    "At task start",
-    "When repository ownership is unclear"
-  ],
-  "expectedOutputs": [
-    "Surface map",
-    "Authority checklist"
-  ],
+  "whenToUse": ["At task start", "When repository ownership is unclear"],
+  "expectedOutputs": ["Surface map", "Authority checklist"],
   "files": {
     "system": "system.md",
     "checklist": "checklist.md"
@@ -85,20 +79,20 @@ Current contract version: `1.0`
 
 ### Field Semantics
 
-| Field | Required | Type | Notes |
-| --- | --- | --- | --- |
-| `schemaVersion` | yes | `"1.0"` | Locked manifest contract version. |
-| `id` | yes | kebab-case string | Must match the containing directory name. |
-| `name` | yes | string | Human-readable title. |
-| `source` | yes | `"builtin" \| "user"` | Must match the parent tree. |
-| `version` | yes | semver string | Example: `1.0.0`. |
-| `summary` | yes | string | Short user-facing description. |
-| `whenToUse` | yes | non-empty string array | Trigger conditions for choosing the skill. |
-| `expectedOutputs` | yes | non-empty string array | Concrete expected results. |
-| `files.system` | yes | string | Relative path to the skill instructions markdown file. |
-| `files.checklist` | yes | string | Relative path to the checklist markdown file. |
-| `tags` | no | string[] | Optional search/grouping metadata. |
-| `overrides` | no | boolean | Must be `true` for user overrides of built-in ids. |
+| Field             | Required | Type                   | Notes                                                  |
+| ----------------- | -------- | ---------------------- | ------------------------------------------------------ |
+| `schemaVersion`   | yes      | `"1.0"`                | Locked manifest contract version.                      |
+| `id`              | yes      | kebab-case string      | Must match the containing directory name.              |
+| `name`            | yes      | string                 | Human-readable title.                                  |
+| `source`          | yes      | `"builtin" \| "user"`  | Must match the parent tree.                            |
+| `version`         | yes      | semver string          | Example: `1.0.0`.                                      |
+| `summary`         | yes      | string                 | Short user-facing description.                         |
+| `whenToUse`       | yes      | non-empty string array | Trigger conditions for choosing the skill.             |
+| `expectedOutputs` | yes      | non-empty string array | Concrete expected results.                             |
+| `files.system`    | yes      | string                 | Relative path to the skill instructions markdown file. |
+| `files.checklist` | yes      | string                 | Relative path to the checklist markdown file.          |
+| `tags`            | no       | string[]               | Optional search/grouping metadata.                     |
+| `overrides`       | no       | boolean                | Must be `true` for user overrides of built-in ids.     |
 
 ## Resolution Rules
 

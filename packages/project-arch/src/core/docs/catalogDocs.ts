@@ -103,10 +103,12 @@ export async function catalogDocs(cwd = process.cwd()): Promise<DocsCatalog> {
   const resolvedEntries = await Promise.all(
     [...entries.values()]
       .sort((a, b) => a.path.localeCompare(b.path))
-      .map(async (entry): Promise<DocsCatalogEntry> => ({
-        ...entry,
-        exists: entry.discoveredOnDisk || (await pathExists(path.join(cwd, entry.path))),
-      })),
+      .map(
+        async (entry): Promise<DocsCatalogEntry> => ({
+          ...entry,
+          exists: entry.discoveredOnDisk || (await pathExists(path.join(cwd, entry.path))),
+        }),
+      ),
   );
 
   return {

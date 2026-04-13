@@ -67,10 +67,7 @@ export function RuntimesShellSurface(props: RuntimesShellSurfaceProps) {
           >
             Refresh Inventory
           </button>
-          <button
-            type="button"
-            onClick={() => runMutation({ kind: "create" })}
-          >
+          <button type="button" onClick={() => runMutation({ kind: "create" })}>
             Link Profile
           </button>
           <button
@@ -136,8 +133,8 @@ export function RuntimesShellSurface(props: RuntimesShellSurfaceProps) {
             {props.model.scanCandidates.map((candidate) => (
               <li key={`${candidate.runtime}-${candidate.source}`}>
                 <p>
-                  <CodeText>{candidate.displayName}</CodeText> · source {candidate.source} · confidence{" "}
-                  {candidate.confidence}
+                  <CodeText>{candidate.displayName}</CodeText> · source {candidate.source} ·
+                  confidence {candidate.confidence}
                 </p>
                 <p>{candidate.description ?? "No description."}</p>
                 <ActionRow>
@@ -202,7 +199,8 @@ export function RuntimesShellSurface(props: RuntimesShellSurfaceProps) {
                   {profile.readinessSummary}
                 </p>
                 <p>
-                  Enabled: {profile.enabled ? "yes" : "no"} · Default: {profile.isDefault ? "yes" : "no"}
+                  Enabled: {profile.enabled ? "yes" : "no"} · Default:{" "}
+                  {profile.isDefault ? "yes" : "no"}
                 </p>
                 {profile.diagnostics.length > 0 ? (
                   <ul>

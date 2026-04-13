@@ -146,9 +146,7 @@ describe("utils/paths", () => {
         "planned",
       ),
     );
-    expect(
-      projectMilestoneTaskLaneDir("shared", "phase-1", "milestone-1", "discovered", cwd),
-    ).toBe(
+    expect(projectMilestoneTaskLaneDir("shared", "phase-1", "milestone-1", "discovered", cwd)).toBe(
       path.join(
         cwd,
         "roadmap",

@@ -46,9 +46,7 @@ export async function milestoneCreate(input: {
 export async function milestoneList(input?: {
   project?: string;
   cwd?: string;
-}): Promise<
-  OperationResult<Array<{ projectId: string; phaseId: string; milestoneId: string }>>
-> {
+}): Promise<OperationResult<Array<{ projectId: string; phaseId: string; milestoneId: string }>>> {
   return wrap(async () => {
     if (input?.project) {
       assertSafeId(input.project, "projectId");

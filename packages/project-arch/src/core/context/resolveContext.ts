@@ -1,7 +1,12 @@
 import path from "path";
 import { loadPhaseManifest, resolvePhaseProjectId } from "../../graph/manifests";
 import { pathExists } from "../../utils/fs";
-import { projectDocsRoot, projectDir, projectMilestoneDir, projectPhaseDir } from "../../utils/paths";
+import {
+  projectDocsRoot,
+  projectDir,
+  projectMilestoneDir,
+  projectPhaseDir,
+} from "../../utils/paths";
 import { collectTaskRecords, type TaskRecord } from "../validation/tasks";
 import { resolveNextWorkflow } from "../workflow/next";
 import { assertSupportedRuntimeCompatibility } from "../runtime/compatibility";
@@ -103,7 +108,9 @@ export async function resolveContext(cwd = process.cwd()): Promise<ResolvedConte
 
   const manifest = await loadPhaseManifest(cwd);
   if (!manifest.activePhase) {
-    throw new Error("Context resolution is incomplete: no active phase is set in roadmap/manifest.json.");
+    throw new Error(
+      "Context resolution is incomplete: no active phase is set in roadmap/manifest.json.",
+    );
   }
   if (!manifest.activeMilestone) {
     throw new Error(
@@ -151,7 +158,9 @@ export async function resolveContext(cwd = process.cwd()): Promise<ResolvedConte
   }
 
   const nextDecision = await resolveNextWorkflow(cwd);
-  const recommendedTask = activeMilestoneTasks.find((task) => task.filePath !== activeTask.filePath);
+  const recommendedTask = activeMilestoneTasks.find(
+    (task) => task.filePath !== activeTask.filePath,
+  );
 
   return {
     version: "2.0",

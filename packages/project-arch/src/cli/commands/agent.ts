@@ -207,10 +207,7 @@ export function registerAgentCommand(program: Command): void {
       return parsed;
     })
     .action(
-      async (
-        taskRef: string,
-        options: { runtime: string; json?: boolean; timeoutMs?: number },
-      ) => {
+      async (taskRef: string, options: { runtime: string; json?: boolean; timeoutMs?: number }) => {
         try {
           const runResult = await agent.agentRun({
             taskId: taskRef,

@@ -73,10 +73,7 @@ export async function createMilestone(
   const canonicalMilestoneDir = projectMilestoneDir(projectId, phaseId, milestoneId, cwd);
   const legacyMilestoneDir = milestoneDir(phaseId, milestoneId, cwd);
   assertWithinRoot(canonicalMilestoneDir, cwd, "milestone directory");
-  if (
-    (await pathExists(canonicalMilestoneDir)) ||
-    (await pathExists(legacyMilestoneDir))
-  ) {
+  if ((await pathExists(canonicalMilestoneDir)) || (await pathExists(legacyMilestoneDir))) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' already exists`);
   }
 
@@ -100,7 +97,10 @@ export async function createMilestone(
     createdAt: now,
     updatedAt: now,
   };
-  await writeJsonDeterministic(path.join(canonicalMilestoneDir, "manifest.json"), milestoneManifest);
+  await writeJsonDeterministic(
+    path.join(canonicalMilestoneDir, "manifest.json"),
+    milestoneManifest,
+  );
   await writeJsonDeterministic(path.join(legacyMilestoneDir, "manifest.json"), milestoneManifest);
 
   await writeMarkdownWithFrontmatter(
@@ -189,10 +189,10 @@ export async function activateMilestone(
 
   const diagnostics: string[] = [];
 
-  const plannedTasks = await fg(
-    path.join(mDir, "tasks", "planned", "*.md").replace(/\\/g, "/"),
-    { onlyFiles: true, absolute: true },
-  );
+  const plannedTasks = await fg(path.join(mDir, "tasks", "planned", "*.md").replace(/\\/g, "/"), {
+    onlyFiles: true,
+    absolute: true,
+  });
   if (plannedTasks.length === 0) {
     diagnostics.push(
       "at least one planned task is required in roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/tasks/planned",

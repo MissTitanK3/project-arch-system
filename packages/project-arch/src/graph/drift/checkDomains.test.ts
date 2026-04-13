@@ -12,7 +12,8 @@ function taskRecord(tags: string[], codeTargets: string[]): TaskRecord {
     phaseId: "phase-1",
     milestoneId: "milestone-1",
     lane: "planned",
-    filePath: "roadmap/projects/shared/phases/phase-1/milestones/milestone-1/tasks/planned/001-task.md",
+    filePath:
+      "roadmap/projects/shared/phases/phase-1/milestones/milestone-1/tasks/planned/001-task.md",
     frontmatter: {
       schemaVersion: "2.0",
       id: "001",

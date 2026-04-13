@@ -54,8 +54,8 @@ describe("core/workflow/next", () => {
       const [brokenTaskPath] = await fg(
         "roadmap/projects/shared/phases/*/milestones/*/tasks/planned/*.md",
         {
-        cwd: context.tempDir,
-        absolute: true,
+          cwd: context.tempDir,
+          absolute: true,
         },
       );
       expect(brokenTaskPath).toBeDefined();
@@ -89,8 +89,8 @@ describe("core/workflow/next", () => {
       const [taskPath] = await fg(
         "roadmap/projects/shared/phases/*/milestones/*/tasks/planned/*.md",
         {
-        cwd: context.tempDir,
-        absolute: true,
+          cwd: context.tempDir,
+          absolute: true,
         },
       );
       expect(taskPath).toBeDefined();

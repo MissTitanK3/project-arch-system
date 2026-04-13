@@ -11,53 +11,42 @@ Agents must follow the read order and operating rules defined below before makin
 Agents must read documentation in the following order before executing work.
 
 1. `architecture/system.md`
-
    - Single entrypoint that summarizes architecture, domains, model, and roadmap context.
 
 1. `architecture/governance/REPO-MODEL.md`
-
    - Repository architecture model and authority hierarchy.
 
 1. `arch-model/README.md`
-
    - Machine-readable codebase topology and module navigation.
 
 1. `.arch/graph.json`
-
    - Machine-readable architecture traceability graph.
 
 1. `architecture/README.md`
-
    - Documentation structure and navigation.
 
 1. `arch-domains/README.md`
-
    - Domain boundaries and ownership map.
 
 1. `architecture/product-framing/*`
-
    - Project goals
    - product intent
    - user journey
    - scope boundaries
 
 1. `architecture/systems/*`, `architecture/data/*`, `architecture/runtime/*`, `architecture/governance/*`
-
    - canonical system boundaries and architecture constraints
 
 1. `architecture/standards/*`
-
    - implementation and repository standards
    - always include `architecture/standards/markdown-standards.md` when authoring or editing Markdown
 
 1. `roadmap/projects/<project>/phases/*`
-
    - Current development phase
    - milestones
    - active tasks
 
 1. `roadmap/decisions/*`
-
    - architectural decisions that constrain implementation
 
 1. `roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/targets.md`
@@ -65,7 +54,6 @@ Agents must read documentation in the following order before executing work.
    Canonical implementation targets for task placement.
 
 1. `architecture/templates/*`
-
    - canonical architecture templates
 
 1. `architecture/foundation/*`, `architecture/legacy-architecture/*`, `architecture/reference/*` (legacy transitional only)
@@ -212,7 +200,7 @@ packages/
 
 Agents must follow:
 
-architecture/standards/*
+architecture/standards/\*
 
 ---
 
@@ -447,21 +435,21 @@ pa feedback --help                   # Feedback subcommand reference (not listed
 
 **File Path Conventions:**
 
-| Artifact  | Path pattern                                                                    |
-| --------- | ------------------------------------------------------------------------------- |
+| Artifact  | Path pattern                                                                                   |
+| --------- | ---------------------------------------------------------------------------------------------- |
 | Task      | `roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/tasks/{lane}/{id}-{slug}.md` |
-| Decision  | `roadmap/decisions/{scope}/{id}-{slug}.md`                                      |
-| Phase     | `roadmap/projects/{project}/phases/{phase}/overview.md`                         |
-| Milestone | `roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/overview.md`  |
+| Decision  | `roadmap/decisions/{scope}/{id}-{slug}.md`                                                     |
+| Phase     | `roadmap/projects/{project}/phases/{phase}/overview.md`                                        |
+| Milestone | `roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/overview.md`                 |
 
 **ID Validation Patterns:**
 
 | Field        | Pattern              | Example              |
 | ------------ | -------------------- | -------------------- |
-| Task ID      | `^\d{3}$`           | `001`, `042`, `999`  |
-| Phase ID     | `^phase-\d+$`       | `phase-1`, `phase-2` |
-| Milestone ID | `^milestone-[\w-]+$`| `milestone-1-setup`  |
-| Decision ID  | `^\d{3}$`           | `001`, `042`         |
+| Task ID      | `^\d{3}$`            | `001`, `042`, `999`  |
+| Phase ID     | `^phase-\d+$`        | `phase-1`, `phase-2` |
+| Milestone ID | `^milestone-[\w-]+$` | `milestone-1-setup`  |
+| Decision ID  | `^\d{3}$`            | `001`, `042`         |
 
 ---
 

@@ -55,9 +55,7 @@ describe.sequential("core/docs/listDocs", () => {
 
     const refs = await listDocsReferences(tempDir);
 
-    expect(refs).toEqual(
-      expect.arrayContaining(["docs/a.md", "docs/b.md", "docs/common.md"]),
-    );
+    expect(refs).toEqual(expect.arrayContaining(["docs/a.md", "docs/b.md", "docs/common.md"]));
   }, 120_000);
 
   it("should return empty array when roadmap content is absent", async () => {

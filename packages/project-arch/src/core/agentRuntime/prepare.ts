@@ -101,7 +101,9 @@ export async function findTaskById(
     return matches[0] ?? null;
   }
 
-  const scopedRefs = matches.map(formatScopedTaskRef).sort((left, right) => left.localeCompare(right));
+  const scopedRefs = matches
+    .map(formatScopedTaskRef)
+    .sort((left, right) => left.localeCompare(right));
   throw new PrepareError(
     "PAA019",
     `Task reference '${taskRef}' is ambiguous. Use a scoped task reference: ${scopedRefs.join(", ")}.`,
@@ -320,9 +322,8 @@ export function buildTaskContract(
   const taskRelPath = toPosixRelativePath(cwd, record.filePath);
 
   const allowedPaths =
-    context?.allowedPaths ?? (declaredExecutionPaths(record).length > 0
-      ? declaredExecutionPaths(record)
-      : ["."]);
+    context?.allowedPaths ??
+    (declaredExecutionPaths(record).length > 0 ? declaredExecutionPaths(record) : ["."]);
   const successCriteria =
     fm.completionCriteria.length > 0
       ? fm.completionCriteria

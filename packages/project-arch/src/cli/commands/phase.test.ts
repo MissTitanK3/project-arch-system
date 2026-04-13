@@ -110,15 +110,7 @@ describe("cli/commands/phase", () => {
 
       const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-      await program.parseAsync([
-        "node",
-        "test",
-        "phase",
-        "new",
-        "phase-94",
-        "--project",
-        "shared",
-      ]);
+      await program.parseAsync(["node", "test", "phase", "new", "phase-94", "--project", "shared"]);
 
       consoleAssertions.assertConsoleContains(consoleSpy, "Created phase shared/phase-94");
 

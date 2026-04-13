@@ -11,10 +11,7 @@ export interface ManagedWriteState {
   skipped: string[];
 }
 
-export async function writeTextFileIfMissing(
-  targetPath: string,
-  content: string,
-): Promise<void> {
+export async function writeTextFileIfMissing(targetPath: string, content: string): Promise<void> {
   if (await pathExists(targetPath)) {
     return;
   }

@@ -17,23 +17,23 @@ This document maps major current and proposed `pa init` surface categories into 
 
 ## Surface Category Map
 
-| Surface category | Tier | Rationale |
-| ---------------- | ---- | --------- |
-| Core roadmap and project-arch planning surfaces | Tier A | Foundational to nearly every initialized repository; includes the single roadmap root and reserved `shared` bootstrap project. |
-| Canonical architecture entry docs and recommended top-level architecture families | Tier A | Part of the smallest coherent default scaffold. |
-| Root taxonomy guidance and architecture authority docs | Tier A | Needed so contributors and later milestones share one source of truth. |
-| Core required standards | Tier A | Day-one implementation standards that are broadly applicable. |
-| Canonical document templates | Tier A | Reusable first-party templates needed for normal repository operation. |
-| Template-specific required standards | Tier B | Required because of the selected stack, not because they are universal. |
-| Broader standards catalog topics | Tier C | Should be visible for discoverability without default file creation. |
-| Recommended governance starter topics beyond the baseline | Tier C | Useful to surface, but not always required on disk at default init. |
-| Recommended operations starter topics beyond the baseline | Tier C | Important categories, but often better cataloged before broad materialization. |
-| Additional architecture family starter docs where reusable first-party content exists | Tier C or Tier D depending on safety | May be broadened later, but only when safe to materialize non-interactively. |
-| Adopted optional standards | Tier D | Become scaffolded only after explicit adoption or a safe widening path. |
-| Governance or operations packs | Tier D | Useful, but too specific to treat as part of the smallest coherent scaffold. |
-| Agent entry-point surfaces identified as canonical defaults | Tier A | Core agent-facing entry surfaces are part of the default first-party model. |
-| Agent compatibility surfaces marked optional compatibility | Tier D | Supported only as optional compatibility, not as default first-party scaffolding. |
-| Workflow files that depend on unresolved context plumbing | Tier D | Too dependent on later context support to be default-scaffolded now. |
+| Surface category                                                                      | Tier                                 | Rationale                                                                                                                      |
+| ------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Core roadmap and project-arch planning surfaces                                       | Tier A                               | Foundational to nearly every initialized repository; includes the single roadmap root and reserved `shared` bootstrap project. |
+| Canonical architecture entry docs and recommended top-level architecture families     | Tier A                               | Part of the smallest coherent default scaffold.                                                                                |
+| Root taxonomy guidance and architecture authority docs                                | Tier A                               | Needed so contributors and later milestones share one source of truth.                                                         |
+| Core required standards                                                               | Tier A                               | Day-one implementation standards that are broadly applicable.                                                                  |
+| Canonical document templates                                                          | Tier A                               | Reusable first-party templates needed for normal repository operation.                                                         |
+| Template-specific required standards                                                  | Tier B                               | Required because of the selected stack, not because they are universal.                                                        |
+| Broader standards catalog topics                                                      | Tier C                               | Should be visible for discoverability without default file creation.                                                           |
+| Recommended governance starter topics beyond the baseline                             | Tier C                               | Useful to surface, but not always required on disk at default init.                                                            |
+| Recommended operations starter topics beyond the baseline                             | Tier C                               | Important categories, but often better cataloged before broad materialization.                                                 |
+| Additional architecture family starter docs where reusable first-party content exists | Tier C or Tier D depending on safety | May be broadened later, but only when safe to materialize non-interactively.                                                   |
+| Adopted optional standards                                                            | Tier D                               | Become scaffolded only after explicit adoption or a safe widening path.                                                        |
+| Governance or operations packs                                                        | Tier D                               | Useful, but too specific to treat as part of the smallest coherent scaffold.                                                   |
+| Agent entry-point surfaces identified as canonical defaults                           | Tier A                               | Core agent-facing entry surfaces are part of the default first-party model.                                                    |
+| Agent compatibility surfaces marked optional compatibility                            | Tier D                               | Supported only as optional compatibility, not as default first-party scaffolding.                                              |
+| Workflow files that depend on unresolved context plumbing                             | Tier D                               | Too dependent on later context support to be default-scaffolded now.                                                           |
 
 ## Category Notes
 

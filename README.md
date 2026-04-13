@@ -56,9 +56,9 @@ Runs the Vitest test suite for the `project-arch` package.
 
 **Current Test Metrics:**
 
-- **Test Files**: 114 (all passing)
-- **Tests**: 1090 (all passing)
-- **Duration**: ~48 seconds
+- **Test Files**: 183 (all passing)
+- **Tests**: 1640 (all passing)
+- **Duration**: ~71 seconds
 - **Coverage (latest run)**: Statements 89.31%, Branches 76.20%, Functions 93.63%, Lines 89.38%
 - **Coverage Target**: >80% for critical modules (SDK, core, CLI)
 

@@ -55,8 +55,7 @@ function isRemediationTask(record: TaskRecord): boolean {
 
 function hasDeclaredExecutionSurfaces(record: TaskRecord): boolean {
   return (
-    record.frontmatter.codeTargets.length > 0 ||
-    (record.frontmatter.publicDocs?.length ?? 0) > 0
+    record.frontmatter.codeTargets.length > 0 || (record.frontmatter.publicDocs?.length ?? 0) > 0
   );
 }
 

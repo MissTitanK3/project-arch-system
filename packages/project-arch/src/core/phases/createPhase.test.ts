@@ -57,14 +57,7 @@ describe("createPhase", () => {
     const customSlug = "planning-phase";
     await createPhase(customSlug, tempDir);
 
-    const phaseRoot = path.join(
-      tempDir,
-      "roadmap",
-      "projects",
-      "shared",
-      "phases",
-      customSlug,
-    );
+    const phaseRoot = path.join(tempDir, "roadmap", "projects", "shared", "phases", customSlug);
     expect(await fs.pathExists(phaseRoot)).toBe(true);
 
     const phases = await listPhases(tempDir);
@@ -169,14 +162,7 @@ describe("createPhase", () => {
     const specialSlug = "phase-2024-planning";
     await createPhase(specialSlug, tempDir);
 
-    const phaseRoot = path.join(
-      tempDir,
-      "roadmap",
-      "projects",
-      "shared",
-      "phases",
-      specialSlug,
-    );
+    const phaseRoot = path.join(tempDir, "roadmap", "projects", "shared", "phases", specialSlug);
     expect(await fs.pathExists(phaseRoot)).toBe(true);
 
     const phases = await listPhases(tempDir);

@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ensureDir, writeFile } from "fs-extra";
 import { learnPath } from "./learn";
-import { createTestProject, createTempDir, resultAssertions, type TestProjectContext } from "../test/helpers";
+import {
+  createTestProject,
+  createTempDir,
+  resultAssertions,
+  type TestProjectContext,
+} from "../test/helpers";
 
 describe.sequential("sdk/learn", () => {
   let context: TestProjectContext;
@@ -32,7 +37,11 @@ describe.sequential("sdk/learn", () => {
     const temp = await createTempDir();
     try {
       await ensureDir(`${temp.tempDir}/apps/web`);
-      await writeFile(`${temp.tempDir}/apps/web/page.tsx`, "export default function Page() {}\n", "utf8");
+      await writeFile(
+        `${temp.tempDir}/apps/web/page.tsx`,
+        "export default function Page() {}\n",
+        "utf8",
+      );
 
       const result = await learnPath({ paths: ["apps/web"], cwd: temp.tempDir });
       resultAssertions.assertSuccess(result);

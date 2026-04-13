@@ -2,9 +2,7 @@ import { learnPath as resolveLearnPath, renderLearnReport } from "../core/learn/
 import { OperationResult } from "../types/result";
 import { wrap } from "./_utils";
 
-export async function learnPath(
-  input: { paths: string[]; cwd?: string },
-): Promise<
+export async function learnPath(input: { paths: string[]; cwd?: string }): Promise<
   OperationResult<{
     text: string;
     report: Awaited<ReturnType<typeof resolveLearnPath>>;

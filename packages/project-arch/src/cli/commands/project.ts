@@ -24,8 +24,7 @@ export function registerProjectCommand(program: Command): void {
     .description("Create a new roadmap project")
     .addHelpText("after", () =>
       formatEnhancedHelp({
-        usage:
-          "pa project new <projectId> [--title <title>] [--type <type>] [--summary <summary>]",
+        usage: "pa project new <projectId> [--title <title>] [--type <type>] [--summary <summary>]",
         description:
           "Scaffold a named roadmap project under roadmap/projects with a manifest, overview, and phases directory.",
         options: [

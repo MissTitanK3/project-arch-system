@@ -168,9 +168,9 @@ describe("checkTaskExecutable", () => {
   });
 
   it("rejects a task with no declared execution surfaces", () => {
-    expect(() =>
-      checkTaskExecutable(makeTaskRecord({ codeTargets: [], publicDocs: [] })),
-    ).toThrow(PrepareError);
+    expect(() => checkTaskExecutable(makeTaskRecord({ codeTargets: [], publicDocs: [] }))).toThrow(
+      PrepareError,
+    );
   });
 
   it("accepts a doc-only task when publicDocs are declared", () => {

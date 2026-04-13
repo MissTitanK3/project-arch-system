@@ -10,7 +10,10 @@ interface CommandsShellSurfaceProps {
 }
 
 function primaryGroup(command: string): string {
-  const parts = command.trim().split(/\s+/).filter((token) => token.length > 0);
+  const parts = command
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
   if (parts.length < 2) {
     return "misc";
   }
@@ -43,7 +46,10 @@ export function CommandsShellSurface(props: CommandsShellSurfaceProps) {
   );
 
   const groups = useMemo(
-    () => [...new Set(entries.map((entry) => entry.group))].sort((left, right) => left.localeCompare(right)),
+    () =>
+      [...new Set(entries.map((entry) => entry.group))].sort((left, right) =>
+        left.localeCompare(right),
+      ),
     [entries],
   );
 
@@ -54,10 +60,14 @@ export function CommandsShellSurface(props: CommandsShellSurfaceProps) {
     <Surface>
       <SurfaceSection title="Command Catalog">
         <p>
-          Generated at <CodeText>{props.model.generatedAt}</CodeText> · source <CodeText>{props.model.source}</CodeText>
+          Generated at <CodeText>{props.model.generatedAt}</CodeText> · source{" "}
+          <CodeText>{props.model.source}</CodeText>
         </p>
         <ActionRow>
-          <button type="button" onClick={() => props.postMessage({ type: "refreshCommandCatalogShellData" })}>
+          <button
+            type="button"
+            onClick={() => props.postMessage({ type: "refreshCommandCatalogShellData" })}
+          >
             Refresh Commands
           </button>
           <button
@@ -88,7 +98,11 @@ export function CommandsShellSurface(props: CommandsShellSurfaceProps) {
                       return;
                     }
 
-                    setActiveGroups([...new Set([...base, group])].sort((left, right) => left.localeCompare(right)));
+                    setActiveGroups(
+                      [...new Set([...base, group])].sort((left, right) =>
+                        left.localeCompare(right),
+                      ),
+                    );
                   }}
                 >
                   {selected ? "Hide" : "Show"} {group}
@@ -107,7 +121,8 @@ export function CommandsShellSurface(props: CommandsShellSurfaceProps) {
             {visibleEntries.map((entry) => (
               <li key={`${entry.scope}-${entry.command}`}>
                 <p>
-                  <CodeText>{entry.command}</CodeText> · {entry.scope === "extension" ? "extension" : "cli"} · {entry.section}
+                  <CodeText>{entry.command}</CodeText> ·{" "}
+                  {entry.scope === "extension" ? "extension" : "cli"} · {entry.section}
                 </p>
                 <p>{entry.description}</p>
                 {entry.details.length > 0 ? (

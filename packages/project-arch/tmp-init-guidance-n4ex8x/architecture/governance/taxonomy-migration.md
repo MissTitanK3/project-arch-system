@@ -18,15 +18,15 @@ This guide explains how an existing repository can move toward the canonical `ar
 
 ## Legacy To Canonical Mapping
 
-| Legacy location | Canonical family | Guidance |
-| --------------- | ---------------- | -------- |
-| `architecture/foundation/prompt.md` | `architecture/product-framing/` | Keep the setup prompt as framing context, then update dependent docs to reference the new path. |
-| `architecture/foundation/project-overview.md`, `goals.md`, `user-journey.md`, `scope.md` | `architecture/product-framing/` | Move product meaning, scope, and risk framing into the active framing family. |
-| `architecture/legacy-architecture/system-boundaries.md` | `architecture/systems/` | System behavior and ownership boundaries belong with major system definitions. |
-| `architecture/legacy-architecture/module-model.md` | `architecture/governance/` | Module responsibilities and dependency rules are governance artifacts for repository structure. |
-| `architecture/legacy-architecture/runtime-architecture.md` | `architecture/runtime/` | Runtime topology and critical path docs belong in the runtime family. |
-| `architecture/reference/*` | `architecture/reference/` or canonical families as needed | Keep examples and notes as supporting context; move only authoritative content into canonical families. |
-| flat `architecture/*.md` layouts | canonical families by role | Sort each document by what it defines, not by its legacy file name. |
+| Legacy location                                                                          | Canonical family                                          | Guidance                                                                                                |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `architecture/foundation/prompt.md`                                                      | `architecture/product-framing/`                           | Keep the setup prompt as framing context, then update dependent docs to reference the new path.         |
+| `architecture/foundation/project-overview.md`, `goals.md`, `user-journey.md`, `scope.md` | `architecture/product-framing/`                           | Move product meaning, scope, and risk framing into the active framing family.                           |
+| `architecture/legacy-architecture/system-boundaries.md`                                  | `architecture/systems/`                                   | System behavior and ownership boundaries belong with major system definitions.                          |
+| `architecture/legacy-architecture/module-model.md`                                       | `architecture/governance/`                                | Module responsibilities and dependency rules are governance artifacts for repository structure.         |
+| `architecture/legacy-architecture/runtime-architecture.md`                               | `architecture/runtime/`                                   | Runtime topology and critical path docs belong in the runtime family.                                   |
+| `architecture/reference/*`                                                               | `architecture/reference/` or canonical families as needed | Keep examples and notes as supporting context; move only authoritative content into canonical families. |
+| flat `architecture/*.md` layouts                                                         | canonical families by role                                | Sort each document by what it defines, not by its legacy file name.                                     |
 
 ## Partial Adoption Patterns
 

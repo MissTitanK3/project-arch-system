@@ -27,16 +27,16 @@ Use the following sequence as the default shape for future setup milestones:
 
 ## Template Shape By Planning Tranche
 
-| Planning tranche | Recommended setup task shape |
-| --- | --- |
-| Project framing | tasks 1 through 4 |
-| Taxonomy and authority | task 5 |
-| Lifecycle and state modeling | task 6 |
-| Capability and system modeling | task 7 |
-| Ownership and interface boundaries | task 8 |
-| Documentation structure and authoring model | task 9 |
-| Taxonomy normalization and reconciliation | task 10 |
-| Validation and cleanup | tasks 11 and 12 |
+| Planning tranche                            | Recommended setup task shape |
+| ------------------------------------------- | ---------------------------- |
+| Project framing                             | tasks 1 through 4            |
+| Taxonomy and authority                      | task 5                       |
+| Lifecycle and state modeling                | task 6                       |
+| Capability and system modeling              | task 7                       |
+| Ownership and interface boundaries          | task 8                       |
+| Documentation structure and authoring model | task 9                       |
+| Taxonomy normalization and reconciliation   | task 10                      |
+| Validation and cleanup                      | tasks 11 and 12              |
 
 ## Placement Rules
 

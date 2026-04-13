@@ -142,11 +142,13 @@ async function discoverActivePhaseFromFilesystem(
     return { projectId: null, phaseId: null };
   }
 
-  return discovered.sort((left, right) => {
-    const leftRef = `${left.projectId}/${left.phaseId}`;
-    const rightRef = `${right.projectId}/${right.phaseId}`;
-    return leftRef.localeCompare(rightRef);
-  })[0] ?? { projectId: null, phaseId: null };
+  return (
+    discovered.sort((left, right) => {
+      const leftRef = `${left.projectId}/${left.phaseId}`;
+      const rightRef = `${right.projectId}/${right.phaseId}`;
+      return leftRef.localeCompare(rightRef);
+    })[0] ?? { projectId: null, phaseId: null }
+  );
 }
 
 /**
@@ -161,7 +163,10 @@ async function discoverActiveMilestoneFromFilesystem(
     return null;
   }
 
-  const canonicalMilestoneRoot = path.join(projectPhaseDir(projectId, activePhase, cwd), "milestones");
+  const canonicalMilestoneRoot = path.join(
+    projectPhaseDir(projectId, activePhase, cwd),
+    "milestones",
+  );
   const legacyMilestoneRoot = path.join(phaseDir(activePhase, cwd), "milestones");
   const milestoneRoot = (await pathExists(canonicalMilestoneRoot))
     ? canonicalMilestoneRoot
@@ -203,7 +208,8 @@ async function checkConsistency(
   if (discoveredPhase.phaseId !== manifestPhase || discoveredPhase.projectId !== manifestProject) {
     diagnostics.push({
       type: "activePhase",
-      canonical: manifestPhase && manifestProject ? `${manifestProject}/${manifestPhase}` : manifestPhase,
+      canonical:
+        manifestPhase && manifestProject ? `${manifestProject}/${manifestPhase}` : manifestPhase,
       secondarySurface: "filesystem",
       secondaryValue:
         discoveredPhase.phaseId && discoveredPhase.projectId
@@ -223,9 +229,10 @@ async function checkConsistency(
     cwd,
   );
   const manifestMilestone = manifest.activeMilestone ?? null;
-  const milestonePath = manifestProject && manifestPhase
-    ? `roadmap/projects/${manifestProject}/phases/${manifestPhase}/milestones/*`
-    : "roadmap/projects/<project>/phases/<activePhase>/milestones/*";
+  const milestonePath =
+    manifestProject && manifestPhase
+      ? `roadmap/projects/${manifestProject}/phases/${manifestPhase}/milestones/*`
+      : "roadmap/projects/<project>/phases/<activePhase>/milestones/*";
 
   if (discoveredMilestone !== manifestMilestone) {
     diagnostics.push({
@@ -425,7 +432,7 @@ export async function generateReportData(cwd = process.cwd()): Promise<ReportDat
 
   const activeProject = manifest.activePhase
     ? resolvePhaseProjectId(manifest, manifest.activePhase)
-    : manifest.activeProject ?? "none";
+    : (manifest.activeProject ?? "none");
   const activePhase = manifest.activePhase ?? "none";
   const activeMilestone = manifest.activeMilestone ?? "none";
   const inventoryProjects = [...new Set(manifest.phases.map((phase) => phase.projectId))].sort();
@@ -530,10 +537,7 @@ export async function generateReportData(cwd = process.cwd()): Promise<ReportDat
   };
 }
 
-export function renderReportData(
-  data: ReportData,
-  options: { verbose?: boolean } = {},
-): string {
+export function renderReportData(data: ReportData, options: { verbose?: boolean } = {}): string {
   const lastSyncInfo = data.graph.lastSync
     ? `(last sync: ${new Date(data.graph.lastSync).toLocaleString()})`
     : "(graph not synced)";
@@ -549,7 +553,11 @@ export function renderReportData(
     [
       "planning scopes",
       `${
-        data.inventory.projects.map((projectId) => `${projectId}:${data.inventory.phasesByProject[projectId] ?? 0} phases`).join(", ") || "none"
+        data.inventory.projects
+          .map(
+            (projectId) => `${projectId}:${data.inventory.phasesByProject[projectId] ?? 0} phases`,
+          )
+          .join(", ") || "none"
       } [source: roadmap/manifest.json + roadmap/projects/*/phases/*]`,
     ],
     [
@@ -606,8 +614,17 @@ export function renderReportData(
       ? `\nRuntime Compatibility Note\n- ${data.compatibility.reason}`
       : "";
   const paritySummary = renderParitySummary(data.parity);
-  const inconsistencyTable = options.verbose ? renderInconsistencyTable(data.parity.diagnostics) : "";
-  return report + diagnosticsTable + warningsSection + compatibilitySection + paritySummary + inconsistencyTable;
+  const inconsistencyTable = options.verbose
+    ? renderInconsistencyTable(data.parity.diagnostics)
+    : "";
+  return (
+    report +
+    diagnosticsTable +
+    warningsSection +
+    compatibilitySection +
+    paritySummary +
+    inconsistencyTable
+  );
 }
 
 export async function generateReport(

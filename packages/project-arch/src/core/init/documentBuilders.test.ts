@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  generateArchitectureFamilyReadme,
-  generateStandardsContent,
-} from "./documentBuilders";
+import { generateArchitectureFamilyReadme, generateStandardsContent } from "./documentBuilders";
 
 describe("core/init/documentBuilders", () => {
   it("renders standards content for markdown standards with linting guidance", () => {
@@ -58,7 +55,9 @@ describe("core/init/documentBuilders", () => {
     expect(rendered).toContain("# Governance");
     expect(rendered).toContain("- repository model and authority rules");
     expect(rendered).toContain("- Use `governance/` for who owns decisions");
-    expect(rendered).toContain("- Use `standards/` for rules contributors must follow while implementing.");
+    expect(rendered).toContain(
+      "- Use `standards/` for rules contributors must follow while implementing.",
+    );
   });
 
   it("renders default architecture family guidance for unknown areas", () => {
@@ -87,7 +86,9 @@ describe("core/init/documentBuilders", () => {
 
     expect(foundation).toContain("- Treat `foundation/` as transitional support only.");
     expect(foundation).toContain("Move active goals, scope, risk, and concept documents");
-    expect(legacyArchitecture).toContain("- Treat `legacy-architecture/` as transitional support only.");
+    expect(legacyArchitecture).toContain(
+      "- Treat `legacy-architecture/` as transitional support only.",
+    );
     expect(legacyArchitecture).toContain("Move active authoritative documents into `systems/`");
   });
 });

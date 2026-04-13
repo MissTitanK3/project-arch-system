@@ -34,12 +34,14 @@ export const artifactBrowserShellNavigationItems: ShellNavigationItem[] = [
   {
     id: LIFECYCLE_SHELL_SURFACE_ID,
     label: "Lifecycle",
-    description: "Lifecycle migration slice anchored to the experimental artifact-browser boundary.",
+    description:
+      "Lifecycle migration slice anchored to the experimental artifact-browser boundary.",
   },
   {
     id: COMMANDS_SHELL_SURFACE_ID,
     label: "Commands",
-    description: "Command-catalog migration slice anchored to the experimental artifact-browser boundary.",
+    description:
+      "Command-catalog migration slice anchored to the experimental artifact-browser boundary.",
   },
 ];
 
@@ -56,7 +58,10 @@ function renderPendingSurface(title: string, description: string): ComponentChil
 export function createArtifactBrowserSurfaceGuidancePayload(
   activeSurface?: ShellNavigationItem,
 ): ShellGuidancePayload {
-  const guidanceBySurface: Record<string, { title: string; summary: string; items: ShellGuidancePayload["items"] }> = {
+  const guidanceBySurface: Record<
+    string,
+    { title: string; summary: string; items: ShellGuidancePayload["items"] }
+  > = {
     artifacts: {
       title: "Artifacts Guidance",
       summary:
@@ -65,12 +70,14 @@ export function createArtifactBrowserSurfaceGuidancePayload(
         {
           id: "artifacts-navigate",
           label: "Navigate Artifacts",
-          detail: "Open the left navigation sheet and select Artifacts to inspect repository-backed task/workflow files.",
+          detail:
+            "Open the left navigation sheet and select Artifacts to inspect repository-backed task/workflow files.",
         },
         {
           id: "artifacts-guidance-buttons",
           label: "Open Contextual Guidance",
-          detail: "Use in-surface help actions (Navigation/File Actions/Stage Chat) to load focused guidance payloads in the shared rail.",
+          detail:
+            "Use in-surface help actions (Navigation/File Actions/Stage Chat) to load focused guidance payloads in the shared rail.",
         },
       ],
     },
@@ -178,7 +185,8 @@ export function createArtifactNavigationGuidancePayload(input: {
       {
         id: "navigation-directory",
         label: "Directory Selection",
-        detail: "Use Roots, Directories, and Files sections to stage file/workflow actions without leaving the shared shell.",
+        detail:
+          "Use Roots, Directories, and Files sections to stage file/workflow actions without leaving the shared shell.",
       },
     ],
   };
@@ -272,10 +280,9 @@ export function createArtifactFileActionsGuidancePayload(input: {
   return {
     id: `artifacts-file-actions-${filePath}`,
     title: "Artifact File Actions Guidance",
-    summary:
-      input.selectedFilePath
-        ? `Guidance for file actions on ${input.selectedFilePath}.`
-        : "Select a task/workflow artifact to unlock file and workflow-aware actions.",
+    summary: input.selectedFilePath
+      ? `Guidance for file actions on ${input.selectedFilePath}.`
+      : "Select a task/workflow artifact to unlock file and workflow-aware actions.",
     items: [
       {
         id: "file-open-preview",
@@ -468,7 +475,8 @@ export function createArtifactStageChatGuidancePayload(input: {
   return {
     id: `artifacts-stage-chat-${input.stageId ?? "none"}`,
     title: "Artifact Stage Chat Guidance",
-    summary: "Use stage-chat actions to hand off workflow-stage context to runtime inference safely.",
+    summary:
+      "Use stage-chat actions to hand off workflow-stage context to runtime inference safely.",
     items: [
       {
         id: "stage-selection",
@@ -486,15 +494,13 @@ export function createArtifactStageChatGuidancePayload(input: {
   };
 }
 
-export function createArtifactBrowserShellSurfaceSlots(
-  input: {
-    artifactSurface: ComponentChildren;
-    runsSurface?: ComponentChildren;
-    runtimesSurface?: ComponentChildren;
-    lifecycleSurface?: ComponentChildren;
-    commandsSurface?: ComponentChildren;
-  },
-): readonly ShellSurfaceSlot[] {
+export function createArtifactBrowserShellSurfaceSlots(input: {
+  artifactSurface: ComponentChildren;
+  runsSurface?: ComponentChildren;
+  runtimesSurface?: ComponentChildren;
+  lifecycleSurface?: ComponentChildren;
+  commandsSurface?: ComponentChildren;
+}): readonly ShellSurfaceSlot[] {
   return [
     {
       id: "artifacts",
@@ -502,31 +508,39 @@ export function createArtifactBrowserShellSurfaceSlots(
     },
     {
       id: RUNS_SHELL_SURFACE_ID,
-      render: () => input.runsSurface ?? renderPendingSurface(
-        "Runs",
-        `Runs shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
-      ),
+      render: () =>
+        input.runsSurface ??
+        renderPendingSurface(
+          "Runs",
+          `Runs shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
+        ),
     },
     {
       id: RUNTIMES_SHELL_SURFACE_ID,
-      render: () => input.runtimesSurface ?? renderPendingSurface(
-        "Runtimes",
-        `Runtimes shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
-      ),
+      render: () =>
+        input.runtimesSurface ??
+        renderPendingSurface(
+          "Runtimes",
+          `Runtimes shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
+        ),
     },
     {
       id: LIFECYCLE_SHELL_SURFACE_ID,
-      render: () => input.lifecycleSurface ?? renderPendingSurface(
-        "Lifecycle",
-        `Lifecycle shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
-      ),
+      render: () =>
+        input.lifecycleSurface ??
+        renderPendingSurface(
+          "Lifecycle",
+          `Lifecycle shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
+        ),
     },
     {
       id: COMMANDS_SHELL_SURFACE_ID,
-      render: () => input.commandsSurface ?? renderPendingSurface(
-        "Commands",
-        `Command shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
-      ),
+      render: () =>
+        input.commandsSurface ??
+        renderPendingSurface(
+          "Commands",
+          `Command shell surface data is currently unavailable. Refresh to reload migration content from ${RUNS_RUNTIME_MIGRATION_BOUNDARY_PATH}.`,
+        ),
     },
   ];
 }

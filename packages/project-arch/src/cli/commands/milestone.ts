@@ -16,7 +16,8 @@ export function registerMilestoneCommand(program: Command): void {
     .addHelpText("after", () =>
       formatEnhancedHelp({
         usage: "pa milestone new <phaseId> <milestoneId> [--project <projectId>]",
-        description: "Create a new milestone within a phase and resolve it inside the phase's owning project.",
+        description:
+          "Create a new milestone within a phase and resolve it inside the phase's owning project.",
         examples: [
           {
             description: "Create a milestone",
@@ -253,23 +254,24 @@ export function registerMilestoneCommand(program: Command): void {
         milestoneId: string,
         options: { force?: string; project?: string },
       ) => {
-      const result = unwrap(
-        await milestones.milestoneComplete({
-          project: options.project,
-          phase: phaseId,
-          milestone: milestoneId,
-          forceReason: options.force,
-        }),
-      );
+        const result = unwrap(
+          await milestones.milestoneComplete({
+            project: options.project,
+            phase: phaseId,
+            milestone: milestoneId,
+            forceReason: options.force,
+          }),
+        );
 
-      for (const warning of result.warnings) {
-        console.warn(`WARNING: ${warning}`);
-      }
+        for (const warning of result.warnings) {
+          console.warn(`WARNING: ${warning}`);
+        }
 
-      if (result.overrideLogPath) {
-        console.log(`Reconciliation override logged at ${result.overrideLogPath}`);
-      }
+        if (result.overrideLogPath) {
+          console.log(`Reconciliation override logged at ${result.overrideLogPath}`);
+        }
 
-      console.log(`Completed milestone ${result.projectId}/${phaseId}/${milestoneId}`);
-    });
+        console.log(`Completed milestone ${result.projectId}/${phaseId}/${milestoneId}`);
+      },
+    );
 }

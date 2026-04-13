@@ -101,7 +101,9 @@ export async function createProject(
     input.ownedPaths && input.ownedPaths.length > 0
       ? input.ownedPaths.map((ownedPath) => ownedPath.trim())
       : [defaultOwnedPath(input.id)];
-  const sharedDependencies = (input.sharedDependencies ?? []).map((dependency) => dependency.trim());
+  const sharedDependencies = (input.sharedDependencies ?? []).map((dependency) =>
+    dependency.trim(),
+  );
   const tags = (input.tags ?? []).map((tag) => tag.trim());
 
   const manifest = defaultProjectManifest(input.id, {

@@ -128,7 +128,11 @@ function getTaskMatchEvidence(task: TaskRecord, scope: PathScope, cwd: string): 
   return [...evidence];
 }
 
-function getDecisionMatchEvidence(decision: DecisionRecord, scope: PathScope, cwd: string): string[] {
+function getDecisionMatchEvidence(
+  decision: DecisionRecord,
+  scope: PathScope,
+  cwd: string,
+): string[] {
   const evidence = new Set<string>();
   const decisionPath = normalizeRepoPath(path.relative(cwd, decision.filePath));
   if (matchesScope(decisionPath, scope)) {
@@ -168,9 +172,7 @@ function unique<T>(values: T[]): T[] {
 function buildSuggestedCommands(
   findings: LearnFinding[],
   scopes: PathScope[],
-  activeContext:
-    | Awaited<ReturnType<typeof resolveContext>>
-    | null,
+  activeContext: Awaited<ReturnType<typeof resolveContext>> | null,
 ): string[] {
   const commands = new Set<string>();
   const primaryScope = scopes[0];
@@ -334,7 +336,11 @@ export async function learnPath(
       });
     }
 
-    if (isDocumentationPath(scope.relativePath) && linkedTasks.length === 0 && linkedDecisions.length === 0) {
+    if (
+      isDocumentationPath(scope.relativePath) &&
+      linkedTasks.length === 0 &&
+      linkedDecisions.length === 0
+    ) {
       findings.push({
         category: "docs-coverage",
         severity: "warning",
@@ -352,7 +358,10 @@ export async function learnPath(
         severity: diagnostic.severity,
         pathScope: diagnostic.path ?? scope.relativePath,
         message: `[${diagnostic.code}] ${diagnostic.message}`,
-        evidence: [diagnostic.path ?? scope.relativePath, ...(diagnostic.hint ? [diagnostic.hint] : [])],
+        evidence: [
+          diagnostic.path ?? scope.relativePath,
+          ...(diagnostic.hint ? [diagnostic.hint] : []),
+        ],
         recommendedAction:
           scope.kind === "file"
             ? `Review ${scope.relativePath} and rerun pa check --file ${scope.relativePath}.`
