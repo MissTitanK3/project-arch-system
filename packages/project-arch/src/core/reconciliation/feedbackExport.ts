@@ -97,7 +97,7 @@ function buildToolingFeedbackReport(
   changedFiles: string[],
 ): ReconciliationReport {
   return reconciliationReportSchema.parse({
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: `tooling-feedback-${source.taskId}-${String(index + 1).padStart(2, "0")}`,
     type: "tooling-feedback",
     status: "reconciliation suggested",

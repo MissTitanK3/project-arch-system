@@ -7,7 +7,7 @@ export function defaultDecisionFrontmatter(params: {
   scope: DecisionScope;
 }): DecisionFrontmatter {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     type: "decision",
     id: params.id,
     title: params.title,

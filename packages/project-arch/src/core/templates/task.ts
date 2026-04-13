@@ -1,4 +1,5 @@
 import { TaskFrontmatter, TaskLane } from "../../schemas/task";
+import { TaskType } from "../../schemas/taskWorkflow";
 
 export function defaultTaskFrontmatter(params: {
   id: string;
@@ -7,14 +8,17 @@ export function defaultTaskFrontmatter(params: {
   lane: TaskLane;
   createdAt: string;
   discoveredFromTask: string | null;
+  taskType?: TaskType;
+  agentExecutable?: boolean;
 }): TaskFrontmatter {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: params.id,
     slug: params.slug,
     title: params.title,
     lane: params.lane,
     status: "todo",
+    ...(params.taskType !== undefined ? { taskType: params.taskType } : {}),
     createdAt: params.createdAt,
     updatedAt: params.createdAt,
     discoveredFromTask: params.discoveredFromTask,
@@ -23,6 +27,7 @@ export function defaultTaskFrontmatter(params: {
     publicDocs: [],
     decisions: [],
     completionCriteria: [],
+    agent: { executable: params.agentExecutable ?? false },
     scope: "",
     acceptanceChecks: [],
     evidence: [],

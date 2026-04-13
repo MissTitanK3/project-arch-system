@@ -23,7 +23,7 @@ export const implementationStatusSchema = z.object({
 });
 
 export const decisionSchema = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("2.0"),
   type: z.literal("decision"),
   id: z.string().min(1),
   title: z.string().min(1),

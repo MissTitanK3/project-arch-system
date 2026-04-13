@@ -20,7 +20,7 @@ import type { ValidationContract } from "../../schemas/validationContract";
 
 export function defaultValidationContractTemplate(phaseId: string): ValidationContract {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     phaseId,
     checks: [
       {
@@ -59,7 +59,7 @@ export function defaultValidationContractTemplate(phaseId: string): ValidationCo
  */
 export function minimalValidationContractTemplate(phaseId: string): ValidationContract {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     phaseId,
     checks: [],
     createdAt: currentDateISO(),

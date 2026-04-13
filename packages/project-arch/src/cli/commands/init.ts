@@ -14,7 +14,7 @@ export function registerInitCommand(program: Command): void {
     .option("--with-ai", "create ai/indexing directory", false)
     .option(
       "--with-workflows",
-      "materialize first-pass workflow files in .github/workflows (default: disabled)",
+      "materialize first-pass workflow files in .project-arch/workflows/*.workflow.md (default: disabled; legacy .github/workflows/*.md is non-canonical)",
       false,
     )
     .addHelpText("after", () =>
@@ -32,7 +32,8 @@ export function registerInitCommand(program: Command): void {
           { flag: "--with-ai", description: "Create AI/indexing directory (default: false)" },
           {
             flag: "--with-workflows",
-            description: "Create first-pass workflow files in .github/workflows (default: false)",
+            description:
+              "Create first-pass workflow files in .project-arch/workflows/*.workflow.md (default: false; legacy .github/workflows/*.md is non-canonical)",
           },
         ],
         examples: [

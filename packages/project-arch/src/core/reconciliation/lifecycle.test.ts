@@ -14,6 +14,7 @@ async function seedReport(input: {
   cwd: string;
   taskId: string;
   date: string;
+  runId?: string;
   status?: "no reconciliation needed" | "reconciliation suggested" | "reconciliation required";
 }): Promise<void> {
   const status = input.status ?? "reconciliation suggested";
@@ -21,11 +22,12 @@ async function seedReport(input: {
   await fs.ensureDir(reconcileDir);
 
   const report = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: `reconcile-${input.taskId}-${input.date}`,
     type: "local-reconciliation",
     status,
     taskId: input.taskId,
+    runId: input.runId,
     date: input.date,
     changedFiles: [],
     affectedAreas: [],
@@ -105,8 +107,8 @@ describe("core/reconciliation/lifecycle", () => {
   });
 
   it("writes canonical per-task pointers when lifecycle config enables them", async () => {
-    await seedReport({ cwd: tempDir, taskId: "001", date: "2026-03-20" });
-    await seedReport({ cwd: tempDir, taskId: "001", date: "2026-03-22" });
+    await seedReport({ cwd: tempDir, taskId: "001", date: "2026-03-20", runId: "run-old" });
+    await seedReport({ cwd: tempDir, taskId: "001", date: "2026-03-22", runId: "run-new" });
 
     const configPath = path.join(tempDir, ".project-arch", "reconcile.config.json");
     await fs.ensureDir(path.dirname(configPath));
@@ -126,5 +128,6 @@ describe("core/reconciliation/lifecycle", () => {
     const pointer = await fs.readJson(pointerPath);
     expect(pointer.taskId).toBe("001");
     expect(pointer.latest.date).toBe("2026-03-22");
+    expect(pointer.latest.runId).toBe("run-new");
   });
 });

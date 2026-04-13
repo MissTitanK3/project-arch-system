@@ -18,6 +18,16 @@ function writeFile(tempDir, relativePath, content = "ok\n") {
   fs.writeFileSync(targetPath, content, "utf8");
 }
 
+function seedDefaultProfileBase(tempDir) {
+  writeFile(tempDir, "architecture/governance/init-default-behavior.md");
+  writeFile(tempDir, "roadmap/projects/shared/manifest.json", "{}\n");
+  writeFile(tempDir, "roadmap/projects/shared/phases/phase-1/overview.md");
+  writeFile(
+    tempDir,
+    "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/tasks/planned/001-define-project-overview.md",
+  );
+}
+
 afterEach(() => {
   while (tempDirs.length > 0) {
     const tempDir = tempDirs.pop();
@@ -48,29 +58,29 @@ describe("sandbox-init arg parsing", () => {
 describe("sandbox-init profile verification", () => {
   it("allows default profile without workflow files when workflow generation is not requested", () => {
     const tempDir = createTempSandbox();
-    writeFile(tempDir, "architecture/governance/init-default-behavior.md");
+    seedDefaultProfileBase(tempDir);
 
     expect(() => verifyProfile("default", tempDir, [])).not.toThrow();
   });
 
   it("requires generated workflow files when workflow generation is requested", () => {
     const tempDir = createTempSandbox();
-    writeFile(tempDir, "architecture/governance/init-default-behavior.md");
-    writeFile(tempDir, ".github/workflows/before-coding.md");
-    writeFile(tempDir, ".github/workflows/after-coding.md");
-    writeFile(tempDir, ".github/workflows/complete-task.md");
-    writeFile(tempDir, ".github/workflows/new-module.md");
-    writeFile(tempDir, ".github/workflows/diagnose.md");
+    seedDefaultProfileBase(tempDir);
+    writeFile(tempDir, ".project-arch/workflows/before-coding.workflow.md");
+    writeFile(tempDir, ".project-arch/workflows/after-coding.workflow.md");
+    writeFile(tempDir, ".project-arch/workflows/complete-task.workflow.md");
+    writeFile(tempDir, ".project-arch/workflows/new-module.workflow.md");
+    writeFile(tempDir, ".project-arch/workflows/diagnose.workflow.md");
 
     expect(() => verifyProfile("default", tempDir, ["--with-workflows"])).not.toThrow();
   });
 
   it("fails workflow-enabled verification when generated workflow files are missing", () => {
     const tempDir = createTempSandbox();
-    writeFile(tempDir, "architecture/governance/init-default-behavior.md");
+    seedDefaultProfileBase(tempDir);
 
     expect(() => verifyProfile("default", tempDir, ["--with-workflows"])).toThrow(
-      "Expected file to exist for profile 'default': .github/workflows/before-coding.md",
+      "Expected file to exist for profile 'default': .project-arch/workflows/before-coding.workflow.md",
     );
   });
 });

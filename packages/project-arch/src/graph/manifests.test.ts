@@ -42,7 +42,7 @@ describe.sequential("graph/manifests", () => {
     await appendDecisionToIndex(indexDir, "project:20260307:alpha");
 
     const index = await loadDecisionIndex(indexDir);
-    expect(index.schemaVersion).toBe("1.0");
+    expect(index.schemaVersion).toBe("2.0");
     expect(index.decisions).toEqual(["project:20260307:alpha", "project:20260307:zeta"]);
   }, 120_000);
 

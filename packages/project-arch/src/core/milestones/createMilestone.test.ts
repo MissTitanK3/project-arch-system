@@ -137,7 +137,7 @@ describe("createMilestone", () => {
     );
 
     const manifest = await fs.readJson(manifestPath);
-    expect(manifest.schemaVersion).toBe("1.0");
+    expect(manifest.schemaVersion).toBe("2.0");
   });
 
   it("creates overview.md with proper structure", async () => {
@@ -411,7 +411,7 @@ describe("createMilestone", () => {
     const reconcileDir = path.join(tempDir, ".project-arch", "reconcile");
     await fs.ensureDir(reconcileDir);
     await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-001-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation required",
@@ -445,7 +445,7 @@ describe("createMilestone", () => {
     const reconcileDir = path.join(tempDir, ".project-arch", "reconcile");
     await fs.ensureDir(reconcileDir);
     await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-001-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation suggested",
@@ -479,7 +479,7 @@ describe("createMilestone", () => {
     const reconcileDir = path.join(tempDir, ".project-arch", "reconcile");
     await fs.ensureDir(reconcileDir);
     await fs.writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-001-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation required",

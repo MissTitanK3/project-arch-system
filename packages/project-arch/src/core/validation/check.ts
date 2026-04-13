@@ -32,6 +32,7 @@ import {
   resolveRuntimeCompatibilityContract,
   type RuntimeCompatibilityContract,
 } from "../runtime/compatibility";
+import { detectLegacyWorkflowDocumentCompatibility } from "../workflow/compatibility";
 
 export interface CheckResult {
   ok: boolean;
@@ -94,7 +95,7 @@ export interface CheckGraphDiagnostics {
   };
 }
 
-export const CHECK_DIAGNOSTICS_SCHEMA_VERSION = "1.0";
+export const CHECK_DIAGNOSTICS_SCHEMA_VERSION = "2.0";
 const DEFAULT_COMPLETENESS_THRESHOLD = 0;
 const DEFAULT_COVERAGE_MODE: "warning" | "error" = "warning";
 
@@ -222,9 +223,14 @@ export async function runRepositoryChecks(
   });
 
   if (!compatibility.supported) {
-    addError(`[RUNTIME_COMPATIBILITY_UNSUPPORTED] ${compatibility.reason} Detected runtime mode: ${compatibility.mode}.`);
+    addError(
+      `[RUNTIME_COMPATIBILITY_UNSUPPORTED] ${compatibility.reason} Detected runtime mode: ${compatibility.mode}.`,
+    );
     return toResult();
   }
+
+  const workflowCompatibility = await detectLegacyWorkflowDocumentCompatibility(cwd);
+  warnings.push(...buildLegacyWorkflowTransitionWarnings(workflowCompatibility));
 
   const taskParseErrors: Array<{ filePath: string; error: Error }> = [];
   const taskRecords = await collectTaskRecords(cwd, {
@@ -434,7 +440,7 @@ export async function runRepositoryChecks(
     }
   }
 
-  const phaseDirs = await fg("roadmap/phases/*", {
+  const phaseDirs = await fg(["roadmap/projects/*/phases/*", "roadmap/phases/*"], {
     cwd,
     onlyDirectories: true,
     absolute: false,
@@ -455,11 +461,14 @@ export async function runRepositoryChecks(
       }
     }
 
-    const milestones = await fg(path.join(runtimePaths.phaseDir, "milestones", "*").replace(/\\/g, "/"), {
-      onlyDirectories: true,
-      absolute: true,
-      followSymbolicLinks: false,
-    });
+    const milestones = await fg(
+      path.join(runtimePaths.phaseDir, "milestones", "*").replace(/\\/g, "/"),
+      {
+        onlyDirectories: true,
+        absolute: true,
+        followSymbolicLinks: false,
+      },
+    );
     const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd, {
       pathsAreAbsolute: true,
     });
@@ -531,17 +540,22 @@ export async function runRepositoryChecks(
       phaseId,
       resolvePhaseProjectId(manifest, phaseId),
     );
-    const milestones = await fg(path.join(milestoneRuntimePaths.phaseDir, "milestones", "*").replace(/\\/g, "/"), {
-      onlyDirectories: true,
-      absolute: true,
-      followSymbolicLinks: false,
-    });
+    const milestones = await fg(
+      path.join(milestoneRuntimePaths.phaseDir, "milestones", "*").replace(/\\/g, "/"),
+      {
+        onlyDirectories: true,
+        absolute: true,
+        followSymbolicLinks: false,
+      },
+    );
     const safeMilestones = await filterGlobPathsBySymlinkPolicy(milestones, cwd, {
       pathsAreAbsolute: true,
     });
     for (const milestonePath of safeMilestones.sort()) {
       const mId = path.basename(milestonePath);
-      const mIndex = await loadDecisionIndex(await preferredMilestoneDecisionIndexDir(phaseId, mId, cwd));
+      const mIndex = await loadDecisionIndex(
+        await preferredMilestoneDecisionIndexDir(phaseId, mId, cwd),
+      );
       for (const id of mIndex.decisions) {
         if (!decisionIds.has(id)) {
           if (
@@ -876,7 +890,13 @@ async function collectValidationContractDiagnostics(
   for (const phaseId of phaseIds) {
     const projectId = resolvePhaseProjectId(manifest, phaseId);
     const canonicalContractPath = projectPhaseValidationContractPath(projectId, phaseId, cwd);
-    const legacyContractPath = path.join(cwd, "roadmap", "phases", phaseId, "validation-contract.json");
+    const legacyContractPath = path.join(
+      cwd,
+      "roadmap",
+      "phases",
+      phaseId,
+      "validation-contract.json",
+    );
     const contractPath = (await pathExists(canonicalContractPath))
       ? canonicalContractPath
       : legacyContractPath;
@@ -923,7 +943,15 @@ async function loadDeclaredTargetAreas(
   const manifest = await loadPhaseManifest(cwd);
   const projectId = resolvePhaseProjectId(manifest, phaseId);
   const canonicalTargetsPath = projectMilestoneTargetsPath(projectId, phaseId, milestoneId, cwd);
-  const legacyTargetsPath = path.join(cwd, "roadmap", "phases", phaseId, "milestones", milestoneId, "targets.md");
+  const legacyTargetsPath = path.join(
+    cwd,
+    "roadmap",
+    "phases",
+    phaseId,
+    "milestones",
+    milestoneId,
+    "targets.md",
+  );
   const targetsPath = (await pathExists(canonicalTargetsPath))
     ? canonicalTargetsPath
     : legacyTargetsPath;
@@ -1222,6 +1250,29 @@ function renderDiagnosticForTextOutput(diagnostic: CheckDiagnostic): string {
     return diagnostic.message;
   }
   return `[${diagnostic.code}] ${diagnostic.message}`;
+}
+
+function buildLegacyWorkflowTransitionWarnings(input: {
+  mode: "absent" | "actions-only" | "legacy-guidance-only" | "mixed";
+  legacyMarkdownGuides: string[];
+  canonicalWorkflowDocuments: string[];
+}): string[] {
+  if (input.legacyMarkdownGuides.length === 0) {
+    return [];
+  }
+
+  const firstLegacyPath = input.legacyMarkdownGuides[0] ?? ".github/workflows";
+  const warnings = [
+    `[LEGACY_WORKFLOW_GUIDANCE_DETECTED] Legacy markdown workflow guidance detected at '${firstLegacyPath}'. Canonical workflow-document surface is '.project-arch/workflows/*.workflow.md'; migrate legacy '.github/workflows/*.md' guides to the canonical location and naming convention.`,
+  ];
+
+  if (input.canonicalWorkflowDocuments.length > 0) {
+    warnings.push(
+      `[LEGACY_WORKFLOW_GUIDANCE_MIXED_SURFACE] Both canonical and legacy markdown workflow-document surfaces are present (${input.canonicalWorkflowDocuments.length} canonical, ${input.legacyMarkdownGuides.length} legacy). Keep only '.project-arch/workflows/*.workflow.md' as canonical and remove or migrate legacy '.github/workflows/*.md' guides to avoid transition drift.`,
+    );
+  }
+
+  return warnings;
 }
 
 function buildDefaultValidationCompatibilityContract(): RuntimeCompatibilityContract {

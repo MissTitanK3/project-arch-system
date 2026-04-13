@@ -68,7 +68,7 @@ export async function createPhase(
   await writeMarkdownWithFrontmatter(
     projectPhaseOverviewPath(projectId, id, cwd),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "phase-overview",
       id,
       createdAt: now,
@@ -86,7 +86,7 @@ export async function createPhase(
   await writeMarkdownWithFrontmatter(
     path.join(legacyPhaseDir, "overview.md"),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "phase-overview",
       id,
       createdAt: now,

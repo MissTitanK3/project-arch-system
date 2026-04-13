@@ -12,7 +12,7 @@ describe("core/templates/task", () => {
       discoveredFromTask: null,
     });
 
-    expect(frontmatter.schemaVersion).toBe("1.0");
+    expect(frontmatter.schemaVersion).toBe("2.0");
     expect(frontmatter.id).toBe("001");
     expect(frontmatter.slug).toBe("my-task");
     expect(frontmatter.title).toBe("My Task");
@@ -23,6 +23,37 @@ describe("core/templates/task", () => {
     expect(frontmatter.tags).toEqual([]);
     expect(frontmatter.codeTargets).toEqual([]);
     expect(frontmatter.publicDocs).toEqual([]);
+    expect(frontmatter.agent).toEqual({ executable: false });
+    expect(frontmatter.taskType).toBeUndefined();
+  });
+
+  it("should include taskType when provided", () => {
+    const frontmatter = defaultTaskFrontmatter({
+      id: "001",
+      slug: "my-task",
+      title: "My Task",
+      lane: "planned",
+      createdAt: "2026-03-07",
+      discoveredFromTask: null,
+      taskType: "spec",
+    });
+
+    expect(frontmatter.taskType).toBe("spec");
+    expect(frontmatter.agent).toEqual({ executable: false });
+  });
+
+  it("should set agent.executable: true when agentExecutable is true", () => {
+    const frontmatter = defaultTaskFrontmatter({
+      id: "002",
+      slug: "agent-task",
+      title: "Agent Task",
+      lane: "planned",
+      createdAt: "2026-03-07",
+      discoveredFromTask: null,
+      agentExecutable: true,
+    });
+
+    expect(frontmatter.agent).toEqual({ executable: true });
   });
 
   it("should preserve discoveredFromTask when provided", () => {

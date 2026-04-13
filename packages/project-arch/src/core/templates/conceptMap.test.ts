@@ -5,7 +5,7 @@ describe("core/templates/conceptMap", () => {
   it("should return default concept map structure", () => {
     const template = defaultConceptMapTemplate();
 
-    expect(template.schemaVersion).toBe("1.0");
+    expect(template.schemaVersion).toBe("2.0");
     expect(Array.isArray(template.concepts)).toBe(true);
     expect(Array.isArray(template.dependencyGraph.nodes)).toBe(true);
     expect(Array.isArray(template.dependencyGraph.edges)).toBe(true);

@@ -19,7 +19,7 @@ describe("schemas/decision", () => {
 
   describe("decisionSchema", () => {
     const baseDecision: Omit<DecisionFrontmatter, "scope"> = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "decision",
       id: "project:20260307:decision",
       title: "Adopt TypeScript for Backend",
@@ -160,7 +160,7 @@ describe("schemas/decision", () => {
       };
 
       it("should reject decision with invalid schemaVersion", () => {
-        const invalid = { ...validDecision, schemaVersion: "2.0" };
+        const invalid = { ...validDecision, schemaVersion: "9.9" };
         expect(() => decisionSchema.parse(invalid)).toThrow();
       });
 

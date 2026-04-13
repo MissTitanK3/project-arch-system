@@ -1,0 +1,215 @@
+{
+  "name": "project-arch-extension",
+  "version": "0.0.0",
+  "publisher": "project-arch",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MissTitanK3/project-arch-system.git",
+    "directory": "apps/project-arch-extension"
+  },
+  "displayName": "Project Arch Extension",
+  "description": "Workspace scaffold for the Project Arch VS Code extension app",
+  "main": "dist/extension.js",
+  "types": "dist/extension.d.ts",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "projectArch.implementTask",
+        "title": "Project Arch: Implement Task"
+      },
+      {
+        "command": "projectArch.generateTaskPlan",
+        "title": "Project Arch: Generate Task Plan"
+      },
+      {
+        "command": "projectArch.explainTask",
+        "title": "Project Arch: Explain Task"
+      },
+      {
+        "command": "projectArch.reviewLocalResult",
+        "title": "Project Arch: Review Local Result (Diff-First)"
+      },
+      {
+        "command": "projectArch.viewLocalWorkflowStatus",
+        "title": "Project Arch: View Local Workflow Status"
+      },
+      {
+        "command": "projectArch.refreshArtifactNavigation",
+        "title": "Project Arch: Refresh Artifact Navigation",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectArch.refreshArtifactNavigationExperimental",
+        "title": "Project Arch: Refresh Artifact Navigation (Experimental)",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectArch.openArtifactInspector",
+        "title": "Project Arch: Open Artifact Inspector"
+      },
+      {
+        "command": "projectArch.openArtifactFile",
+        "title": "Project Arch: Open Artifact File"
+      },
+      {
+        "command": "projectArch.refreshCommandCatalog",
+        "title": "Project Arch: Refresh Command Catalog",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectArch.refreshRuns",
+        "title": "Project Arch: Refresh Runs",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectArch.stageCatalogCommandInExistingTerminal",
+        "title": "Project Arch: Send Command to Existing Terminal"
+      },
+      {
+        "command": "projectArch.stageCatalogCommandInNewTerminal",
+        "title": "Project Arch: Send Command to New Terminal"
+      },
+      {
+        "command": "projectArch.refreshLifecycle",
+        "title": "Project Arch: Refresh Lifecycle View",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectArch.refreshRuntimes",
+        "title": "Project Arch: Refresh Runtimes View",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "projectArch.initProject",
+        "title": "Project Arch: Initialize Project"
+      },
+      {
+        "command": "projectArch.removeProject",
+        "title": "Project Arch: Remove project-arch from Repository"
+      },
+      {
+        "command": "projectArch.openStageChat",
+        "title": "Project Arch: Open Stage Chat"
+      },
+      {
+        "command": "projectArch.resetStageChat",
+        "title": "Project Arch: Reset Stage Chat"
+      },
+      {
+        "command": "projectArch.discardStageChat",
+        "title": "Project Arch: Discard Stage Chat"
+      },
+      {
+        "command": "projectArch.returnToWorkflowView",
+        "title": "Project Arch: Return to Workflow View"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "projectArch",
+          "title": "Project Arch",
+          "icon": "resources/artifacts-view.svg"
+        }
+      ]
+    },
+    "views": {
+      "projectArch": [
+        {
+          "id": "projectArch.artifacts",
+          "name": "Project Arch Artifacts",
+          "icon": "resources/artifacts-view.svg",
+          "type": "webview"
+        },
+        {
+          "id": "projectArch.artifacts.experimental",
+          "name": "Project Arch Artifacts (Experimental)",
+          "icon": "resources/artifacts-view.svg",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "projectArch.refreshArtifactNavigation",
+          "icon": "$(refresh)",
+          "when": "view == projectArch.artifacts",
+          "group": "navigation"
+        },
+        {
+          "command": "projectArch.refreshArtifactNavigationExperimental",
+          "icon": "$(refresh)",
+          "when": "view == projectArch.artifacts.experimental",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "pnpm run build:host && pnpm run build:webview:experimental",
+    "build:host": "tsc -p tsconfig.json",
+    "build:webview:experimental": "node ./scripts/build-experimental-webview.mjs",
+    "watch:webview:experimental": "node ./scripts/build-experimental-webview.mjs --watch",
+    "validate:webview:experimental": "node ./scripts/validate-experimental-webview-assets.mjs",
+    "validate:webview:experimental:vsix": "node ./scripts/validate-experimental-webview-assets.mjs --with-vsix",
+    "test:shared-shell-layer": "vitest run --passWithNoTests src/navigation/preact/shell/contracts.test.ts src/navigation/preact/shell/navigation.test.ts src/navigation/preact/shell/state.test.ts src/navigation/preact/styles/tokens.test.ts src/navigation/experimentalArtifactBrowser/client/preactSharedPrimitives.test.ts scripts/validate-shared-shell-layer.test.mjs",
+    "validate:shared-shell-layer": "node ./scripts/validate-shared-shell-layer.mjs",
+    "verify:shared-shell-layer": "pnpm run build:webview:experimental && pnpm run typecheck:experimental-webview && pnpm run test:shared-shell-layer && pnpm run validate:shared-shell-layer --with-build-output",
+    "test:artifact-browser-shell-composition": "vitest run --passWithNoTests src/navigation/experimentalArtifactBrowser/client/artifactBrowserShellConfig.test.tsx scripts/validate-artifact-browser-shell-composition.test.mjs",
+    "validate:artifact-browser-shell-composition": "node ./scripts/validate-artifact-browser-shell-composition.mjs",
+    "verify:artifact-browser-shell-composition": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:artifact-browser-shell-composition && pnpm run build:webview:experimental && pnpm run validate:artifact-browser-shell-composition --with-build-output",
+    "test:artifact-browser-shell-parity": "vitest run --passWithNoTests src/navigation/experimentalArtifactBrowser/client/experimentalArtifactBrowserActions.test.ts src/navigation/artifactBrowserMessageContracts.test.ts scripts/validate-artifact-browser-shell-parity.test.mjs",
+    "validate:artifact-browser-shell-parity": "node ./scripts/validate-artifact-browser-shell-parity.mjs",
+    "verify:artifact-browser-shell-parity": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:artifact-browser-shell-parity && pnpm run build:webview:experimental && pnpm run validate:artifact-browser-shell-parity --with-build-output",
+    "test:artifact-browser-migration-safety": "vitest run --passWithNoTests src/activation.test.ts src/navigation/artifactNavigationManifest.test.ts scripts/validate-artifact-browser-migration-safety.test.mjs",
+    "validate:artifact-browser-migration-safety": "node ./scripts/validate-artifact-browser-migration-safety.mjs",
+    "verify:artifact-browser-migration-safety": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:artifact-browser-shell-composition && pnpm run test:artifact-browser-shell-parity && pnpm run test:shell-surface-consolidation && pnpm run test:artifact-browser-migration-safety && pnpm run build:webview:experimental && pnpm run validate:artifact-browser-shell-composition --with-build-output && pnpm run validate:artifact-browser-shell-parity --with-build-output && pnpm run validate:shell-surface-consolidation --with-build-output && pnpm run validate:artifact-browser-migration-safety --with-build-output",
+    "test:runs-runtimes-shell-composition": "vitest run --passWithNoTests src/navigation/runsView.test.ts src/navigation/runtimesView.test.ts scripts/validate-runs-runtimes-shell-composition.test.mjs",
+    "validate:runs-runtimes-shell-composition": "node ./scripts/validate-runs-runtimes-shell-composition.mjs",
+    "verify:runs-runtimes-shell-composition": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:runs-runtimes-shell-composition && pnpm run validate:runs-runtimes-shell-composition",
+    "test:lifecycle-command-shell-composition": "vitest run --passWithNoTests src/navigation/lifecycleView.test.ts src/navigation/commandCatalogView.test.ts scripts/validate-lifecycle-command-shell-composition.test.mjs",
+    "validate:lifecycle-command-shell-composition": "node ./scripts/validate-lifecycle-command-shell-composition.mjs",
+    "verify:lifecycle-command-shell-composition": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:lifecycle-command-shell-composition && pnpm run validate:lifecycle-command-shell-composition",
+    "test:shared-navigation-guidance-integration": "vitest run --passWithNoTests src/navigation/experimentalArtifactBrowser/client/artifactBrowserShellConfig.test.tsx scripts/validate-shared-navigation-guidance-integration.test.mjs",
+    "validate:shared-navigation-guidance-integration": "node ./scripts/validate-shared-navigation-guidance-integration.mjs",
+    "verify:shared-navigation-guidance-integration": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:shared-navigation-guidance-integration && pnpm run build:webview:experimental && pnpm run validate:shared-navigation-guidance-integration --with-build-output",
+    "test:multi-surface-coexistence-regression-safety": "vitest run --passWithNoTests src/activation.test.ts src/navigation/artifactNavigationManifest.test.ts scripts/validate-multi-surface-coexistence-regression-safety.test.mjs",
+    "validate:multi-surface-coexistence-regression-safety": "node ./scripts/validate-multi-surface-coexistence-regression-safety.mjs",
+    "verify:multi-surface-coexistence-regression-safety": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:runs-runtimes-shell-composition && pnpm run test:lifecycle-command-shell-composition && pnpm run test:shared-navigation-guidance-integration && pnpm run test:multi-surface-coexistence-regression-safety && pnpm run build:webview:experimental && pnpm run validate:runs-runtimes-shell-composition && pnpm run validate:lifecycle-command-shell-composition && pnpm run validate:shared-navigation-guidance-integration --with-build-output && pnpm run validate:shell-surface-consolidation --with-build-output && pnpm run validate:artifact-browser-migration-safety --with-build-output && pnpm run validate:multi-surface-coexistence-regression-safety --with-build-output",
+    "test:shell-surface-consolidation": "vitest run --passWithNoTests src/activation.test.ts src/navigation/artifactNavigationManifest.test.ts scripts/validate-shell-surface-consolidation.test.mjs",
+    "validate:shell-surface-consolidation": "node ./scripts/validate-shell-surface-consolidation.mjs",
+    "verify:shell-surface-consolidation": "pnpm run build:host && pnpm run typecheck:experimental-webview && pnpm run test:shell-surface-consolidation && pnpm run build:webview:experimental && pnpm run validate:shell-surface-consolidation --with-build-output",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:experimental-webview": "tsc -p tsconfig.experimental-webview.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest run --passWithNoTests",
+    "verify": "pnpm run typecheck && pnpm run typecheck:experimental-webview && pnpm run lint && pnpm run test",
+    "package:vsix": "pnpm run build && node -e \"require('fs').mkdirSync('.artifacts',{recursive:true})\" && vsce package --no-dependencies --out .artifacts/project-arch-extension.vsix"
+  },
+  "dependencies": {
+    "dompurify": "^3.3.3",
+    "marked": "^18.0.0",
+    "preact": "^10.27.2",
+    "project-arch": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.8",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.7.0",
+    "esbuild": "^0.25.4",
+    "typescript": "^5.8.2",
+    "vitest": "^4.0.18"
+  }
+}

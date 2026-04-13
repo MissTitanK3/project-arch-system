@@ -15,7 +15,7 @@ function taskRecord(decisions: string[]): TaskRecord {
     lane: "planned",
     filePath: "roadmap/projects/shared/phases/phase-1/milestones/milestone-1/tasks/planned/001-task.md",
     frontmatter: {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "001",
       slug: "task",
       title: "Task",
@@ -37,7 +37,7 @@ function decisionRecord(id: string): DecisionRecord {
   return {
     filePath: `roadmap/decisions/${id}.md`,
     frontmatter: {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "decision",
       id,
       title: "Decision",

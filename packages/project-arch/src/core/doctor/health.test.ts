@@ -90,6 +90,59 @@ describe("core/doctor/health", () => {
     }
   });
 
+  it("reports malformed runtime profile config JSON as local config error", async () => {
+    const context = await createTestProject(originalCwd, undefined, { setCwd: false });
+    try {
+      const configPath = path.join(context.tempDir, ".project-arch", "runtime.config.json");
+      await fs.ensureDir(path.dirname(configPath));
+      await fs.writeFile(configPath, "{ invalid", "utf8");
+
+      const result = await runDoctorHealth({ cwd: context.tempDir });
+      expect(result.status).toBe("broken");
+      expect(result.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "PAH011",
+            path: ".project-arch/runtime.config.json",
+          }),
+        ]),
+      );
+    } finally {
+      await context.cleanup();
+    }
+  });
+
+  it("reports schema-invalid runtime profile config explicitly", async () => {
+    const context = await createTestProject(originalCwd, undefined, { setCwd: false });
+    try {
+      const configPath = path.join(context.tempDir, ".project-arch", "runtime.config.json");
+      await fs.ensureDir(path.dirname(configPath));
+      await fs.writeJson(
+        configPath,
+        {
+          schemaVersion: "2.0",
+          defaultProfile: "missing-profile",
+          profiles: [],
+        },
+        { spaces: 2 },
+      );
+
+      const result = await runDoctorHealth({ cwd: context.tempDir });
+      expect(result.status).toBe("broken");
+      expect(result.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "PAH015",
+            path: ".project-arch/runtime.config.json",
+          }),
+        ]),
+      );
+      expect(result.issues.some((issue) => issue.message.includes("defaultProfile"))).toBe(true);
+    } finally {
+      await context.cleanup();
+    }
+  });
+
   it("reports missing project manifest under roadmap/projects", async () => {
     const context = await createTestProject(originalCwd, undefined, { setCwd: false });
     try {
@@ -127,7 +180,11 @@ describe("core/doctor/health", () => {
         "shared",
         "manifest.json",
       );
-      await fs.writeFile(projectManifestPath, JSON.stringify({ schemaVersion: "1.0", id: "" }), "utf8");
+      await fs.writeFile(
+        projectManifestPath,
+        JSON.stringify({ schemaVersion: "2.0", id: "" }),
+        "utf8",
+      );
 
       const result = await runDoctorHealth({ cwd: context.tempDir });
       expect(result.status).toBe("broken");

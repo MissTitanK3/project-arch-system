@@ -17,7 +17,7 @@ describe.sequential("core/learn/learnPath", () => {
   it("returns a path-scoped learn report with findings and suggested commands", async () => {
     const report = await learnPath({ paths: ["architecture/governance"] }, context.tempDir);
 
-    expect(report.schemaVersion).toBe("1.0");
+    expect(report.schemaVersion).toBe("2.0");
     expect(report.analyzedPaths).toEqual(["architecture/governance"]);
     expect(report.summary.totalGaps).toBeGreaterThan(0);
     expect(Object.keys(report.summary.byCategory).length).toBeGreaterThan(0);

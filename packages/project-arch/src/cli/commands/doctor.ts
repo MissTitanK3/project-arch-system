@@ -75,7 +75,7 @@ export function registerDoctorCommand(
         console.log(
           JSON.stringify(
             {
-              schemaVersion: "1.0",
+              schemaVersion: "2.0",
               status: result.status,
               checkedAt: result.checkedAt,
               summary: {

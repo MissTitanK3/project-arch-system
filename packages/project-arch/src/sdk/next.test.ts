@@ -37,7 +37,7 @@ describe("sdk/next", () => {
       const reconcileDir = path.join(context.tempDir, ".project-arch", "reconcile");
       await fs.ensureDir(reconcileDir);
       await fs.writeJson(path.join(reconcileDir, "001-2026-03-22.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "001-2026-03-22",
         type: "local-reconciliation",
         status: "reconciliation complete",

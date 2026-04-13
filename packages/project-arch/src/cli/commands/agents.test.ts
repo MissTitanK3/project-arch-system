@@ -44,7 +44,7 @@ describe("cli/commands/agents", () => {
 
     await fs.ensureDir(skillDir);
     await fs.writeJson(path.join(skillDir, "skill.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: input.id,
       name: `Skill ${input.id}`,
       source: input.source,
@@ -91,7 +91,7 @@ describe("cli/commands/agents", () => {
       skills: Array<{ id: string }>;
     };
 
-    expect(payload.schemaVersion).toBe("1.0");
+    expect(payload.schemaVersion).toBe("2.0");
     expect(payload.skills.map((skill) => skill.id)).toEqual(["alpha", "zeta"]);
   });
 
@@ -169,7 +169,7 @@ describe("cli/commands/agents", () => {
       schemaVersion: string;
     };
 
-    expect(payload.schemaVersion).toBe("1.0");
+    expect(payload.schemaVersion).toBe("2.0");
     expect(payload.skillDir).toContain(".arch/agents-of-arch/user-skills/quality-gates");
     expect(await fs.pathExists(path.join(context.tempDir, payload.manifestPath))).toBe(true);
   });
@@ -225,7 +225,7 @@ describe("cli/commands/agents", () => {
     const skillDir = path.join(context.tempDir, ".arch", "agents-of-arch", "skills", "repo-map");
     await fs.ensureDir(skillDir);
     await fs.writeJson(path.join(skillDir, "skill.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "repo-map",
       name: "Repo Map",
       source: "builtin",
@@ -266,7 +266,7 @@ describe("cli/commands/agents", () => {
     const skillDir = path.join(context.tempDir, ".arch", "agents-of-arch", "skills", "repo-map");
     await fs.ensureDir(skillDir);
     await fs.writeJson(path.join(skillDir, "skill.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "repo-map",
       name: "Repo Map",
       source: "builtin",
@@ -310,7 +310,7 @@ describe("cli/commands/agents", () => {
     const skillDir = path.join(context.tempDir, ".arch", "agents-of-arch", "skills", "repo-map");
     await fs.ensureDir(skillDir);
     await fs.writeJson(path.join(skillDir, "skill.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "repo-map",
       name: "Repo Map",
       source: "builtin",

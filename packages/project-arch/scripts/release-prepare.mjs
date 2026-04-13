@@ -513,7 +513,7 @@ function main() {
   const safeToProceed = hardFailures.length === 0;
 
   const report = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     generatedAt: new Date().toISOString(),
     startedAt: startedAt.toISOString(),
     package: {

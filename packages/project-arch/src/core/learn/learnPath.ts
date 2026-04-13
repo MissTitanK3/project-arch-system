@@ -30,7 +30,7 @@ export interface LearnSummary {
 }
 
 export interface LearnReport {
-  schemaVersion: "1.0";
+  schemaVersion: "2.0";
   timestamp: string;
   analyzedPaths: string[];
   findings: LearnFinding[];
@@ -368,7 +368,7 @@ export async function learnPath(
 
   const pathsWithFindings = new Set(findings.map((finding) => finding.pathScope));
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     timestamp: new Date().toISOString(),
     analyzedPaths: scopes.map((scope) => scope.relativePath),
     findings,

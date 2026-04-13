@@ -83,7 +83,7 @@ export async function migrateLegacyDecision(
 
     // Add missing required fields with sensible defaults
     if (!updated.schemaVersion) {
-      updated.schemaVersion = "1.0";
+      updated.schemaVersion = "2.0";
     }
 
     if (!updated.type) {

@@ -37,7 +37,7 @@ export interface ConceptMap {
 
 export function defaultConceptMapTemplate(): ConceptMap {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     concepts: [
       {
         concept: "example-concept",

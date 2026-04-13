@@ -68,7 +68,7 @@ Old format without required fields.
       await fs.writeFile(
         validPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 type: decision
 id: "001"
 title: "Valid Decision"
@@ -138,7 +138,7 @@ This should be preserved.
 
       // Verify the file was updated
       const content = await fs.readFile(legacyPath, "utf8");
-      expect(content).toContain("schemaVersion: '1.0'");
+      expect(content).toContain("schemaVersion: '2.0'");
       expect(content).toContain("type: decision");
       expect(content).toContain("scope:");
       expect(content).toContain("drivers:");
@@ -305,7 +305,7 @@ status: "accepted"
       expect(result.success).toBe(true);
 
       const content = await fs.readFile(noVersionPath, "utf8");
-      expect(content).toContain("schemaVersion: '1.0'");
+      expect(content).toContain("schemaVersion: '2.0'");
     });
 
     it("should add type field when missing", async () => {
@@ -315,7 +315,7 @@ status: "accepted"
       await fs.writeFile(
         noTypePath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "no-type"
 title: "No Type"
 status: "accepted"

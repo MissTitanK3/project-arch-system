@@ -35,7 +35,7 @@ export function registerDocsCommand(program: Command): void {
       const result = unwrap(await docs.docsCatalog({ linkedOnly: options.linkedOnly }));
 
       if (options.json) {
-        printJson({ schemaVersion: "1.0", ...result });
+        printJson({ schemaVersion: "2.0", ...result });
         return;
       }
 

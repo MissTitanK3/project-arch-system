@@ -8,20 +8,20 @@ pa check --json
 
 ## Contract Version
 
-- Current version: `1.0`
+- Current version: `2.0`
 - Status: stable for automation consumers
 
 ## Versioning Rules
 
-- Patch (`1.0.x`): clarifications only, no payload shape changes.
-- Minor (`1.x`): additive changes only (new optional fields).
+- Patch (`2.0.x`): clarifications only, no payload shape changes.
+- Minor (`2.x`): additive changes only (new optional fields).
 - Major (`x.0`): breaking changes (field removal/rename/type change).
 
-## Payload Shape (`1.0`)
+## Payload Shape (`2.0`)
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "status": "ok | invalid",
   "summary": {
     "errorCount": 0,
@@ -99,29 +99,29 @@ If a diagnostic is not mapped to a specific stable code, fallback values are `CH
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "status": "invalid",
   "summary": {
     "errorCount": 1,
     "warningCount": 1,
     "diagnosticCount": 2
   },
-    "graphDiagnostics": {
-      "built": true,
-      "completeness": {
-        "score": 75,
-        "threshold": 80,
-        "sufficient": false,
-        "connectedDecisionNodes": 3,
-        "totalDecisionNodes": 4
-      },
-      "disconnectedNodes": {
-        "decisionsWithoutDomain": ["project:20260322:orphan"],
-        "decisionsWithoutTaskBackReferences": [],
-        "domainsWithoutDecisions": ["payments"],
-        "taskReferencesToMissingDecisions": []
-      }
+  "graphDiagnostics": {
+    "built": true,
+    "completeness": {
+      "score": 75,
+      "threshold": 80,
+      "sufficient": false,
+      "connectedDecisionNodes": 3,
+      "totalDecisionNodes": 4
     },
+    "disconnectedNodes": {
+      "decisionsWithoutDomain": ["project:20260322:orphan"],
+      "decisionsWithoutTaskBackReferences": [],
+      "domainsWithoutDecisions": ["payments"],
+      "taskReferencesToMissingDecisions": []
+    }
+  },
   "diagnostics": [
     {
       "code": "UNMAPPED_MODULE",

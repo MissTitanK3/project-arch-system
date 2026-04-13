@@ -3,7 +3,7 @@ import { z } from "zod";
 export const projectTypeSchema = z.enum(["application", "service", "package", "client", "shared"]);
 
 export const projectManifestSchema = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("2.0"),
   id: z.string().min(1),
   title: z.string().min(1),
   type: projectTypeSchema,

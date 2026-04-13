@@ -29,17 +29,30 @@ async function findTaskFileById(taskId: string, cwd: string): Promise<string | n
   // Normalise: accept "001", "001-some-slug", or "001-some-slug.md"
   const numericId = taskId.replace(/^(\d{3}).*/, "$1");
 
-  const files = await fg(`roadmap/phases/*/milestones/*/tasks/**/${numericId}-*.md`, {
-    cwd,
-    absolute: true,
-    onlyFiles: true,
-    followSymbolicLinks: false,
-  });
+  const files = await fg(
+    [
+      `roadmap/projects/*/phases/*/milestones/*/tasks/**/${numericId}-*.md`,
+      `roadmap/phases/*/milestones/*/tasks/**/${numericId}-*.md`,
+    ],
+    {
+      cwd,
+      absolute: true,
+      onlyFiles: true,
+      followSymbolicLinks: false,
+    },
+  );
   const safeFiles = await filterGlobPathsBySymlinkPolicy(files, cwd, {
     pathsAreAbsolute: true,
   });
 
-  return safeFiles[0] ?? null;
+  const canonicalMatch = safeFiles
+    .sort((left, right) => left.localeCompare(right))
+    .find((filePath) => filePath.replace(/\\/g, "/").includes("/roadmap/projects/"));
+  if (canonicalMatch) {
+    return canonicalMatch;
+  }
+
+  return safeFiles.sort((left, right) => left.localeCompare(right))[0] ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +131,8 @@ function reconcileOutputDir(cwd: string): string {
 
 export interface RunReconcileOptions {
   taskId: string;
+  /** Optional run id for traceability when reconcile is triggered from agent runtime. */
+  runId?: string;
   /** Additional changed files to include alongside codeTargets. */
   additionalChangedFiles?: string[];
   cwd?: string;
@@ -185,11 +200,12 @@ export async function runReconcile(options: RunReconcileOptions): Promise<RunRec
   }
 
   const report = reconciliationReportSchema.parse({
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: reportId,
     type: "local-reconciliation",
     status,
     taskId: frontmatter.id,
+    runId: options.runId,
     date,
     author: "pa reconcile",
     summary: `Reconciliation pass for task ${frontmatter.id}: ${frontmatter.title}. Triggered by: ${firedTriggers.map((t) => t.name).join(", ") || "none"}.`,

@@ -3,10 +3,7 @@ import fs from "fs-extra";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { pathExists } from "../../utils/fs";
 import { createTempDir, type TestProjectContext } from "../../test/helpers";
-import {
-  scaffoldAgentsGuide,
-  scaffoldGovernanceGuidanceDocs,
-} from "./governanceGuidanceScaffold";
+import { scaffoldAgentsGuide, scaffoldGovernanceGuidanceDocs } from "./governanceGuidanceScaffold";
 
 async function writeMarkdownFile(targetPath: string, content: string): Promise<void> {
   await fs.ensureDir(path.dirname(targetPath));
@@ -37,6 +34,14 @@ describe("core/init/governanceGuidanceScaffold", () => {
       path.join(tempDir, "architecture", "governance", "workflow-content-model.md"),
       "utf8",
     );
+    const workflowSurfacesGuide = await fs.readFile(
+      path.join(tempDir, "architecture", "governance", "workflow-generation-surfaces.md"),
+      "utf8",
+    );
+    const workflowInventoryGuide = await fs.readFile(
+      path.join(tempDir, "architecture", "governance", "workflow-file-inventory.md"),
+      "utf8",
+    );
     const taxonomyMigrationGuide = await fs.readFile(
       path.join(tempDir, "architecture", "governance", "taxonomy-migration.md"),
       "utf8",
@@ -46,6 +51,14 @@ describe("core/init/governanceGuidanceScaffold", () => {
     expect(repoModel).toContain("## Init Tier Model");
     expect(workflowGuide).toContain("# Workflow Content Model");
     expect(workflowGuide).toContain("## Required Content Blocks");
+    expect(workflowSurfacesGuide).toContain(".project-arch/workflows/*.workflow.md");
+    expect(workflowSurfacesGuide).not.toContain(".github/workflows/*.md");
+    expect(workflowInventoryGuide).toContain(".project-arch/workflows/before-coding.workflow.md");
+    expect(workflowInventoryGuide).toContain(".project-arch/workflows/after-coding.workflow.md");
+    expect(workflowInventoryGuide).toContain(".project-arch/workflows/complete-task.workflow.md");
+    expect(workflowInventoryGuide).toContain(".project-arch/workflows/new-module.workflow.md");
+    expect(workflowInventoryGuide).toContain(".project-arch/workflows/diagnose.workflow.md");
+    expect(workflowInventoryGuide).not.toContain(".github/workflows/");
     expect(taxonomyMigrationGuide).toContain("# Taxonomy Migration Guide");
     expect(taxonomyMigrationGuide).toContain("## Legacy To Canonical Mapping");
   });

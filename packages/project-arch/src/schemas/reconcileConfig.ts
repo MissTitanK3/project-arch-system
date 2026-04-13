@@ -74,7 +74,7 @@ export const reconciliationLifecycleModeSchema = z.enum([
 
 export const reconcileConfigSchema = z
   .object({
-    schemaVersion: z.literal("1.0").default("1.0"),
+    schemaVersion: z.literal("2.0").default("2.0"),
     extends: z.literal("default"),
     workflowProfile: workflowProfileSchema.optional(),
     lifecycle: z

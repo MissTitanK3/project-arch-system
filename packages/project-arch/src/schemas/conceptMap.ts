@@ -28,7 +28,7 @@ export const implementationChecklistEntrySchema = z.object({
 });
 
 export const conceptMapSchema = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("2.0"),
   concepts: z.array(conceptEntrySchema),
   domainModuleMapping: z.array(domainModuleMappingEntrySchema),
   implementationChecklist: z.array(implementationChecklistEntrySchema),

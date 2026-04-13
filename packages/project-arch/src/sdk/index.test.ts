@@ -16,8 +16,11 @@ describe("project-arch SDK", () => {
     expect(sdk.lint).toBeDefined();
     expect(sdk.report).toBeDefined();
     expect(sdk.policy).toBeDefined();
+    expect(sdk.runtime).toBeDefined();
     expect(sdk.docs).toBeDefined();
     expect(sdk.agents).toBeDefined();
+    expect(sdk.contracts).toBeDefined();
+    expect(sdk.workflows).toBeDefined();
     expect(sdk.registry).toBeDefined();
     expect(sdk.commandMetadata).toBeDefined();
   });
@@ -39,8 +42,11 @@ describe("project-arch SDK", () => {
         "lint",
         "report",
         "policy",
+        "runtime",
         "docs",
         "agents",
+        "contracts",
+        "workflows",
         "registry",
         "commandMetadata",
       ]),

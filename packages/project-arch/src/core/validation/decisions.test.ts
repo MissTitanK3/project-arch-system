@@ -271,7 +271,7 @@ links:
       await writeFile(
         invalidTypePath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 type: "invalid-type"
 id: project:20260307:invalid-type
 title: Invalid Type

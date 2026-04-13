@@ -69,8 +69,8 @@ describe("cli/commands/context", () => {
 
     await program.parseAsync(["node", "test", "context", "--json"]);
 
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("\"version\": \"1.0\""));
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("\"active\""));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"version": "2.0"'));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"active"'));
   });
 
   it("should use sdk context surface", async () => {
@@ -81,7 +81,7 @@ describe("cli/commands/context", () => {
     const resolveSpy = vi.spyOn(contextSdk, "contextResolve").mockResolvedValue({
       success: true,
       data: {
-        version: "1.0",
+        version: "2.0",
         timestamp: "2026-03-26T00:00:00.000Z",
         projectRoot: process.cwd(),
         active: {

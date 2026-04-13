@@ -41,7 +41,7 @@ describe("validationContractCheckSchema", () => {
 describe("validationContractSchema", () => {
   it("should parse valid validation contract", () => {
     const contract = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       phaseId: "phase-1",
       checks: [
         {
@@ -61,7 +61,7 @@ describe("validationContractSchema", () => {
 
   it("should reject contract with invalid schema version", () => {
     const invalidContract = {
-      schemaVersion: "2.0",
+      schemaVersion: "9.9",
       phaseId: "phase-1",
       checks: [],
       createdAt: "2026-03-22",
@@ -73,7 +73,7 @@ describe("validationContractSchema", () => {
 
   it("should reject contract with invalid date format", () => {
     const invalidContract = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       phaseId: "phase-1",
       checks: [],
       createdAt: "03-22-2026",
@@ -85,7 +85,7 @@ describe("validationContractSchema", () => {
 
   it("should parse contract with multiple checks", () => {
     const contract = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       phaseId: "phase-2",
       checks: [
         {

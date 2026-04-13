@@ -258,7 +258,7 @@ describe("cli/commands/check", () => {
           hint: string | null;
         }>;
       };
-      expect(payload.schemaVersion).toBe("1.0");
+      expect(payload.schemaVersion).toBe("2.0");
       expect(payload.status).toBe("invalid");
       expect(payload.compatibility.mode).toBe("project-scoped-only");
       expect(payload.summary).toEqual({ errorCount: 1, warningCount: 1, diagnosticCount: 2 });

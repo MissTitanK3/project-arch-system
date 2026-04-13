@@ -49,6 +49,10 @@ describe("cli/commands/init", () => {
       expect(helpText).toContain("nextjs-turbo");
       expect(helpText).toContain("--with-ai");
       expect(helpText).toContain("--with-workflows");
+      expect(helpText).toContain(".project-arch/workflows/*.workflow.md");
+      expect(helpText).toContain("legacy .github/workflows/*.md is non-canonical");
+      expect(helpText).not.toContain("materialize first-pass workflow files in .github/workflows");
+      expect(helpText).not.toContain("Create first-pass workflow files in .github/workflows");
     });
 
     it("should execute init with default options", async () => {
@@ -137,11 +141,26 @@ describe("cli/commands/init", () => {
 
       await program.parseAsync(["node", "test", "init", "--with-workflows"]);
 
-      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/before-coding.md");
-      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/after-coding.md");
-      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/complete-task.md");
-      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/new-module.md");
-      await fileAssertions.assertFileExists(context.tempDir, ".github/workflows/diagnose.md");
+      await fileAssertions.assertFileExists(
+        context.tempDir,
+        ".project-arch/workflows/before-coding.workflow.md",
+      );
+      await fileAssertions.assertFileExists(
+        context.tempDir,
+        ".project-arch/workflows/after-coding.workflow.md",
+      );
+      await fileAssertions.assertFileExists(
+        context.tempDir,
+        ".project-arch/workflows/complete-task.workflow.md",
+      );
+      await fileAssertions.assertFileExists(
+        context.tempDir,
+        ".project-arch/workflows/new-module.workflow.md",
+      );
+      await fileAssertions.assertFileExists(
+        context.tempDir,
+        ".project-arch/workflows/diagnose.workflow.md",
+      );
     });
 
     it("should pass --force through to re-init and overwrite managed files", async () => {
@@ -156,7 +175,7 @@ describe("cli/commands/init", () => {
         policyPath,
         `${JSON.stringify(
           {
-            schemaVersion: "1.0",
+            schemaVersion: "2.0",
             defaultProfile: "custom",
             profiles: {
               custom: {
@@ -187,7 +206,12 @@ describe("cli/commands/init", () => {
 
       await program.parseAsync(["node", "test", "init", "--with-workflows"]);
 
-      const workflowPath = path.join(context.tempDir, ".github", "workflows", "before-coding.md");
+      const workflowPath = path.join(
+        context.tempDir,
+        ".project-arch",
+        "workflows",
+        "before-coding.workflow.md",
+      );
       await fs.writeFile(workflowPath, "# Custom Before Coding Workflow\n", "utf8");
 
       await program.parseAsync(["node", "test", "init", "--with-workflows", "--force"]);
@@ -205,6 +229,8 @@ describe("cli/commands/init", () => {
       path.join(
         tempDir,
         "roadmap",
+        "projects",
+        "shared",
         "phases",
         phaseId,
         "milestones",
@@ -311,7 +337,10 @@ describe("cli/commands/init", () => {
       const checks: Array<[string, string[]]> = [
         [
           "001-define-project-overview.md",
-          ["architecture/product-framing/prompt.md", "architecture/product-framing/project-overview.md"],
+          [
+            "architecture/product-framing/prompt.md",
+            "architecture/product-framing/project-overview.md",
+          ],
         ],
         [
           "008-finalize-architecture-foundation.md",
@@ -332,7 +361,10 @@ describe("cli/commands/init", () => {
         ],
         [
           "007-define-runtime-architecture.md",
-          ["architecture/runtime/runtime-architecture.md", "architecture/product-framing/user-journey.md"],
+          [
+            "architecture/runtime/runtime-architecture.md",
+            "architecture/product-framing/user-journey.md",
+          ],
         ],
       ];
 

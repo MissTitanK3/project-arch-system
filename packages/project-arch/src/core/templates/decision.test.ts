@@ -9,7 +9,7 @@ describe("core/templates/decision", () => {
       scope: { kind: "project" },
     });
 
-    expect(frontmatter.schemaVersion).toBe("1.0");
+    expect(frontmatter.schemaVersion).toBe("2.0");
     expect(frontmatter.type).toBe("decision");
     expect(frontmatter.id).toBe("project:20260307:decision");
     expect(frontmatter.title).toBe("Project Decision");

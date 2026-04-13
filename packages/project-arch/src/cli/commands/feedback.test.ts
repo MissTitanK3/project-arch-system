@@ -449,7 +449,7 @@ describe("cli/commands/feedback", () => {
     await (
       await import("fs-extra")
     ).writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-001-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation complete",
@@ -492,7 +492,7 @@ describe("cli/commands/feedback", () => {
     await (
       await import("fs-extra")
     ).writeJson(path.join(reconcileDir, "003-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-003-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation complete",
@@ -542,7 +542,7 @@ describe("cli/commands/feedback", () => {
     await (
       await import("fs-extra")
     ).writeJson(path.join(reconcileDir, "004-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-004-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation complete",
@@ -594,7 +594,7 @@ describe("cli/commands/feedback", () => {
     await (
       await import("fs-extra")
     ).writeJson(path.join(reconcileDir, "002-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-002-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation complete",

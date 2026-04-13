@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-04-13
+
+### Added
+
+#### **Runtime Profiles And Readiness Diagnostics**
+
+- `pa runtime` command surface for runtime inventory, scan, registration, readiness checks, and profile mutations
+- Repository-owned runtime profile config at `.project-arch/runtime.config.json`
+- Runtime inventory and readiness contracts for merged adapter/profile state, profile defaults, model selection, adapter options, and actionable diagnostics
+- Adapter-backed readiness checks for unavailable runtimes, missing models, invalid adapter options, disabled profiles, and adapter readiness failures
+- SDK runtime APIs and command metadata for runtime list, check, link, update, enable, disable, default, and unlink flows
+
+#### **Agent Runtime Lifecycle**
+
+- `pa agent prepare`, `run`, `status`, `validate`, `reconcile`, `audit`, and `orchestrate`
+- `pa result import` for importing runtime result bundles into the agent lifecycle
+- Runtime-local artifact layout under `.project-arch/agent-runtime/` for contracts, prompts, launches, run records, results, orchestration state, and audit history
+- Planner-to-implementer-to-reviewer-to-reconciler orchestration with persisted role state and explicit fallback through result import, validation, and reconciliation
+- SDK exports for `agent`, `result`, `contracts`, and `workflows`
+- Escalation draft output for reviewable agent reconciliation follow-up decisions
+
+### Changed
+
+- CLI help now documents the shipped runtime and agent MVP surfaces
+- `pa init --with-workflows` now writes workflow documents to `.project-arch/workflows/*.workflow.md`
+- Fresh scaffolded roadmap artifacts now use schema version `2.0` and project-scoped paths under `roadmap/projects/shared/phases/...`
+- Repository validation diagnostics now report schema version `2.0`
+- Reconciliation reports now use schema version `2.0` and can carry agent run traceability
+- Doctor health checks now validate runtime profile config shape
+
+### Fixed
+
+- Validation and reconciliation now prefer canonical project-scoped roadmap paths while retaining legacy path compatibility where supported
+- Workflow guidance now warns when legacy markdown workflow documents remain under `.github/workflows/*.md`
+
+### Compatibility
+
+- Legacy `roadmap/phases/...` paths remain readable where compatibility support exists, but fresh guidance and initialized output use `roadmap/projects/shared/phases/...`
+- Legacy markdown workflow guidance under `.github/workflows/*.md` is treated as non-canonical transition context
+- The VS Code extension and Preact artifact-browser evaluation are intentionally excluded from this CLI release
+
+### Test Coverage
+
+- Added runtime profile, runtime inventory/readiness, runtime scan, adapter readiness, user adapter, agent runtime lifecycle, orchestration, result import, validation, reconciliation, and SDK coverage
+- Release validation passed with 183 test files and 1640 tests
+
 ## [2.0.0] - 2026-03-27
 
 ### Added

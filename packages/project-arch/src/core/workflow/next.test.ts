@@ -17,7 +17,7 @@ async function seedReconciliationArtifact(
   const jsonPath = path.join(reconcileDir, `${taskId}-${date}.json`);
 
   await fs.writeJson(jsonPath, {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: `${taskId}-${date}`,
     type: "local-reconciliation",
     status: "reconciliation complete",

@@ -17,7 +17,7 @@ describe.sequential("sdk/context", () => {
     const result = await contextResolve();
 
     resultAssertions.assertSuccess(result);
-    expect(result.data.version).toBe("1.0");
+    expect(result.data.version).toBe("2.0");
     expect(result.data.active.project.id).toBe("shared");
     expect(result.data.active.phase.id).toBe("phase-1");
     expect(result.data.active.milestone.id).toBe("milestone-1-setup");

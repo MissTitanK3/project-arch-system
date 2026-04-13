@@ -75,15 +75,16 @@ export function getTaskIdentityFromTaskPath(
   const relativePath = path.relative(cwd, taskFilePath).split(path.sep).join("/");
   const match =
     relativePath.match(
-      /^roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/tasks\/(planned|discovered|backlog)\/\d{3}-.+\.md$/,
+      /^roadmap\/projects\/[^/]+\/phases\/([^/]+)\/milestones\/([^/]+)\/tasks\/(planned|discovered|backlog)\/\d{3}-.+\.md$/,
     ) ??
     relativePath.match(
-      /^roadmap\/projects\/[^/]+\/phases\/([^/]+)\/milestones\/([^/]+)\/tasks\/(planned|discovered|backlog)\/\d{3}-.+\.md$/,
-    );
+      /^roadmap\/phases\/([^/]+)\/milestones\/([^/]+)\/tasks\/(planned|discovered|backlog)\/\d{3}-.+\.md$/,
+    ) ??
+    null;
 
   if (!match) {
     throw new Error(
-      "Task file path must be under roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/tasks/<lane>/<id>-<slug>.md or roadmap/phases/<phase>/milestones/<milestone>/tasks/<lane>/<id>-<slug>.md",
+      "Task file path must be under canonical roadmap/projects/<project>/phases/<phase>/milestones/<milestone>/tasks/<lane>/<id>-<slug>.md (legacy compatibility also accepts roadmap/phases/<phase>/milestones/<milestone>/tasks/<lane>/<id>-<slug>.md)",
     );
   }
 

@@ -12,11 +12,12 @@ export const reconciliationTypeSchema = z.enum(["local-reconciliation", "tooling
 export type ReconciliationType = z.infer<typeof reconciliationTypeSchema>;
 
 export const reconciliationReportSchema = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("2.0"),
   id: z.string().min(1),
   type: reconciliationTypeSchema,
   status: reconciliationStatusSchema,
   taskId: z.string().min(1),
+  runId: z.string().min(1).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   author: z.string().optional(),
   summary: z.string().optional(),

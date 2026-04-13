@@ -106,12 +106,14 @@ export function verifyProfile(profileName, sandboxDir, initArgs = []) {
   }
 
   if (hasInitFlag(initArgs, "--with-workflows")) {
-    assertExists(sandboxDir, ".github/workflows/before-coding.md", profileName);
-    assertExists(sandboxDir, ".github/workflows/after-coding.md", profileName);
-    assertExists(sandboxDir, ".github/workflows/complete-task.md", profileName);
-    assertExists(sandboxDir, ".github/workflows/new-module.md", profileName);
-    assertExists(sandboxDir, ".github/workflows/diagnose.md", profileName);
+    assertExists(sandboxDir, ".project-arch/workflows/before-coding.workflow.md", profileName);
+    assertExists(sandboxDir, ".project-arch/workflows/after-coding.workflow.md", profileName);
+    assertExists(sandboxDir, ".project-arch/workflows/complete-task.workflow.md", profileName);
+    assertExists(sandboxDir, ".project-arch/workflows/new-module.workflow.md", profileName);
+    assertExists(sandboxDir, ".project-arch/workflows/diagnose.workflow.md", profileName);
+    assertMissing(sandboxDir, ".github/workflows", profileName);
   } else {
+    assertMissing(sandboxDir, ".project-arch/workflows", profileName);
     assertMissing(sandboxDir, ".github/workflows", profileName);
   }
 }

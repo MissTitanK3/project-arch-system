@@ -23,13 +23,13 @@ import { MilestoneManifest, milestoneManifestSchema } from "../../schemas/milest
 import { ProjectManifest, projectManifestSchema } from "../../schemas/project";
 
 export interface DecisionIndex {
-  schemaVersion: "1.0";
+  schemaVersion: "2.0";
   decisions: string[];
 }
 
 export function defaultPhaseManifest(): PhaseManifest {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     phases: [],
     activeProject: null,
     activePhase: null,
@@ -65,19 +65,19 @@ export function resolvePhaseProjectId(manifest: PhaseManifest, phaseId: string):
 export async function ensureDecisionIndex(dirPath: string): Promise<void> {
   const filePath = path.join(dirPath, "index.json");
   if (!(await pathExists(filePath))) {
-    await writeJsonDeterministic(filePath, { schemaVersion: "1.0", decisions: [] });
+    await writeJsonDeterministic(filePath, { schemaVersion: "2.0", decisions: [] });
   }
 }
 
 export async function loadDecisionIndex(dirPath: string): Promise<DecisionIndex> {
   const filePath = path.join(dirPath, "index.json");
   if (!(await pathExists(filePath))) {
-    return { schemaVersion: "1.0", decisions: [] };
+    return { schemaVersion: "2.0", decisions: [] };
   }
 
   const raw = await readJson<unknown>(filePath);
   const parsed = raw as { schemaVersion?: string; decisions?: unknown };
-  if (parsed.schemaVersion !== "1.0" || !Array.isArray(parsed.decisions)) {
+  if (parsed.schemaVersion !== "2.0" || !Array.isArray(parsed.decisions)) {
     throw new Error(`Invalid decision index at ${filePath}`);
   }
 
@@ -90,13 +90,13 @@ export async function loadDecisionIndex(dirPath: string): Promise<DecisionIndex>
     })
     .sort();
 
-  return { schemaVersion: "1.0", decisions };
+  return { schemaVersion: "2.0", decisions };
 }
 
 export async function saveDecisionIndex(dirPath: string, index: DecisionIndex): Promise<void> {
   const filePath = path.join(dirPath, "index.json");
   const normalized: DecisionIndex = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     decisions: [...index.decisions].sort(),
   };
   await writeJsonDeterministic(filePath, normalized);
@@ -129,7 +129,7 @@ export function defaultProjectManifest(
   data: Omit<ProjectManifest, "schemaVersion" | "id">,
 ): ProjectManifest {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: projectId,
     ...data,
   };
@@ -160,7 +160,7 @@ export async function saveProjectManifest(
 export function defaultMilestoneManifest(phaseId: string, milestoneId: string): MilestoneManifest {
   const now = currentDateISO();
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: milestoneId,
     phaseId,
     createdAt: now,

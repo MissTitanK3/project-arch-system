@@ -47,6 +47,38 @@
     "description": "Lint frontmatter for schema and YAML safety issues",
     "inputs": ["fix"]
   },
+  "runtime.list": {
+    "description": "List merged runtime inventory",
+    "inputs": []
+  },
+  "runtime.check": {
+    "description": "Check runtime profile readiness",
+    "inputs": ["profileId"]
+  },
+  "runtime.link": {
+    "description": "Link a runtime profile",
+    "inputs": ["runtime", "profile", "model"]
+  },
+  "runtime.update": {
+    "description": "Update bounded runtime profile fields",
+    "inputs": ["profileId"]
+  },
+  "runtime.enable": {
+    "description": "Enable a linked runtime profile",
+    "inputs": ["profileId"]
+  },
+  "runtime.disable": {
+    "description": "Disable a linked runtime profile",
+    "inputs": ["profileId"]
+  },
+  "runtime.default": {
+    "description": "Set or clear default runtime profile",
+    "inputs": ["profileId"]
+  },
+  "runtime.unlink": {
+    "description": "Remove a linked runtime profile",
+    "inputs": ["profileId"]
+  },
   "agents.list": {
     "description": "List resolved agent skills",
     "inputs": []

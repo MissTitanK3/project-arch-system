@@ -80,7 +80,7 @@ describe("core/validation/tasks", () => {
       await writeFile(
         invalidTaskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "500"
 slug: invalid-task
 lane: planned
@@ -119,7 +119,7 @@ This task has an ID out of range for the planned lane.
       await writeFile(
         mismatchTaskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "042"
 slug: wrong-prefix
 lane: planned
@@ -158,7 +158,7 @@ This task filename doesn't match the ID prefix.
       await writeFile(
         mismatchTaskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "043"
 slug: lane-mismatch
 lane: discovered
@@ -200,7 +200,7 @@ This task has a lane mismatch.
         await fs.writeFile(
           outsideTask,
           `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "099"
 slug: outside-task
 lane: planned

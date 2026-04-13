@@ -33,7 +33,7 @@ describe("schemas/task", () => {
 
   describe("taskSchema", () => {
     const validTask: TaskFrontmatter = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "042",
       slug: "implement-feature-x",
       title: "Implement Feature X",
@@ -57,6 +57,25 @@ describe("schemas/task", () => {
     it("should accept valid task with optional fields", () => {
       const taskWithOptional: TaskFrontmatter = {
         ...validTask,
+        taskType: "spec",
+        workflow: {
+          schemaVersion: "2.0",
+          template: "spec-authoring",
+          stages: [
+            {
+              id: "context-readiness",
+              title: "Context and Readiness",
+              runtimePreference: "local",
+              items: [
+                {
+                  id: "review-scope",
+                  label: "Review scope and objective",
+                  status: "planned",
+                },
+              ],
+            },
+          ],
+        },
         scope: "phase-1",
         acceptanceChecks: ["Manual testing completed"],
         evidence: ["evidence/screenshot.png"],
@@ -69,6 +88,15 @@ describe("schemas/task", () => {
       expect(result).toEqual(taskWithOptional);
     });
 
+    it("should allow future task types without closing the schema", () => {
+      const result = taskSchema.parse({
+        ...validTask,
+        taskType: "compliance-review",
+      });
+
+      expect(result.taskType).toBe("compliance-review");
+    });
+
     it("should accept discoveredFromTask as string or null", () => {
       const withString = { ...validTask, discoveredFromTask: "041" };
       const withNull = { ...validTask, discoveredFromTask: null };
@@ -78,7 +106,7 @@ describe("schemas/task", () => {
     });
 
     it("should reject task with invalid schemaVersion", () => {
-      const invalid = { ...validTask, schemaVersion: "2.0" };
+      const invalid = { ...validTask, schemaVersion: "9.9" };
       expect(() => taskSchema.parse(invalid)).toThrow();
     });
 
@@ -88,6 +116,29 @@ describe("schemas/task", () => {
       expect(() => taskSchema.parse({ ...validTask, id: "1234" })).toThrow();
       expect(() => taskSchema.parse({ ...validTask, id: "abc" })).toThrow();
       expect(() => taskSchema.parse({ ...validTask, id: "" })).toThrow();
+    });
+
+    it("should accept optional agent execution metadata", () => {
+      const executableTask = taskSchema.parse({
+        ...validTask,
+        agent: { executable: true },
+      });
+      expect(executableTask.agent?.executable).toBe(true);
+
+      const disabledTask = taskSchema.parse({
+        ...validTask,
+        agent: { executable: false },
+      });
+      expect(disabledTask.agent?.executable).toBe(false);
+    });
+
+    it("should reject unknown fields under agent execution metadata", () => {
+      expect(() =>
+        taskSchema.parse({
+          ...validTask,
+          agent: { executable: true, promotedBy: "alice" },
+        }),
+      ).toThrow();
     });
 
     it("should reject task with empty required strings", () => {

@@ -36,7 +36,7 @@ export function registerNextCommand(program: Command): void {
         console.log(
           JSON.stringify(
             {
-              schemaVersion: "1.0",
+              schemaVersion: "2.0",
               ...decision,
             },
             null,

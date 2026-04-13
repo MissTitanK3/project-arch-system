@@ -3,7 +3,7 @@ import { z } from "zod";
 export const DEFAULT_PHASE_PROJECT_ID = "shared" as const;
 
 export const phaseManifestSchema = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("2.0"),
   phases: z.array(
     z.object({
       id: z.string().min(1),

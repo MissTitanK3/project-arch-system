@@ -32,7 +32,7 @@ describe("sdk/agents", () => {
     );
     await fs.ensureDir(skillDir);
     await fs.writeJson(path.join(skillDir, "skill.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: input.id,
       name: `Skill ${input.id}`,
       source: input.source,
@@ -133,7 +133,7 @@ describe("sdk/agents", () => {
     const skillDir = path.join(context.tempDir, ".arch", "agents-of-arch", "skills", "repo-map");
     await fs.ensureDir(skillDir);
     await fs.writeJson(path.join(skillDir, "skill.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "repo-map",
       name: "Repo Map",
       source: "builtin",

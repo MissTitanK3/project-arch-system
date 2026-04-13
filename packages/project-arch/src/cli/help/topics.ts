@@ -24,7 +24,8 @@ export const HELP_TOPICS = {
 
 Initialization:
   pa init [options]                    Initialize new project architecture
-    Options: --template, --pm, --with-ai, --with-workflows
+    Options: --template, --pm, --with-ai, --with-workflows (writes .project-arch/workflows/*.workflow.md when enabled)
+    Legacy note: older repositories may still contain .github/workflows/*.md; treat this as non-canonical compatibility context
     Output: Creates roadmap/, architecture/, arch-domains/ structure
 
 Task Management:
@@ -140,6 +141,64 @@ Validation & Reporting:
     Output: Report text
     --verbose: Include detailed inconsistency diagnostics
 
+Agent Runtime MVP (shipped):
+  pa runtime list [--json]            List merged runtime inventory (adapters + linked profiles)
+    Output: Runtime inventory contract with runtime-level availability and profile-level readiness
+    --json: Emits runtime-inventory contract payload
+  pa runtime check [profileId] [--json]
+                                       Check readiness diagnostics for all profiles or one profile id
+    Output: Runtime readiness contract with actionable diagnostics
+    --json: Emits runtime-readiness-check contract payload
+  pa runtime link <runtime> --profile <id> --model <model> [--json]
+                                       Link a runtime profile with bounded fields
+  pa runtime update <profileId> [options] [--json]
+                                       Update bounded runtime profile fields
+  pa runtime enable <profileId> [--json]
+                                       Enable a linked runtime profile
+  pa runtime disable <profileId> [--json]
+                                       Disable a linked runtime profile
+  pa runtime default [profileId] [--clear] [--json]
+                                       Set or clear default runtime profile
+  pa runtime unlink <profileId> [--json]
+                                       Remove a linked runtime profile
+  pa agent prepare <taskRef> [--json] [--prompt-only] [--check]
+                                       Prepare one run-scoped contract/prompt bundle
+    Outcomes: prepared (exit 0), approval-required boundary (exit 2), ineligible/error (exit 1)
+    --json: Emits SDK operation envelope with success/data or success/errors
+  pa result import <path> [--json]     Import one runtime result bundle by path
+  pa agent validate <runId> [--json] [--strict] [--paths-only]
+                                       Validate one imported run against policy/repo checks
+    Outcomes: validation-failed (exit 1), validation-passed, escalation-ready (warning/default; failure with --strict)
+    --json: Emits SDK operation envelope with success/data or success/errors
+  pa agent reconcile <runId> [--json] [--apply] [--create-discovered]
+                                       Reconcile one validated run into repository-native outputs
+    Escalation requests: Promoted to reviewable draft outputs under .project-arch/reconcile/escalations/
+    --json: Emits SDK operation envelope with success/data or success/errors
+  pa agent audit [runId] [--json] [--limit <count>]
+                                       Inspect runtime-local audit history under .project-arch/agent-runtime/logs/
+    --json: Emits SDK operation envelope with success/data or success/errors
+  pa agent orchestrate <taskRef> --runtime <runtime> [--json] [--strict] [--paths-only] [--apply] [--create-discovered] [--timeout-ms <ms>]
+                                       Execute planner->implementer->reviewer->reconciler orchestration with persisted role state
+    Outcomes: orchestration-in-progress, follow-up-review (waiting-for-result-import), role-failure, orchestration-completed
+    Follow-up/fallback: role failures and waiting-input states continue through result import -> validate -> reconcile
+    --json: Emits SDK operation envelope with success/data or success/errors
+
+
+  pa agent run <taskRef> --runtime <runtime> [--json] [--timeout-ms <ms>]
+                                       Prepare and launch an authorized task through a runtime adapter
+    Boundary: direct launch via registered adapter; fallback manual import/validate/reconcile still available
+    Outcomes: launch-dispatched (exit 0), launch-failed (exit 1), missing-input (exit 2)
+    Outputs: runId, runHandle, lifecycleBoundary=prepare-first, launch record path
+    --json: Emits SDK operation envelope with success/data or success/errors
+    --timeout-ms: Adapter launch timeout in milliseconds (default: 30000)
+  pa agent status <runId> [--json]     Inspect launch-phase status of an agent run
+    Phases: pre-launch, launch-dispatched, launch-failed, post-launch (when run-record exists)
+    Boundary: launch-phase advisory; run-record remains authoritative downstream
+    --json: Emits SDK operation envelope with success/data or success/errors
+
+Deferred Agent Commands (future work):
+  pa agent escalate <runId>
+    Note: Intentionally deferred; use reconcile instead for current escalation workflows
 Agent Skills:
   pa agents list [--json]             List resolved skill set
     Output: Stable skill list (human-readable or JSON)
@@ -182,10 +241,14 @@ Output Formats:
   - Use --help on any command for detailed usage
 
 File Path Conventions:
-  Tasks:      roadmap/phases/{phase}/milestones/{milestone}/tasks/{lane}/{id}-{slug}.md
+  Tasks:      roadmap/projects/shared/phases/{phase}/milestones/{milestone}/tasks/{lane}/{id}-{slug}.md
   Decisions:  roadmap/decisions/{scope}/{id}-{slug}.md
-  Phases:     roadmap/phases/{phase}/overview.md
-  Milestones: roadmap/phases/{phase}/milestones/{milestone}/overview.md
+  Phases:     roadmap/projects/shared/phases/{phase}/overview.md
+  Milestones: roadmap/projects/shared/phases/{phase}/milestones/{milestone}/overview.md
+
+Legacy Compatibility:
+  - Some commands may still read legacy roadmap/phases/* paths for backward compatibility.
+  - Canonical initialized layout and all new guidance use roadmap/projects/shared/phases/*.
 
 Validation Patterns:
   Task ID:      ^\\d{3}$           (e.g., 001, 042, 999)
@@ -252,6 +315,12 @@ Further reading:
 `,
 
   workflows: `Common Workflows:
+
+Generated Workflow Documents:
+  - Enable generation with: pa init --with-workflows
+  - Canonical fresh-output surface: .project-arch/workflows/*.workflow.md
+  - Legacy repositories may still contain .github/workflows/*.md; this is non-canonical compatibility context
+  - Generated workflow documents are helper guidance and remain subordinate to canonical entry-point instructions
 
 Feature Development Workflow:
   1. Create a phase for the feature area:
@@ -483,7 +552,7 @@ Frontmatter Schema:
     - title: string
     - status: proposed|accepted|rejected|superseded
     - scope: project|phase|milestone
-    - schemaVersion: "1.0"
+    - schemaVersion: "2.0"
 
 Content Structure:
   - Use markdown for all documentation
@@ -656,13 +725,13 @@ Common Problems and Solutions:
   Fix: Edit file and add required field with appropriate value
   Example frontmatter for tasks:
     ---
-    schemaVersion: "1.0"
+    schemaVersion: "2.0"
     id: "001"
     title: "Task title"
     status: "todo"
     lane: "planned"
     ---
-  
+
   Problem: Unquoted numeric/boolean values
   Detection: pa lint frontmatter (SCALAR_SAFETY warnings)
   Fix: Add quotes around string values that look like numbers/booleans
@@ -695,7 +764,7 @@ Common Problems and Solutions:
     Step 1: List all decisions
       pa decision list
     Step 2: Verify target task exists
-      ls roadmap/phases/<phase>/milestones/<milestone>/tasks/
+      ls roadmap/projects/shared/phases/<phase>/milestones/<milestone>/tasks/
     Step 3: Update link or remove invalid reference
       pa decision link <id> --task <valid-ref>
   
@@ -725,7 +794,7 @@ Common Problems and Solutions:
   Detection: pa check reports missing overview.md
   Remediation:
     Create milestone overview file at:
-    roadmap/phases/<phase>/milestones/<milestone>/overview.md
+    roadmap/projects/shared/phases/<phase>/milestones/<milestone>/overview.md
 
 5. Policy Conflicts
 
@@ -940,7 +1009,8 @@ ${commandLine("pa init [options]", "Initialize project architecture")}
 ${optionLine("--template <type>", "Template to use (default, minimal, full)")}
 ${optionLine("--pm <manager>", "Package manager (npm, yarn, pnpm)")}
 ${optionLine("--with-ai", "Include AI integration setup")}
-${optionLine("--with-workflows", "Materialize first-pass workflow files")}
+${optionLine("--with-workflows", "Materialize first-pass workflow files in .project-arch/workflows/*.workflow.md")}
+                                       Legacy note: .github/workflows/*.md may appear in older repositories; non-canonical for fresh init
 
 ${separator}
 ${colors.heading("Phase Management:")}
@@ -1034,6 +1104,47 @@ ${optionLine("--override", "Mark skill as override for a built-in id")}
 ${optionLine("--tags <tags>", "Comma-separated tags")}
 ${commandLine("pa agents sync [--check] [--json]", "Sync or check derived registry status")}
 ${commandLine("pa agents check [--json]", "Validate skill manifests and referenced files")}
+
+${separator}
+${colors.heading("Agent Runtime MVP:")}
+${separator}
+${commandLine("pa runtime list [--json]", "List merged runtime inventory (adapters + linked profiles)")}
+                     Output: runtime-level availability and profile-level readiness summaries
+                     --json: Emits runtime-inventory contract payload
+${commandLine("pa runtime check [profileId] [--json]", "Check readiness diagnostics for all profiles or one profile id")}
+                     Output: readiness statuses + actionable diagnostics
+                     --json: Emits runtime-readiness-check contract payload
+${commandLine("pa agent prepare <taskRef> [--json] [--prompt-only] [--check]", "Prepare one run-scoped contract/prompt bundle")}
+    \`<taskRef>\` accepts either a unique 3-digit task id or a scoped \`phase-id/milestone-id/task-id\` reference.
+                                       Outcomes: prepared (0), approval-required (2), ineligible/error (1)
+                                       --json: Prints SDK operation envelope with success/data or success/errors
+${commandLine("pa result import <path> [--json]", "Import one runtime result bundle by path")}
+${commandLine("pa agent validate <runId> [--json] [--strict] [--paths-only]", "Validate one imported run")}
+                                       Outcomes: validation-failed (1), validation-passed, escalation-ready (warning/default; fail with --strict)
+                                       --json: Prints SDK operation envelope with success/data or success/errors
+${commandLine("pa agent reconcile <runId> [--json] [--apply] [--create-discovered]", "Reconcile one validated run")}
+                                       Escalation requests are promoted to reviewable drafts under .project-arch/reconcile/escalations/
+                                       --json: Prints SDK operation envelope with success/data or success/errors
+${commandLine("pa agent audit [runId] [--json] [--limit <count>]", "Inspect runtime-local audit history")}
+                                       Audit history remains runtime-local and is not auto-promoted to feedback
+                                       --json: Prints SDK operation envelope with success/data or success/errors
+${commandLine("pa agent orchestrate <taskRef> --runtime <runtime> [--json] [--strict] [--paths-only] [--apply] [--create-discovered] [--timeout-ms <ms>]", "Execute planner->implementer->reviewer->reconciler orchestration")}
+                                       Outcomes: orchestration-in-progress, follow-up-review (waiting-for-result-import), role-failure, orchestration-completed
+                                       Follow-up/fallback: result import -> validate -> reconcile remains explicit for waiting-input and role-failure states
+                                       --json: Prints SDK operation envelope with success/data or success/errors
+${commandLine("pa agent run <taskRef> --runtime <runtime> [--json] [--timeout-ms <ms>]", "Prepare and launch an authorized task through a runtime adapter")}
+                                       Boundary: direct launch via registered adapter; fallback manual import/validate/reconcile remains available
+                                       Outputs: runId, runHandle, lifecycleBoundary=prepare-first, launch record path
+                                       --json: Prints SDK operation envelope with success/data or success/errors
+${commandLine("pa agent status <runId> [--json]", "Inspect launch-phase status of an agent run")}
+                                       Phases: pre-launch, launch-dispatched, launch-failed, post-launch
+                                       Boundary: launch-phase advisory; run-record remains authoritative downstream
+                                       --json: Prints SDK operation envelope with success/data or success/errors
+
+${separator}
+${colors.heading("Deferred Agent Commands (future):")}
+${separator}
+${commandLine("pa agent escalate <runId>", "Deferred; not shipped in current MVP")}
 
 ${separator}
 ${colors.heading("Policy Analysis:")}

@@ -4,7 +4,7 @@ import { milestoneManifestSchema, type MilestoneManifest } from "./milestone";
 describe("schemas/milestone", () => {
   describe("milestoneManifestSchema", () => {
     const validManifest: MilestoneManifest = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "milestone-1",
       phaseId: "phase-1",
       createdAt: "2026-03-01",
@@ -39,7 +39,7 @@ describe("schemas/milestone", () => {
     });
 
     it("should reject manifest with invalid schemaVersion", () => {
-      const invalid = { ...validManifest, schemaVersion: "2.0" };
+      const invalid = { ...validManifest, schemaVersion: "9.9" };
       expect(() => milestoneManifestSchema.parse(invalid)).toThrow();
     });
 
@@ -159,7 +159,7 @@ describe("schemas/milestone", () => {
     describe("relationship scenarios", () => {
       it("should accept milestone with hyphenated IDs", () => {
         const manifest = {
-          schemaVersion: "1.0" as const,
+          schemaVersion: "2.0" as const,
           id: "mvp-release",
           phaseId: "phase-beta",
           createdAt: "2026-03-01",
@@ -172,7 +172,7 @@ describe("schemas/milestone", () => {
 
       it("should accept milestone with underscore-separated IDs", () => {
         const manifest = {
-          schemaVersion: "1.0" as const,
+          schemaVersion: "2.0" as const,
           id: "feature_freeze",
           phaseId: "phase_2",
           createdAt: "2026-03-01",
@@ -185,7 +185,7 @@ describe("schemas/milestone", () => {
 
       it("should accept milestone with alphanumeric IDs", () => {
         const manifest = {
-          schemaVersion: "1.0" as const,
+          schemaVersion: "2.0" as const,
           id: "v2.0.0",
           phaseId: "q1-2026",
           createdAt: "2026-03-01",

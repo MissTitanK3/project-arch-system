@@ -213,7 +213,7 @@ describe.sequential("core/validation/check", () => {
       await writeFile(
         duplicateTaskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: duplicate-task
 lane: planned
@@ -267,7 +267,7 @@ This task has a duplicate ID.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-with-missing-target
 lane: planned
@@ -333,7 +333,7 @@ This task references a missing code target.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-with-missing-docs
 lane: planned
@@ -385,7 +385,7 @@ This task references missing public docs.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-with-undeclared-module
 lane: planned
@@ -444,7 +444,7 @@ This task references an undeclared module.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-with-undeclared-domain
 lane: planned
@@ -488,7 +488,7 @@ This task references an undeclared domain.
       await writeFile(
         path.join(tempDir, decisionPath),
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 type: decision
 id: ${decisionId}
 status: proposed
@@ -538,7 +538,7 @@ This decision links to a missing task.
       await writeFile(
         path.join(tempDir, decisionPath),
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 type: decision
 id: ${decisionId}
 status: proposed
@@ -589,7 +589,7 @@ This decision has an invalid task link format.
       await writeFile(
         path.join(tempDir, decisionPath),
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 type: decision
 id: ${decisionId}
 status: proposed
@@ -642,7 +642,7 @@ This decision references a missing code target.
       await writeFile(
         path.join(tempDir, decisionPath),
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 type: decision
 id: ${decisionId}
 status: proposed
@@ -748,7 +748,7 @@ This decision supersedes a missing decision.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-with-multiple-errors
 lane: planned
@@ -799,7 +799,7 @@ Multiple validation errors.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-with-multiple-failures
 lane: planned
@@ -861,7 +861,7 @@ Multiple validation failures for fail-fast test.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-empty-targets
 lane: planned
@@ -909,7 +909,7 @@ Empty code targets should be valid.
       await writeFile(
         taskPath,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "${taskId}"
 slug: task-empty-docs
 lane: planned
@@ -1001,7 +1001,7 @@ Empty public docs should be valid.
       );
 
       await writeJsonDeterministic(manifestPath, {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: milestoneId,
       });
 
@@ -1015,7 +1015,7 @@ Empty public docs should be valid.
       const projectDecisionIndexPath = path.join(tempDir, "roadmap", "decisions", "index.json");
 
       await writeJsonDeterministic(projectDecisionIndexPath, {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         decisions: ["project:20260307:missing-from-index"],
       });
 
@@ -1034,7 +1034,7 @@ Empty public docs should be valid.
       await fs.ensureDir(path.dirname(configPath));
 
       await writeJsonDeterministic(configPath, {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         extends: "default",
         triggers: {
           include: [{ status: "required" }],
@@ -1061,7 +1061,7 @@ Empty public docs should be valid.
       await fs.ensureDir(reconcileDir);
 
       const baseReport = {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         type: "local-reconciliation",
         changedFiles: [],
         affectedAreas: [],
@@ -1107,7 +1107,7 @@ Empty public docs should be valid.
       await fs.ensureDir(feedbackDir);
 
       await writeJsonDeterministic(path.join(feedbackDir, "tooling-feedback-001.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "tooling-feedback-001-01",
         type: "tooling-feedback",
         status: "reconciliation suggested",
@@ -1192,7 +1192,7 @@ Empty public docs should be valid.
       await writeFile(
         taskFile,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: task-with-module
 lane: planned
@@ -1257,7 +1257,7 @@ completionCriteria: []
       await writeFile(
         taskFile,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: task-short-path
 lane: planned
@@ -1308,7 +1308,7 @@ completionCriteria: []
       await writeFile(
         taskFile,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: task-non-module-artifact
 lane: planned
@@ -1363,7 +1363,7 @@ completionCriteria: []
       await writeFile(
         taskFile,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: task-suppressed-non-module-artifact
 lane: planned
@@ -1426,7 +1426,7 @@ completionCriteria: []
       await writeFile(
         taskFile,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: task-with-domain
 lane: planned
@@ -1490,7 +1490,7 @@ completionCriteria: []
       await writeFile(
         taskFile,
         `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: task-non-domain
 lane: planned
@@ -1584,7 +1584,7 @@ completionCriteria: []
       const conceptMapPath = path.join(tempDir, "arch-model", "concept-map.json");
 
       await writeJsonDeterministic(conceptMapPath, {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         concepts: [
           {
             id: "concept-a",
@@ -1688,7 +1688,7 @@ describe("runRepositoryChecks – malformed task file resilience", () => {
     await fs.writeFile(
       malformedPath,
       `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: "malformed-schema"
 lane: "planned"
@@ -1748,14 +1748,7 @@ describe("runRepositoryChecks – planning coverage diagnostics", () => {
       tempDir,
       "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/targets.md",
     );
-    await writeFile(
-      targetsPath,
-      [
-        "# Targets",
-        "",
-        "- `packages/uncovered-surface`",
-      ].join("\n"),
-    );
+    await writeFile(targetsPath, ["# Targets", "", "- `packages/uncovered-surface`"].join("\n"));
 
     const taskPath = path.join(
       tempDir,
@@ -1782,14 +1775,7 @@ describe("runRepositoryChecks – planning coverage diagnostics", () => {
       tempDir,
       "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/targets.md",
     );
-    await writeFile(
-      targetsPath,
-      [
-        "# Targets",
-        "",
-        "- `packages/uncovered-surface`",
-      ].join("\n"),
-    );
+    await writeFile(targetsPath, ["# Targets", "", "- `packages/uncovered-surface`"].join("\n"));
 
     const taskPath = path.join(
       tempDir,
@@ -1884,16 +1870,16 @@ describe("runRepositoryChecks – validation contract", () => {
     await fs.remove(contractPath);
     await fs.remove(path.join(tempDir, "roadmap/phases/phase-1/validation-contract.json"));
 
-      const result = await runRepositoryChecks(tempDir);
+    const result = await runRepositoryChecks(tempDir);
 
-      expect(result.ok).toBe(false);
-      expect(result.errors.some((error) => error.includes("PAV_CONTRACT_MISSING"))).toBe(true);
-      expect(result.errors.some((error) => error.includes("phase-1"))).toBe(true);
-      expect(
-        result.errors.some((error) =>
-          error.includes("roadmap/projects/shared/phases/phase-1/validation-contract.json"),
-        ),
-      ).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes("PAV_CONTRACT_MISSING"))).toBe(true);
+    expect(result.errors.some((error) => error.includes("phase-1"))).toBe(true);
+    expect(
+      result.errors.some((error) =>
+        error.includes("roadmap/projects/shared/phases/phase-1/validation-contract.json"),
+      ),
+    ).toBe(true);
   }, 120_000);
 
   it("accepts valid validation contract", async () => {
@@ -1909,7 +1895,7 @@ describe("runRepositoryChecks – validation contract", () => {
       "roadmap/projects/shared/phases/phase-1/validation-contract.json",
     );
     const invalidContract = {
-      schemaVersion: "2.0", // invalid version
+      schemaVersion: "9.9", // invalid version
       phaseId: "phase-1",
       checks: [],
       createdAt: "2026-03-22",
@@ -1936,7 +1922,7 @@ describe("runRepositoryChecks – validation contract", () => {
       "roadmap/projects/shared/phases/phase-1/validation-contract.json",
     );
     const incompleteContract = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       phaseId: "phase-1",
       checks: [
         {
@@ -1973,6 +1959,103 @@ describe("runRepositoryChecks – validation contract", () => {
       await emptyContext.cleanup();
     }
   }, 120_000);
+
+  it("emits explicit warning when legacy markdown workflow guides are detected", async () => {
+    await fs.ensureDir(path.join(tempDir, ".github", "workflows"));
+    await fs.writeFile(
+      path.join(tempDir, ".github", "workflows", "legacy-guide.md"),
+      "# Legacy Workflow Guide\n",
+      "utf8",
+    );
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(
+      result.warnings.some((warning) => warning.includes("LEGACY_WORKFLOW_GUIDANCE_DETECTED")),
+    ).toBe(true);
+    expect(
+      result.warnings.some((warning) => warning.includes(".project-arch/workflows/*.workflow.md")),
+    ).toBe(true);
+    expect(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === "LEGACY_WORKFLOW_GUIDANCE_DETECTED",
+      ),
+    ).toBe(true);
+    expect(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === "LEGACY_WORKFLOW_GUIDANCE_MIXED_SURFACE",
+      ),
+    ).toBe(false);
+  }, 120_000);
+
+  it("does not emit legacy guidance warnings for canonical-only workflow-document state", async () => {
+    await fs.ensureDir(path.join(tempDir, ".project-arch", "workflows"));
+    await fs.writeFile(
+      path.join(tempDir, ".project-arch", "workflows", "before-coding.workflow.md"),
+      "# Canonical Workflow Guide\n",
+      "utf8",
+    );
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.warnings.some((warning) => warning.includes("LEGACY_WORKFLOW_GUIDANCE_"))).toBe(
+      false,
+    );
+    expect(
+      result.diagnostics.some((diagnostic) =>
+        diagnostic.code.startsWith("LEGACY_WORKFLOW_GUIDANCE_"),
+      ),
+    ).toBe(false);
+  }, 120_000);
+
+  it("emits mixed-surface warning when legacy and canonical workflow guides coexist", async () => {
+    await fs.ensureDir(path.join(tempDir, ".github", "workflows"));
+    await fs.ensureDir(path.join(tempDir, ".project-arch", "workflows"));
+
+    await fs.writeFile(
+      path.join(tempDir, ".github", "workflows", "legacy-guide.md"),
+      "# Legacy Workflow Guide\n",
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(tempDir, ".project-arch", "workflows", "canonical.workflow.md"),
+      "# Canonical Workflow Guide\n",
+      "utf8",
+    );
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(
+      result.warnings.some((warning) => warning.includes("LEGACY_WORKFLOW_GUIDANCE_MIXED_SURFACE")),
+    ).toBe(true);
+    expect(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === "LEGACY_WORKFLOW_GUIDANCE_MIXED_SURFACE",
+      ),
+    ).toBe(true);
+    expect(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.code === "LEGACY_WORKFLOW_GUIDANCE_DETECTED",
+      ),
+    ).toBe(true);
+    expect(result.errors.some((error) => error.includes("LEGACY_WORKFLOW_GUIDANCE_"))).toBe(false);
+  }, 120_000);
+
+  it("does not emit legacy guidance warnings for GitHub Actions YAML workflows", async () => {
+    await fs.ensureDir(path.join(tempDir, ".github", "workflows"));
+    await fs.writeFile(path.join(tempDir, ".github", "workflows", "ci.yml"), "name: CI\n", "utf8");
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.warnings.some((warning) => warning.includes("LEGACY_WORKFLOW_GUIDANCE_"))).toBe(
+      false,
+    );
+    expect(
+      result.diagnostics.some((diagnostic) =>
+        diagnostic.code.startsWith("LEGACY_WORKFLOW_GUIDANCE_"),
+      ),
+    ).toBe(false);
+  }, 120_000);
 });
 
 async function scaffoldValidationContractForPhase(tempDir: string, phaseId: string): Promise<void> {
@@ -1981,7 +2064,7 @@ async function scaffoldValidationContractForPhase(tempDir: string, phaseId: stri
     `roadmap/projects/shared/phases/${phaseId}/validation-contract.json`,
   );
   await writeJsonDeterministic(contractPath, {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     phaseId,
     checks: [],
     createdAt: "2026-03-22",

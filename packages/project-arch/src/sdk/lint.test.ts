@@ -21,7 +21,7 @@ describe("sdk/lint", () => {
     await fs.writeFile(
       filePath,
       `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "003"
 slug: "sdk-lint"
 title: "SDK Lint"

@@ -60,7 +60,7 @@ describe("cli/commands/doctor", () => {
       issues: Array<{ code: string }>;
     };
 
-    expect(payload.schemaVersion).toBe("1.0");
+    expect(payload.schemaVersion).toBe("2.0");
     expect(payload.status).toBe("degraded");
     expect(payload.summary.issueCount).toBe(1);
     expect(payload.summary.repairedCount).toBe(1);

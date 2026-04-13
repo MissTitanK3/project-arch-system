@@ -269,12 +269,12 @@ describe("cli/commands/report", () => {
       await program.parseAsync(["node", "test", "report", "--json"]);
 
       const output = consoleSpy.mock.calls[0][0] as string;
-      expect(output).toContain("\"schemaVersion\": \"1.0\"");
-      expect(output).toContain("\"report\":");
-      expect(output).toContain("\"compatibility\":");
-      expect(output).toContain("\"activeProject\":");
-      expect(output).toContain("\"docsCoverage\":");
-      expect(output).toContain("\"parity\":");
+      expect(output).toContain('"schemaVersion": "2.0"');
+      expect(output).toContain('"report":');
+      expect(output).toContain('"compatibility":');
+      expect(output).toContain('"activeProject":');
+      expect(output).toContain('"docsCoverage":');
+      expect(output).toContain('"parity":');
       consoleSpy.mockRestore();
     });
   });

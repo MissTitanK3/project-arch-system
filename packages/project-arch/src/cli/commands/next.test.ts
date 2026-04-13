@@ -52,7 +52,7 @@ describe("cli/commands/next", () => {
       evidence: string[];
     };
 
-    expect(payload.schemaVersion).toBe("1.0");
+    expect(payload.schemaVersion).toBe("2.0");
     expect(payload.status).toBe("needs_check");
     expect(payload.recommendedCommand).toBe("pa check");
   });

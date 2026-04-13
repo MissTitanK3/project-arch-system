@@ -12,8 +12,13 @@ export * as next from "./next";
 export * as lint from "./lint";
 export * as report from "./report";
 export * as policy from "./policy";
+export * as runtime from "./runtime";
 export * as docs from "./docs";
+export * as agent from "./agent";
+export * as result from "./result";
 export * as agents from "./agents";
+export * as contracts from "./contracts";
+export * as workflows from "./workflows";
 
 export { registry } from "./registry";
 export { commandMetadata } from "./commands";

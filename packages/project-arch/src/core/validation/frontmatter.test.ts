@@ -21,7 +21,7 @@ describe("core/validation/frontmatter", () => {
     await fs.writeFile(
       taskPath,
       `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: "invalid-task"
 lane: "planned"
@@ -60,7 +60,7 @@ completionCriteria: []
     await fs.writeFile(
       taskPath,
       `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "001"
 slug: "missing-title"
 lane: "planned"
@@ -95,7 +95,7 @@ completionCriteria: []
     await fs.writeFile(
       decisionPath,
       `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 type: "decision"
 id: "project:001:key-type"
 title: "Key Type"
@@ -133,7 +133,7 @@ links:
     await fs.writeFile(
       taskPath,
       `---
-schemaVersion: 1.0   
+schemaVersion: 2.0   
 id: 002
 slug: "fixable-task"   
 title: "Fixable Task"
@@ -163,10 +163,10 @@ completionCriteria: []
     expect(result.diagnostics).toHaveLength(0);
     expect(updated).toContain('  - "lint"');
     expect(updated).not.toContain("\t-");
-    expect(updated).toContain('schemaVersion: "1.0"');
+    expect(updated).toContain('schemaVersion: "2.0"');
     expect(updated).toContain('id: "002"');
     expect(updated).toContain("lane: planned");
     expect(updated).toContain("status: todo");
-    expect(updated).not.toContain("schemaVersion: 1.0   ");
+    expect(updated).not.toContain("schemaVersion: 2.0   ");
   });
 });

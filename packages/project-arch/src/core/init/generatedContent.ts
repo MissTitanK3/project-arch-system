@@ -2,6 +2,8 @@ export interface PlannedBootstrapTask {
   id: string;
   slug: string;
   title: string;
+  taskType?: string;
+  agentExecutable?: boolean;
   tags: string[];
   dependsOn?: string[];
   codeTargets?: string[];
@@ -40,7 +42,7 @@ export function renderGeneratedWorkflowFile(definition: GeneratedWorkflowDefinit
   return [
     `# ${definition.title}`,
     "",
-    "This file is a generated workflow helper. It is subordinate to the canonical repository instruction surfaces.",
+    "This file is a generated workflow helper on the project-arch-owned workflow-document surface (`.project-arch/workflows/*.workflow.md`). It is subordinate to the canonical repository instruction surfaces.",
     "",
     "## Purpose",
     "",
@@ -75,6 +77,7 @@ export function renderGeneratedWorkflowFile(definition: GeneratedWorkflowDefinit
     "## Authority Reminder",
     "",
     "- generated workflow files are helper artifacts, not primary instruction surfaces",
+    "- generated workflow files live on the canonical project-arch-owned workflow-document surface: `.project-arch/workflows/*.workflow.md`",
     "- canonical agent entry-point guidance wins over this file when instructions conflict",
     "- use `AGENTS.md` when present; during transitional scaffolds, consult `agents.md` as the current root entry surface",
     "- repository-wide architecture and policy guidance still lives in `architecture/` and `roadmap/`",

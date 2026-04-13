@@ -10,7 +10,7 @@ function decisionRecord(codeTargets: string[]): DecisionRecord {
   return {
     filePath: "roadmap/decisions/test.md",
     frontmatter: {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "decision",
       id: "project:20260307:test",
       title: "Test Decision",

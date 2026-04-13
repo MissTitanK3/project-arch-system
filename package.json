@@ -4,7 +4,10 @@
   "packageManager": "pnpm@10.30.3",
   "scripts": {
     "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
+    "test": "turbo run test",
+    "package:extension": "pnpm --filter project-arch-extension package:vsix",
     "release:prepare": "pnpm --filter project-arch release:prepare",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "sandbox:init": "node scripts/sandbox-init.mjs default",

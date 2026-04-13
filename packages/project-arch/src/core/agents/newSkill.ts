@@ -94,7 +94,7 @@ export async function createUserSkill(
   const safeTags = (input.tags ?? []).map((tag) => sanitizeFrontmatterString(tag)).filter(Boolean);
 
   const manifest: AgentSkill = agentSkillSchema.parse({
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: input.id,
     name: safeTitle,
     source: "user",

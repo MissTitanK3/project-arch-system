@@ -13,7 +13,7 @@ describe("core/templates/agents", () => {
 
     expect(skills).toHaveLength(7);
     expect(skills.every((skill) => skill.manifest.source === "builtin")).toBe(true);
-    expect(skills.every((skill) => skill.manifest.schemaVersion === "1.0")).toBe(true);
+    expect(skills.every((skill) => skill.manifest.schemaVersion === "2.0")).toBe(true);
     expect(skills.every((skill) => skill.manifest.files.system === "system.md")).toBe(true);
     expect(skills.every((skill) => skill.manifest.files.checklist === "checklist.md")).toBe(true);
   });

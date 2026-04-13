@@ -93,6 +93,46 @@ describe("sdk/commands", () => {
       expect(commandMetadata["lint.frontmatter"].inputs).toEqual(["fix"]);
     });
 
+    it("should define metadata for runtime commands", () => {
+      expect(commandMetadata["runtime.list"]).toBeDefined();
+      expect(commandMetadata["runtime.list"].description).toBe("List merged runtime inventory");
+      expect(commandMetadata["runtime.list"].inputs).toEqual([]);
+
+      expect(commandMetadata["runtime.check"]).toBeDefined();
+      expect(commandMetadata["runtime.check"].description).toBe("Check runtime profile readiness");
+      expect(commandMetadata["runtime.check"].inputs).toEqual(["profileId"]);
+
+      expect(commandMetadata["runtime.link"]).toBeDefined();
+      expect(commandMetadata["runtime.link"].description).toBe("Link a runtime profile");
+      expect(commandMetadata["runtime.link"].inputs).toEqual(["runtime", "profile", "model"]);
+
+      expect(commandMetadata["runtime.update"]).toBeDefined();
+      expect(commandMetadata["runtime.update"].description).toBe(
+        "Update bounded runtime profile fields",
+      );
+      expect(commandMetadata["runtime.update"].inputs).toEqual(["profileId"]);
+
+      expect(commandMetadata["runtime.enable"]).toBeDefined();
+      expect(commandMetadata["runtime.enable"].description).toBe("Enable a linked runtime profile");
+      expect(commandMetadata["runtime.enable"].inputs).toEqual(["profileId"]);
+
+      expect(commandMetadata["runtime.disable"]).toBeDefined();
+      expect(commandMetadata["runtime.disable"].description).toBe(
+        "Disable a linked runtime profile",
+      );
+      expect(commandMetadata["runtime.disable"].inputs).toEqual(["profileId"]);
+
+      expect(commandMetadata["runtime.default"]).toBeDefined();
+      expect(commandMetadata["runtime.default"].description).toBe(
+        "Set or clear default runtime profile",
+      );
+      expect(commandMetadata["runtime.default"].inputs).toEqual(["profileId"]);
+
+      expect(commandMetadata["runtime.unlink"]).toBeDefined();
+      expect(commandMetadata["runtime.unlink"].description).toBe("Remove a linked runtime profile");
+      expect(commandMetadata["runtime.unlink"].inputs).toEqual(["profileId"]);
+    });
+
     it("should define metadata for agents commands", () => {
       expect(commandMetadata["agents.list"]).toBeDefined();
       expect(commandMetadata["agents.list"].description).toBe("List resolved agent skills");
@@ -146,6 +186,14 @@ describe("sdk/commands", () => {
       expect(keys).toEqual([...keys].sort((a, b) => a.localeCompare(b)));
       expect(keys).toContain("tasks.create");
       expect(keys).toContain("agents.check");
+      expect(keys).toContain("runtime.list");
+      expect(keys).toContain("runtime.check");
+      expect(keys).toContain("runtime.link");
+      expect(keys).toContain("runtime.update");
+      expect(keys).toContain("runtime.enable");
+      expect(keys).toContain("runtime.disable");
+      expect(keys).toContain("runtime.default");
+      expect(keys).toContain("runtime.unlink");
     });
   });
 });

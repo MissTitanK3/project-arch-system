@@ -7,7 +7,7 @@ describe("schemas/reconcileConfig", () => {
       extends: "default",
     });
 
-    expect(parsed.schemaVersion).toBe("1.0");
+    expect(parsed.schemaVersion).toBe("2.0");
     expect(parsed.extends).toBe("default");
     expect(parsed.lifecycle.mode).toBe("append-only-history");
     expect(parsed.lifecycle.writeCanonicalPointers).toBe(false);
@@ -31,7 +31,7 @@ describe("schemas/reconcileConfig", () => {
 
   it("accepts include/exclude/override rules", () => {
     const parsed = reconcileConfigSchema.parse({
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       extends: "default",
       triggers: {
         include: [

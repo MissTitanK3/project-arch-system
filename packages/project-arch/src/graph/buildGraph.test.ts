@@ -27,7 +27,7 @@ describe.sequential("graph/buildGraph", () => {
     expect(await pathExists(graphPath)).toBe(true);
 
     const graph = await readJson<{ schemaVersion: string }>(graphPath);
-    expect(graph.schemaVersion).toBe("1.0");
+    expect(graph.schemaVersion).toBe("2.0");
   }, 120_000);
 
   it("should be idempotent across repeated calls", async () => {

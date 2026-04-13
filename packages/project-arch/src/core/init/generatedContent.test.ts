@@ -35,6 +35,8 @@ describe("core/init/generatedContent", () => {
     expect(rendered).toContain("## Fail-Safe Behavior");
     expect(rendered).toContain("## Authority Reminder");
     expect(rendered).toContain("## Related Governance");
+    expect(rendered).toContain(".project-arch/workflows/*.workflow.md");
+    expect(rendered).not.toContain(".github/workflows/*.md");
   });
 
   it("renders bootstrap task bodies with required input, questions, plan, and verification", () => {

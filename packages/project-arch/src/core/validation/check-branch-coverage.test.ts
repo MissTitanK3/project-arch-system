@@ -225,7 +225,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       await fs.mkdir(phaseDecisionDir, { recursive: true });
 
       await writeJsonDeterministic(path.join(phaseDecisionDir, "index.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         decisions: ["phantom:phase:decision"],
       });
 
@@ -254,7 +254,7 @@ describe.sequential("core/validation/check - branch coverage", () => {
       await fs.mkdir(milestoneDecisionDir, { recursive: true });
 
       await writeJsonDeterministic(path.join(milestoneDecisionDir, "index.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         decisions: ["phantom:milestone:decision"],
       });
 

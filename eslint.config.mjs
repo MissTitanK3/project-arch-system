@@ -14,6 +14,15 @@ export default tseslint.config(
         ],
     },
     {
+        files: ['scripts/**/*.mjs'],
+        languageOptions: {
+            globals: {
+                process: 'readonly',
+                console: 'readonly',
+            },
+        },
+    },
+    {
         rules: {
             '@typescript-eslint/no-explicit-any': 'warn',
         },

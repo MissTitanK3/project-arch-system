@@ -2,10 +2,6 @@ import path from "path";
 import fs from "fs-extra";
 import { ensureDir, pathExists, writeJsonDeterministic } from "../../utils/fs";
 import {
-  milestoneDir,
-  milestoneTaskLaneDir,
-  phaseDecisionsRoot,
-  phaseDir,
   projectDir,
   projectDocsRoot,
   projectManifestPath,
@@ -48,14 +44,8 @@ import {
   type GeneratedWorkflowDefinition,
   type PlannedBootstrapTask,
 } from "./generatedContent";
-import {
-  generateArchitectureFamilyReadme,
-  generateStandardsContent,
-} from "./documentBuilders";
-import {
-  scaffoldAgentsGuide,
-  scaffoldGovernanceGuidanceDocs,
-} from "./governanceGuidanceScaffold";
+import { generateArchitectureFamilyReadme, generateStandardsContent } from "./documentBuilders";
+import { scaffoldAgentsGuide, scaffoldGovernanceGuidanceDocs } from "./governanceGuidanceScaffold";
 import {
   flushManagedWriteLogs,
   type ManagedWriteState,
@@ -155,7 +145,7 @@ const generatedWorkflowDefinitions: GeneratedWorkflowDefinition[] = [
       "If required context cannot be resolved, surface the missing context instead of starting from placeholders.",
     ],
     adaptationNote:
-      "This workflow is for pre-implementation preparation on the `.github/workflows/*.md` document surface; it does not replace canonical repo-wide instructions.",
+      "This workflow is for pre-implementation preparation on the `.project-arch/workflows/*.workflow.md` document surface; it does not replace canonical repo-wide instructions.",
   },
   {
     slug: "after-coding",
@@ -175,7 +165,7 @@ const generatedWorkflowDefinitions: GeneratedWorkflowDefinition[] = [
       "If validation fails, return to diagnosis or repair work instead of proceeding to task completion.",
     ],
     adaptationNote:
-      "This workflow keeps the post-edit loop explicit on the generated workflow-document surface without inventing tool-local validation rules.",
+      "This workflow keeps the post-edit loop explicit on the project-arch-owned `.project-arch/workflows/*.workflow.md` surface without inventing tool-local validation rules.",
   },
   {
     slug: "complete-task",
@@ -195,7 +185,7 @@ const generatedWorkflowDefinitions: GeneratedWorkflowDefinition[] = [
       "If the task exposes new gaps, create the governed follow-up artifact instead of burying the issue in prose.",
     ],
     adaptationNote:
-      "This workflow keeps task closeout tied to roadmap traceability rather than treating completion as a purely conversational step.",
+      "This workflow keeps task closeout tied to roadmap traceability on the project-arch-owned `.project-arch/workflows/*.workflow.md` surface rather than treating completion as a purely conversational step.",
   },
   {
     slug: "new-module",
@@ -216,7 +206,7 @@ const generatedWorkflowDefinitions: GeneratedWorkflowDefinition[] = [
       "If the new module requires a decision record, capture that decision before broad implementation continues.",
     ],
     adaptationNote:
-      "This workflow keeps structural expansion governed by repository placement and ownership rules rather than by ad hoc file creation.",
+      "This workflow keeps structural expansion on the project-arch-owned `.project-arch/workflows/*.workflow.md` surface governed by repository placement and ownership rules rather than by ad hoc file creation.",
   },
   {
     slug: "diagnose",
@@ -237,7 +227,7 @@ const generatedWorkflowDefinitions: GeneratedWorkflowDefinition[] = [
       "Choose the next governed repair path only after the failure mode is explicit.",
     ],
     adaptationNote:
-      "This workflow is a debugging helper on the generated workflow-document surface; it must not become an alternate decision system.",
+      "This workflow is a debugging helper on the project-arch-owned `.project-arch/workflows/*.workflow.md` surface; it must not become an alternate decision system.",
   },
 ];
 
@@ -246,6 +236,7 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "001",
     slug: "define-project-overview",
     title: "Define project overview in architecture",
+    taskType: "spec",
     tags: ["setup", "architecture", "overview"],
     publicDocs: [
       "architecture/product-framing/prompt.md",
@@ -288,6 +279,8 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "002",
     slug: "define-project-goals",
     title: "Define project goals in architecture",
+    taskType: "spec",
+    agentExecutable: true,
     tags: ["setup", "architecture", "goals"],
     publicDocs: ["architecture/product-framing/goals.md"],
     traceLinks: [
@@ -324,6 +317,8 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "003",
     slug: "map-user-journey",
     title: "Map user journey in architecture",
+    taskType: "spec",
+    agentExecutable: true,
     tags: ["setup", "architecture", "user-journey"],
     publicDocs: ["architecture/product-framing/user-journey.md"],
     traceLinks: [
@@ -360,6 +355,8 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "004",
     slug: "define-scope-and-non-scope",
     title: "Define scope and non-scope in architecture",
+    taskType: "spec",
+    agentExecutable: true,
     tags: ["setup", "architecture", "scope"],
     publicDocs: ["architecture/product-framing/scope.md"],
     traceLinks: [
@@ -396,6 +393,8 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "005",
     slug: "define-system-boundaries",
     title: "Define system boundaries in architecture",
+    taskType: "spec",
+    agentExecutable: true,
     tags: ["setup", "architecture", "system-boundaries", "discover", "greenfield"],
     publicDocs: ["architecture/systems/system-boundaries.md"],
     traceLinks: [
@@ -442,6 +441,8 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "006",
     slug: "define-module-model",
     title: "Define module model in architecture",
+    taskType: "spec",
+    agentExecutable: true,
     tags: ["setup", "architecture", "module-model", "discover", "greenfield"],
     publicDocs: ["architecture/governance/module-model.md"],
     traceLinks: [
@@ -489,6 +490,8 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "007",
     slug: "define-runtime-architecture",
     title: "Define runtime architecture in architecture",
+    taskType: "spec",
+    agentExecutable: true,
     tags: ["setup", "architecture", "runtime-architecture", "discover", "greenfield"],
     publicDocs: ["architecture/runtime/runtime-architecture.md"],
     traceLinks: [
@@ -536,6 +539,7 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     id: "008",
     slug: "finalize-architecture-foundation",
     title: "Finalize architecture foundation readiness",
+    taskType: "spec",
     tags: ["setup", "architecture"],
     dependsOn: ["001", "002", "003", "004", "005", "006", "007"],
     traceLinks: [
@@ -672,7 +676,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   }
 
   if (options.withWorkflows) {
-    await ensureDirIfMissing(cwd, path.join(".github", "workflows"));
+    await ensureDirIfMissing(cwd, path.join(".project-arch", "workflows"));
   }
 
   const docsRoot = projectDocsRoot(cwd);
@@ -761,7 +765,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   await writeManagedJsonFile(
     path.join(docsRoot, "manifest.json"),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       phases: [{ id: phaseId, projectId: DEFAULT_PHASE_PROJECT_ID, createdAt: now }],
       activeProject: DEFAULT_PHASE_PROJECT_ID,
       activePhase: phaseId,
@@ -784,7 +788,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   await writeManagedMarkdownFile(
     path.join(projectPhasePath, "overview.md"),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "phase-overview",
       id: phaseId,
       createdAt: now,
@@ -814,107 +818,42 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     managedWriteState,
   );
 
-  const phasePath = phaseDir(phaseId, cwd);
-  await ensureDir(path.join(phasePath, "milestones"));
-  await ensureDir(phaseDecisionsRoot(phaseId, cwd));
-  await ensureDecisionIndex(phaseDecisionsRoot(phaseId, cwd));
-
-  await writeManagedMarkdownFile(
-    path.join(phasePath, "overview.md"),
-    {
-      schemaVersion: "1.0",
-      type: "phase-overview",
-      id: phaseId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    [
-      "# Overview",
-      "",
-      "Phase 1 establishes architecture before feature milestones begin.",
-      "",
-      "## Focus",
-      "",
-      "- Add the project setup prompt to architecture/product-framing/prompt.md",
-      "  as the canonical source.",
-      "- Complete architecture/product-framing with project overview, goals,",
-      "  journey, and scope details derived from prompt.md.",
-      "- Ensure agents can plan implementation from architecture",
-      "  without missing context.",
-      "",
-    ].join("\n"),
-    managedWriteState,
+  const projectMilestonePath = projectMilestoneDir(
+    DEFAULT_PHASE_PROJECT_ID,
+    phaseId,
+    milestoneId,
+    cwd,
   );
-
-  await writeManagedJsonFile(
-    path.join(phasePath, "validation-contract.json"),
-    defaultValidationContractTemplate(phaseId),
-    managedWriteState,
+  await ensureDir(
+    projectMilestoneTaskLaneDir(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, "planned", cwd),
   );
-
-  const projectMilestonePath = projectMilestoneDir(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, cwd);
-  await ensureDir(projectMilestoneTaskLaneDir(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, "planned", cwd));
   await ensureDir(
     projectMilestoneTaskLaneDir(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, "discovered", cwd),
   );
-  await ensureDir(projectMilestoneTaskLaneDir(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, "backlog", cwd));
-  await ensureDir(projectMilestoneDecisionsRoot(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, cwd));
-  await ensureDecisionIndex(
+  await ensureDir(
+    projectMilestoneTaskLaneDir(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, "backlog", cwd),
+  );
+  await ensureDir(
     projectMilestoneDecisionsRoot(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, cwd),
   );
-
-  const milestonePath = milestoneDir(phaseId, milestoneId, cwd);
-  await ensureDir(milestoneTaskLaneDir(phaseId, milestoneId, "planned", cwd));
-  await ensureDir(milestoneTaskLaneDir(phaseId, milestoneId, "discovered", cwd));
-  await ensureDir(milestoneTaskLaneDir(phaseId, milestoneId, "backlog", cwd));
-  await ensureDir(path.join(milestonePath, "decisions"));
-  await ensureDecisionIndex(path.join(milestonePath, "decisions"));
-
-  await writeManagedJsonFile(
-    path.join(milestonePath, "manifest.json"),
-    {
-      schemaVersion: "1.0",
-      id: milestoneId,
-      phaseId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    managedWriteState,
+  await ensureDecisionIndex(
+    projectMilestoneDecisionsRoot(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, cwd),
   );
   await writeManagedJsonFile(
     path.join(projectMilestonePath, "manifest.json"),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: milestoneId,
       phaseId,
       createdAt: now,
       updatedAt: now,
     },
-    managedWriteState,
-  );
-
-  await writeManagedMarkdownFile(
-    path.join(milestonePath, "overview.md"),
-    {
-      schemaVersion: "1.0",
-      type: "milestone-overview",
-      id: milestoneId,
-      phaseId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    [
-      "# Overview",
-      "",
-      "This milestone creates the baseline project architecture and workflow assets.",
-      "",
-    ].join("\n"),
     managedWriteState,
   );
   await writeManagedMarkdownFile(
     path.join(projectMilestonePath, "overview.md"),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "milestone-overview",
       id: milestoneId,
       phaseId,
@@ -929,11 +868,6 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     ].join("\n"),
     managedWriteState,
   );
-
-  const targetsPath = path.join(milestonePath, "targets.md");
-  if (!(await pathExists(targetsPath))) {
-    await writeMarkdownFile(targetsPath, milestoneTargetsTemplate());
-  }
   const projectTargetsPath = projectMilestoneTargetsPath(
     DEFAULT_PHASE_PROJECT_ID,
     phaseId,
@@ -952,6 +886,8 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       lane: "planned",
       createdAt: now,
       discoveredFromTask: null,
+      taskType: task.taskType,
+      agentExecutable: task.agentExecutable,
     });
 
     frontmatter.tags = task.tags;
@@ -962,16 +898,6 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     if (task.dependsOn) {
       frontmatter.dependsOn = task.dependsOn;
     }
-
-    await writeManagedMarkdownFile(
-      path.join(
-        milestoneTaskLaneDir(phaseId, milestoneId, "planned", cwd),
-        `${task.id}-${task.slug}.md`,
-      ),
-      frontmatter,
-      renderTaskBody(task),
-      managedWriteState,
-    );
     await writeManagedMarkdownFile(
       path.join(
         projectMilestoneTaskLaneDir(DEFAULT_PHASE_PROJECT_ID, phaseId, milestoneId, "planned", cwd),
@@ -1664,10 +1590,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
 
   const modules = packageModules.map((moduleName) => ({
     name: moduleName,
-    type:
-      moduleName === "packages/database"
-        ? ("infrastructure" as const)
-        : ("library" as const),
+    type: moduleName === "packages/database" ? ("infrastructure" as const) : ("library" as const),
     description: moduleDescriptions[moduleName] ?? "Module in the monorepo.",
   }));
 
@@ -2241,7 +2164,6 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     }
   }
 
-
   await scaffoldGovernanceGuidanceDocs(cwd, { pathExists, writeMarkdownFile });
 
   const architectureSystemPath = path.join(cwd, "architecture", "system.md");
@@ -2308,13 +2230,12 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     });
   }
 
-
   await scaffoldAgentsGuide(cwd, { pathExists, writeMarkdownFile });
 
   if (options.withWorkflows) {
     for (const workflowDefinition of generatedWorkflowDefinitions) {
       await writeManagedFile(
-        path.join(cwd, ".github", "workflows", `${workflowDefinition.slug}.md`),
+        path.join(cwd, ".project-arch", "workflows", `${workflowDefinition.slug}.workflow.md`),
         renderGeneratedWorkflowFile(workflowDefinition),
         managedWriteState,
       );

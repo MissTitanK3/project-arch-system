@@ -18,7 +18,7 @@ export function registerAgentsCommand(program: Command): void {
       const result = unwrap(await agents.agentsList());
 
       if (options.json) {
-        printJson({ schemaVersion: "1.0", skills: result.skills });
+        printJson({ schemaVersion: "2.0", skills: result.skills });
         return;
       }
 
@@ -41,7 +41,7 @@ export function registerAgentsCommand(program: Command): void {
       try {
         const result = unwrap(await agents.agentsShow({ id }));
         if (options.json) {
-          printJson({ schemaVersion: "1.0", skill: result.skill });
+          printJson({ schemaVersion: "2.0", skill: result.skill });
           return;
         }
 
@@ -102,7 +102,7 @@ export function registerAgentsCommand(program: Command): void {
           };
 
           if (options.json) {
-            printJson({ schemaVersion: "1.0", ...payload });
+            printJson({ schemaVersion: "2.0", ...payload });
             return;
           }
 
@@ -130,7 +130,7 @@ export function registerAgentsCommand(program: Command): void {
       };
 
       if (options.json) {
-        printJson({ schemaVersion: "1.0", ...payload });
+        printJson({ schemaVersion: "2.0", ...payload });
       } else if (options.check) {
         console.log(result.stale ? "STALE" : "OK");
       } else {
@@ -150,7 +150,7 @@ export function registerAgentsCommand(program: Command): void {
       try {
         const result = unwrap(await agents.agentsCheck());
         const payload = {
-          schemaVersion: "1.0",
+          schemaVersion: "2.0",
           status: result.ok ? "valid" : "invalid",
           summary: {
             errorCount: result.errors.length,

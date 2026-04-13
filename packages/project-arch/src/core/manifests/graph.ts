@@ -467,7 +467,7 @@ export async function rebuildArchitectureGraph(
 
   const graphPath = path.join(archRoot, "graph.json");
   const nextGraphSummary = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     nodes: {
       domains: domains.length,
       decisions: decisionNodes.length,

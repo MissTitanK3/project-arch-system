@@ -346,6 +346,16 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
     ].join("\n"),
   },
 
+  PAH015: {
+    description:
+      "The runtime profile config file (`.project-arch/runtime.config.json`) exists but does not satisfy the canonical runtime-profile schema.",
+    remediation: [
+      "Review the reported runtime profile config path and failing field.",
+      "Fix contradictory or malformed runtime profile config values such as duplicate profile ids or an invalid defaultProfile reference.",
+      "Re-run `pa doctor health` to confirm the runtime profile config validates cleanly.",
+    ].join("\n"),
+  },
+
   PAH002: {
     description: "`roadmap/manifest.json` is missing.",
     remediation: [

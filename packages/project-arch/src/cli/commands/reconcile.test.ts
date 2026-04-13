@@ -66,7 +66,7 @@ describe("cli/commands/reconcile", () => {
       await fs.ensureDir(reconcileDir);
 
       await fs.writeJson(path.join(reconcileDir, "001-2026-03-20.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "reconcile-001-2026-03-20",
         type: "local-reconciliation",
         status: "reconciliation suggested",
@@ -82,7 +82,7 @@ describe("cli/commands/reconcile", () => {
         feedbackCandidates: [],
       });
       await fs.writeJson(path.join(reconcileDir, "001-2026-03-22.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "reconcile-001-2026-03-22",
         type: "local-reconciliation",
         status: "reconciliation complete",
@@ -116,7 +116,7 @@ describe("cli/commands/reconcile", () => {
       await fs.ensureDir(reconcileDir);
 
       await fs.writeJson(path.join(reconcileDir, "001-2026-03-20.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "reconcile-001-2026-03-20",
         type: "local-reconciliation",
         status: "reconciliation suggested",
@@ -133,7 +133,7 @@ describe("cli/commands/reconcile", () => {
       });
       await fs.writeFile(path.join(reconcileDir, "001-2026-03-20.md"), "# old");
       await fs.writeJson(path.join(reconcileDir, "001-2026-03-22.json"), {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "reconcile-001-2026-03-22",
         type: "local-reconciliation",
         status: "reconciliation complete",
@@ -161,6 +161,33 @@ describe("cli/commands/reconcile", () => {
   });
 
   describe("pa reconcile task", () => {
+    it("should reconcile canonical task paths even when legacy task copies are absent", async () => {
+      const canonicalTaskPath = await createTask({
+        phaseId,
+        milestoneId,
+        lane: "planned",
+        discoveredFromTask: null,
+        cwd: context.tempDir,
+      });
+
+      const legacyTaskPath = canonicalTaskPath
+        .replace(/\/roadmap\/projects\/[^/]+\/phases\//, "/roadmap/phases/")
+        .replace(/\\/g, "/");
+      await fs.remove(legacyTaskPath);
+
+      const program = new Command();
+      program.exitOverride();
+      registerReconcileCommand(program);
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      await program.parseAsync(["node", "test", "reconcile", "task", "001"]);
+      const output = consoleSpy.mock.calls.map((c) => String(c[0])).join("\n");
+      consoleSpy.mockRestore();
+
+      expect(output).toContain("status:");
+      expect(output).toContain("json report:");
+    }, 120_000);
+
     it("should run reconcile for a task with no code targets and write report files", async () => {
       await createTask({
         phaseId,

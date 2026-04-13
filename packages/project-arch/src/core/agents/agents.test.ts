@@ -28,7 +28,7 @@ async function writeSkillManifest(
   const skillDir = path.join(projectRoot, ".arch", "agents-of-arch", sourceDir, dirName);
   await fs.ensureDir(skillDir);
   await fs.writeJson(path.join(skillDir, "skill.json"), {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: data.id,
     name: `Skill ${data.id}`,
     source: data.source,
@@ -122,7 +122,7 @@ describe("core/agents", () => {
     const skillDir = path.join(context.tempDir, ".arch", "agents-of-arch", "skills", "repo-map");
     await fs.ensureDir(skillDir);
     await fs.writeJson(path.join(skillDir, "skill.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "repo-map",
       name: "Repo Map",
       source: "builtin",

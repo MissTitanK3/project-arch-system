@@ -48,7 +48,7 @@ export function registerReportCommand(program: Command): void {
     .action(async (options: { verbose?: boolean; json?: boolean }) => {
       const output = unwrap(await report.reportGenerate({ verbose: options.verbose }));
       if (options.json) {
-        printJson({ schemaVersion: "1.0", ...output });
+        printJson({ schemaVersion: "2.0", ...output });
         return;
       }
       console.log(sanitizeTerminalText(output.text, { allowNewlines: true, allowTabs: true }));

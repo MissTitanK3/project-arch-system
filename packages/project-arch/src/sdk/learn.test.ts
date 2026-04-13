@@ -18,7 +18,7 @@ describe.sequential("sdk/learn", () => {
     const result = await learnPath({ paths: ["apps/web"] });
 
     resultAssertions.assertSuccess(result);
-    expect(result.data.report.schemaVersion).toBe("1.0");
+    expect(result.data.report.schemaVersion).toBe("2.0");
     expect(result.data.report.analyzedPaths).toEqual(["apps/web"]);
     expect(result.data.text).toContain("Scope");
   }, 120_000);

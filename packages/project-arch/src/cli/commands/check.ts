@@ -137,7 +137,7 @@ export function registerCheckCommand(program: Command): void {
           {
             description: "Validate a single file",
             command:
-              "pa check --file roadmap/phases/phase-1/milestones/m-1/tasks/planned/001-task.md",
+              "pa check --file roadmap/projects/shared/phases/phase-1/milestones/m-1/tasks/planned/001-task.md",
           },
           {
             description: "Scope diagnostics to one milestone",

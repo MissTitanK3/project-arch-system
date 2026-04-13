@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  projectManifestSchema,
-  projectTypeSchema,
-  type ProjectManifest,
-} from "./project";
+import { projectManifestSchema, projectTypeSchema, type ProjectManifest } from "./project";
 
 describe("schemas/project", () => {
   describe("projectTypeSchema", () => {
@@ -20,7 +16,7 @@ describe("schemas/project", () => {
 
   describe("projectManifestSchema", () => {
     const validManifest: ProjectManifest = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "storefront",
       title: "Storefront",
       type: "application",
@@ -57,19 +53,19 @@ describe("schemas/project", () => {
 
     it("rejects empty owned path and dependency entries", () => {
       expect(() =>
-        projectManifestSchema.parse({ ...validManifest, ownedPaths: ["apps/storefront", ""] })
+        projectManifestSchema.parse({ ...validManifest, ownedPaths: ["apps/storefront", ""] }),
       ).toThrow();
       expect(() =>
         projectManifestSchema.parse({
           ...validManifest,
           sharedDependencies: ["packages/ui", ""],
-        })
+        }),
       ).toThrow();
     });
 
     it("accepts omitted optional fields and applies defaults", () => {
       const result = projectManifestSchema.parse({
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "shared",
         title: "Shared",
         type: "shared",
@@ -83,7 +79,9 @@ describe("schemas/project", () => {
     });
 
     it("rejects invalid schemaVersion", () => {
-      expect(() => projectManifestSchema.parse({ ...validManifest, schemaVersion: "2.0" })).toThrow();
+      expect(() =>
+        projectManifestSchema.parse({ ...validManifest, schemaVersion: "9.9" }),
+      ).toThrow();
     });
 
     it("strips unknown fields", () => {

@@ -21,7 +21,10 @@ import { registerNextCommand } from "./commands/next";
 import { registerExplainCommand } from "./commands/explain";
 import { registerFixCommand } from "./commands/fix";
 import { registerNormalizeCommand } from "./commands/normalize";
+import { registerAgentCommand } from "./commands/agent";
+import { registerResultCommand } from "./commands/result";
 import { registerAgentsCommand } from "./commands/agents";
+import { registerRuntimeCommand } from "./commands/runtime";
 import {
   getArchDir,
   getCommandPathFromCommander,
@@ -78,7 +81,10 @@ export async function runCli(argv = process.argv): Promise<void> {
   registerExplainCommand(program);
   registerFixCommand(program);
   registerNormalizeCommand(program);
+  registerAgentCommand(program);
+  registerResultCommand(program);
   registerAgentsCommand(program);
+  registerRuntimeCommand(program);
   registerHelpCommand(program);
 
   try {

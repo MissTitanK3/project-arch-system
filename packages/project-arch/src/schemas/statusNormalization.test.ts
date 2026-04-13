@@ -145,7 +145,7 @@ describe("statusNormalization", () => {
   describe("integration: full migration scenario", () => {
     it("should migrate legacy task frontmatter through schema validation", () => {
       const legacyFrontmatter = {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "001",
         slug: "example",
         title: "Example Task",

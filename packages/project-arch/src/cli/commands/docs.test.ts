@@ -139,8 +139,12 @@ describe("cli/commands/docs", () => {
       await program.parseAsync(["node", "test", "docs"]);
 
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("docs: 2 total"));
-      expect(consoleSpy).toHaveBeenCalledWith("architecture/README.md [architecture, exists, file]");
-      expect(consoleSpy).toHaveBeenCalledWith("docs/missing.md [docs, missing, tasks:1, decisions:1]");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "architecture/README.md [architecture, exists, file]",
+      );
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "docs/missing.md [docs, missing, tasks:1, decisions:1]",
+      );
 
       consoleSpy.mockRestore();
     });
@@ -154,7 +158,7 @@ describe("cli/commands/docs", () => {
 
       await program.parseAsync(["node", "test", "docs", "--json"]);
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("\"schemaVersion\": \"1.0\""));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"schemaVersion": "2.0"'));
       consoleSpy.mockRestore();
     });
 

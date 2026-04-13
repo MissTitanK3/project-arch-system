@@ -479,7 +479,7 @@ describe.sequential("core/validation/policy", () => {
     );
 
     await writeJsonDeterministic(path.join(context.tempDir, "roadmap", "policy.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       defaultProfile: "strict",
       profiles: {
         strict: {

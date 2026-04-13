@@ -23,7 +23,7 @@ export interface ContextLocationSummary {
 export type ContextProjectSummary = ContextLocationSummary;
 
 export interface ResolvedContextPayload {
-  version: "1.0";
+  version: "2.0";
   timestamp: string;
   projectRoot: string;
   active: {
@@ -154,7 +154,7 @@ export async function resolveContext(cwd = process.cwd()): Promise<ResolvedConte
   const recommendedTask = activeMilestoneTasks.find((task) => task.filePath !== activeTask.filePath);
 
   return {
-    version: "1.0",
+    version: "2.0",
     timestamp: new Date().toISOString(),
     projectRoot: cwd,
     active: {

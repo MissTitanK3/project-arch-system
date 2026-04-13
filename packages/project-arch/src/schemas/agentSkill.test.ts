@@ -4,7 +4,7 @@ import { agentSkillRegistrySchema } from "./agentSkillRegistry";
 
 describe("schemas/agentSkill", () => {
   const validSkill = {
-    schemaVersion: "1.0" as const,
+    schemaVersion: "2.0" as const,
     id: "repo-map",
     name: "Repository Map",
     source: "builtin" as const,
@@ -38,7 +38,7 @@ describe("schemas/agentSkill", () => {
     expect(() =>
       agentSkillSchema.parse({
         ...validSkill,
-        schemaVersion: "2.0",
+        schemaVersion: "9.9",
       }),
     ).toThrow();
   });
@@ -88,7 +88,7 @@ describe("schemas/agentSkill", () => {
     expect(() =>
       agentSkillSchema.parse({
         ...validSkill,
-        version: "1.0",
+        version: "2.0",
       }),
     ).toThrow(/semver/i);
   });
@@ -96,7 +96,7 @@ describe("schemas/agentSkill", () => {
 
 describe("schemas/agentSkillRegistry", () => {
   const validRegistry = {
-    schemaVersion: "1.0" as const,
+    schemaVersion: "2.0" as const,
     generatedAt: "2026-03-22T00:00:00Z",
     skills: [
       {
@@ -139,7 +139,7 @@ describe("schemas/agentSkillRegistry", () => {
     expect(() =>
       agentSkillRegistrySchema.parse({
         ...validRegistry,
-        schemaVersion: "2.0",
+        schemaVersion: "9.9",
       }),
     ).toThrow();
   });

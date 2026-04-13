@@ -103,7 +103,7 @@ describe("createPhase", () => {
     await createPhase("phase-5", tempDir);
 
     const manifest = await loadPhaseManifest(tempDir);
-    expect(manifest.schemaVersion).toBe("1.0");
+    expect(manifest.schemaVersion).toBe("2.0");
     expect(manifest.phases.some((p) => p.id === "phase-5" && p.projectId === "shared")).toBe(true);
   });
 

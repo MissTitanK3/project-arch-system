@@ -44,7 +44,7 @@ export function registerTaskCommand(program: Command): void {
           },
           outputFormat: "Relative path to created task file",
           fileLocation:
-            "roadmap/phases/{phase}/milestones/{milestone}/tasks/planned/{id}-{slug}.md",
+            "roadmap/projects/shared/phases/{phase}/milestones/{milestone}/tasks/planned/{id}-{slug}.md",
           schemaReference: "packages/project-arch/src/schemas/task.ts",
         },
         commonIssues: [
@@ -123,7 +123,7 @@ export function registerTaskCommand(program: Command): void {
           },
           outputFormat: "Relative path to created task file",
           fileLocation:
-            "roadmap/phases/{phase}/milestones/{milestone}/tasks/discovered/{id}-{slug}.md",
+            "roadmap/projects/shared/phases/{phase}/milestones/{milestone}/tasks/discovered/{id}-{slug}.md",
           schemaReference:
             "packages/project-arch/src/schemas/task.ts (discoveredFromTask field required)",
         },
@@ -196,7 +196,7 @@ export function registerTaskCommand(program: Command): void {
           },
           outputFormat: "Relative path to created task file",
           fileLocation:
-            "roadmap/phases/{phase}/milestones/{milestone}/tasks/backlog/{id}-{slug}.md",
+            "roadmap/projects/shared/phases/{phase}/milestones/{milestone}/tasks/backlog/{id}-{slug}.md",
         },
         relatedCommands: [
           { command: "pa task new --help", description: "Create a planned task" },

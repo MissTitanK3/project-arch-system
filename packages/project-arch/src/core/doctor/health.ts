@@ -7,6 +7,7 @@ import { currentDateISO } from "../../utils/date";
 import { writeJsonDeterministic } from "../../utils/fs";
 import { DOCTOR_HEALTH_CODES, DoctorHealthCode } from "./healthCodes";
 import { projectManifestSchema } from "../../schemas/project";
+import { inspectRuntimeProfileConfig } from "../agentRuntime/runtimeProfiles";
 
 export type DoctorHealthSeverity = "error" | "warning";
 export type DoctorHealthStatus = "healthy" | "degraded" | "broken";
@@ -299,7 +300,7 @@ async function collectPhaseAndMilestoneIssues(
               repairAction: async () => {
                 const now = currentDateISO();
                 await writeJsonDeterministic(milestoneManifestPath, {
-                  schemaVersion: "1.0",
+                  schemaVersion: "2.0",
                   id: milestoneName,
                   phaseId: phaseName,
                   createdAt: now,
@@ -358,7 +359,7 @@ async function collectDecisionIndexIssue(
         repairAction: async () => {
           await fs.ensureDir(path.dirname(indexPath));
           await writeJsonDeterministic(indexPath, {
-            schemaVersion: "1.0",
+            schemaVersion: "2.0",
             decisions: [],
           });
         },
@@ -370,8 +371,8 @@ async function collectDecisionIndexIssue(
   try {
     const raw = await fs.readJSON(indexPath);
     const parsed = raw as { schemaVersion?: unknown; decisions?: unknown };
-    if (parsed.schemaVersion !== "1.0" || !Array.isArray(parsed.decisions)) {
-      throw new Error("expected schemaVersion '1.0' and decisions array");
+    if (parsed.schemaVersion !== "2.0" || !Array.isArray(parsed.decisions)) {
+      throw new Error("expected schemaVersion '2.0' and decisions array");
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -380,7 +381,7 @@ async function collectDecisionIndexIssue(
         code: DOCTOR_HEALTH_CODES.INVALID_DECISION_INDEX,
         severity: "error",
         message: `Invalid decision index '${toPosixRelative(cwd, indexPath)}': ${detail}`,
-        fix: "Repair the JSON file so schemaVersion is '1.0' and decisions is an array.",
+        fix: "Repair the JSON file so schemaVersion is '2.0' and decisions is an array.",
         repairable: false,
         path: toPosixRelative(cwd, indexPath),
       }),
@@ -462,6 +463,28 @@ async function collectLocalConfigIssues(
         }),
       );
     }
+  }
+
+  const runtimeConfig = await inspectRuntimeProfileConfig(cwd);
+  if (runtimeConfig.status === "invalid") {
+    const firstIssue = runtimeConfig.issues[0];
+    const isJsonIssue = firstIssue?.code === "invalid-json";
+    issues.push(
+      buildIssue({
+        code: isJsonIssue
+          ? DOCTOR_HEALTH_CODES.INVALID_LOCAL_CONFIG
+          : DOCTOR_HEALTH_CODES.INVALID_RUNTIME_PROFILE_CONFIG,
+        severity: "error",
+        message: isJsonIssue
+          ? `Invalid local config '${runtimeConfig.path}': ${firstIssue?.message ?? "malformed JSON"}`
+          : `Invalid runtime profile config '${runtimeConfig.path}' (${firstIssue?.path ?? "root"}): ${firstIssue?.message ?? "schema validation failed"}`,
+        fix: isJsonIssue
+          ? "Fix malformed JSON syntax in local config."
+          : "Fix runtime profile config fields so they satisfy the canonical runtime profile schema.",
+        repairable: false,
+        path: runtimeConfig.path,
+      }),
+    );
   }
 }
 

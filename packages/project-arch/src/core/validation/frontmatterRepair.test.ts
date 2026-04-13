@@ -22,7 +22,7 @@ describe("core/validation/frontmatterRepair", () => {
     await fs.writeFile(
       taskPath,
       `---
-schemaVersion: 1.0   
+schemaVersion: 2.0   
 id: 002
 slug: fixable-task   
 title: Fixable Task
@@ -48,7 +48,7 @@ completionCriteria: []
     expect(preview.changedFiles).toBe(1);
     expect(preview.appliedFiles).toBe(0);
     expect(preview.manualFiles).toBe(0);
-    expect(preview.fileResults[0]?.diff).toContain('+schemaVersion: "1.0"');
+    expect(preview.fileResults[0]?.diff).toContain('+schemaVersion: "2.0"');
 
     const applied = await repairFrontmatter({ cwd: context.tempDir, write: true });
     expect(applied.appliedFiles).toBe(1);
@@ -66,7 +66,7 @@ completionCriteria: []
       `---
 slug: normalize-me
 title: Normalize Me
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 status: in-progress
 lane: planned
 id: "003"
@@ -91,7 +91,7 @@ completionCriteria: []
 
     const contentAfterFirstRun = await fs.readFile(taskPath, "utf8");
     expect(contentAfterFirstRun).toMatch(
-      /schemaVersion:\s['"]1\.0['"]\nid:\s['"]003['"]\nslug: normalize-me/,
+      /schemaVersion:\s['"]2\.0['"]\nid:\s['"]003['"]\nslug: normalize-me/,
     );
     expect(contentAfterFirstRun).toContain("status: in_progress");
 
@@ -106,7 +106,7 @@ completionCriteria: []
     await fs.writeFile(
       taskPath,
       `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "004"
 slug: manual-fix
 lane: "planned"

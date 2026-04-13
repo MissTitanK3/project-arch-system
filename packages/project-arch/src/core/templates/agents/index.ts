@@ -65,7 +65,7 @@ function createFoundationalSkill(params: {
 }): FoundationalSkillTemplate {
   return {
     manifest: {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: params.id,
       name: params.name,
       source: "builtin",

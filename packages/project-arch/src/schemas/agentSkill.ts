@@ -21,7 +21,7 @@ const filesSchema = z.object({
 export const agentSkillSourceSchema = z.enum(["builtin", "user"]);
 
 export const agentSkillSchema = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("2.0"),
   id: kebabCaseIdSchema,
   name: z.string().min(1),
   source: agentSkillSourceSchema,

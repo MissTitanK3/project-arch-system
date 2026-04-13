@@ -41,6 +41,12 @@ describe("Help Topics", () => {
         throw new Error("workflows help topic should be available");
       }
       expect(content).toContain("Common Workflows");
+      expect(content).toContain(
+        "Canonical fresh-output surface: .project-arch/workflows/*.workflow.md",
+      );
+      expect(content).toContain(".github/workflows/*.md");
+      expect(content).toContain("non-canonical");
+      expect(content).not.toContain("Canonical fresh-output surface: .github/workflows/*.md");
       expect(content).toContain("pa task new");
       expect(content).toContain("pa lint frontmatter --fix");
       expect(content).toContain("pnpm lint:md");
@@ -100,6 +106,10 @@ describe("Help Topics", () => {
       expect(content).toContain("Architecture Remediation");
       expect(content).toContain("Frontmatter YAML Issues");
       expect(content).toContain("Task Management Issues");
+      expect(content).toContain('schemaVersion: "2.0"');
+      expect(content).not.toContain(
+        "Prepare and launch an authorized task through a runtime adapter",
+      );
     });
 
     it("should return content for operations topic", () => {
@@ -172,11 +182,64 @@ describe("Help Topics", () => {
         expect(commandsTopic).toContain("pa doctor health [--repair] [--json]");
       });
 
+      it("should document canonical workflow guidance with explicit legacy boundary", () => {
+        expect(commandsTopic).toContain("--with-workflows");
+        expect(commandsTopic).toContain(".project-arch/workflows/*.workflow.md");
+        expect(commandsTopic).toContain(".github/workflows/*.md");
+        expect(commandsTopic).toContain("non-canonical");
+        expect(commandsTopic).not.toContain(
+          "materialize first-pass workflow files in .github/workflows",
+        );
+      });
+
       it("should include runtime command metadata registry derived from sdk metadata", () => {
         expect(commandsTopic).toContain("Runtime Command Metadata Registry:");
         expect(commandsTopic).toContain("tasks.create");
         expect(commandsTopic).toContain("Description: Create a planned task");
         expect(commandsTopic).toContain("agents.check");
+      });
+
+      it("should document shipped agent-runtime MVP commands", () => {
+        expect(commandsTopic).toContain("Agent Runtime MVP (shipped):");
+        expect(commandsTopic).toContain("pa agent prepare <taskRef>");
+        expect(commandsTopic).toContain(
+          "Outcomes: prepared (exit 0), approval-required boundary (exit 2), ineligible/error (exit 1)",
+        );
+        expect(commandsTopic).toContain(
+          "--json: Emits SDK operation envelope with success/data or success/errors",
+        );
+        expect(commandsTopic).toContain("pa result import <path>");
+        expect(commandsTopic).toContain("pa agent validate <runId>");
+        expect(commandsTopic).toContain(
+          "Outcomes: validation-failed (exit 1), validation-passed, escalation-ready (warning/default; failure with --strict)",
+        );
+        expect(commandsTopic).toContain(
+          "--json: Emits SDK operation envelope with success/data or success/errors",
+        );
+        expect(commandsTopic).toContain("pa agent reconcile <runId>");
+        expect(commandsTopic).toContain("pa agent audit [runId] [--json] [--limit <count>]");
+        expect(commandsTopic).toContain("pa agent orchestrate <taskRef> --runtime <runtime>");
+        expect(commandsTopic).toContain(
+          "pa agent run <taskRef> --runtime <runtime> [--json] [--timeout-ms <ms>]",
+        );
+        expect(commandsTopic).toContain("pa agent status <runId> [--json]");
+        expect(commandsTopic).toContain(
+          "Outcomes: orchestration-in-progress, follow-up-review (waiting-for-result-import), role-failure, orchestration-completed",
+        );
+        expect(commandsTopic).toContain(
+          "Follow-up/fallback: role failures and waiting-input states continue through result import -> validate -> reconcile",
+        );
+        expect(commandsTopic).toContain(
+          "Escalation requests: Promoted to reviewable draft outputs under .project-arch/reconcile/escalations/",
+        );
+        expect(commandsTopic).toContain(
+          "Inspect runtime-local audit history under .project-arch/agent-runtime/logs/",
+        );
+      });
+
+      it("should mark deferred agent commands as future-only", () => {
+        expect(commandsTopic).toContain("Deferred Agent Commands (future work):");
+        expect(commandsTopic).toContain("pa agent escalate <runId>");
       });
     });
   });

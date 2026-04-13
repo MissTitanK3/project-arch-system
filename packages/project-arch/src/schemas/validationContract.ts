@@ -12,7 +12,7 @@ export const validationContractCheckSchema = z.object({
 export type ValidationContractCheck = z.infer<typeof validationContractCheckSchema>;
 
 export const validationContractSchema = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal("2.0"),
   phaseId: z.string().min(1),
   checks: z.array(validationContractCheckSchema),
   createdAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

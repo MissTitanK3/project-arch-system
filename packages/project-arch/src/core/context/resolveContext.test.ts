@@ -20,7 +20,7 @@ describe.sequential("core/context/resolveContext", () => {
   it("should resolve active phase, milestone, and task context", async () => {
     const resolved = await resolveContext(tempDir);
 
-    expect(resolved.version).toBe("1.0");
+    expect(resolved.version).toBe("2.0");
     expect(resolved.projectRoot).toBe(tempDir);
     expect(resolved.active.project.id).toBe("shared");
     expect(resolved.active.project.path).toBe("roadmap/projects/shared");

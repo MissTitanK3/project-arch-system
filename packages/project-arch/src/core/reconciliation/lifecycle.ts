@@ -205,11 +205,12 @@ export async function refreshCanonicalReconciliationPointers(cwd = process.cwd()
     await fs.writeJson(
       pointerPath,
       {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         taskId: artifact.report.taskId,
         generatedAt: currentDateISO(),
         latest: {
           id: artifact.report.id,
+          runId: artifact.report.runId,
           date: artifact.report.date,
           status: artifact.report.status,
           jsonPath: artifact.relativeJsonPath,

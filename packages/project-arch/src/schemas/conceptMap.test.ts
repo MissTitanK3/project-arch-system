@@ -3,7 +3,7 @@ import { conceptMapSchema } from "./conceptMap";
 
 describe("schemas/conceptMap", () => {
   const validConceptMap = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     concepts: [
       {
         id: "concept-a",
@@ -37,7 +37,7 @@ describe("schemas/conceptMap", () => {
   it("rejects missing required sections", () => {
     expect(() =>
       conceptMapSchema.parse({
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         concepts: [],
       }),
     ).toThrow();

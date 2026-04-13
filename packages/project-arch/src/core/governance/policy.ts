@@ -44,7 +44,7 @@ export const DEFAULT_POLICY_PROFILE: PolicyProfile = {
 };
 
 export interface PolicyFileDocument {
-  schemaVersion: "1.0";
+  schemaVersion: "2.0";
   defaultProfile: string;
   profiles: Record<string, PolicyProfile>;
 }
@@ -64,7 +64,7 @@ export interface PolicySetupResult {
 
 export function defaultPolicyFileDocument(): PolicyFileDocument {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     defaultProfile: "default",
     profiles: {
       default: DEFAULT_POLICY_PROFILE,

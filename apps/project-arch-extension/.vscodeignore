@@ -1,0 +1,11 @@
+src/**
+tsconfig.json
+vitest.config.ts
+**/*.test.ts
+**/*.test.mjs
+pnpm-lock.yaml
+.turbo/**
+.artifacts/**
+.sandbox/**
+.vscode/**
+scripts/**

@@ -5,7 +5,7 @@ const generatedAtSchema = z.string().datetime({ offset: true });
 
 export const agentSkillRegistrySchema = z
   .object({
-    schemaVersion: z.literal("1.0"),
+    schemaVersion: z.literal("2.0"),
     generatedAt: generatedAtSchema,
     skills: z.array(agentSkillRegistryEntrySchema),
   })

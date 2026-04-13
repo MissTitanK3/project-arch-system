@@ -97,6 +97,9 @@ describe("cli/index", () => {
         expect(commandNames).toContain("explain");
         expect(commandNames).toContain("fix");
         expect(commandNames).toContain("normalize");
+        expect(commandNames).toContain("agent");
+        expect(commandNames).toContain("runtime");
+        expect(commandNames).toContain("result");
         expect(commandNames).toContain("agents");
         expect(commandNames).toContain("help");
         return this;
@@ -158,7 +161,7 @@ describe("cli/index", () => {
         await writeFile(
           path.join(taskDir, "043-lane-mismatch.md"),
           `---
-schemaVersion: "1.0"
+schemaVersion: "2.0"
 id: "043"
 slug: lane-mismatch
 lane: discovered

@@ -106,7 +106,7 @@ The clean publish build path introduced in Task 04 is required for release confi
 For `pa check --json`, treat `schemaVersion` as a public automation contract.
 
 - Schema source of truth: `packages/project-arch/docs/check-json-diagnostics-schema.md`
-- Current schema: `1.0`
+- Current schema: `2.0`
 
 When changing diagnostics payload:
 

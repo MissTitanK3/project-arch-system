@@ -21,7 +21,7 @@ describe("registerSurfaces - Scale Regression Tests", () => {
 
     const taskContent = [
       "---",
-      'schemaVersion: "1.0"',
+      'schemaVersion: "2.0"',
       'id: "001"',
       'slug: "define-project-overview"',
       'title: "Define Project Overview"',

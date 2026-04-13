@@ -94,7 +94,7 @@ export async function createMilestone(
 
   const now = currentDateISO();
   const milestoneManifest = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     id: milestoneId,
     phaseId,
     createdAt: now,
@@ -106,7 +106,7 @@ export async function createMilestone(
   await writeMarkdownWithFrontmatter(
     projectMilestoneOverviewPath(projectId, phaseId, milestoneId, cwd),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "milestone-overview",
       id: milestoneId,
       phaseId,
@@ -118,7 +118,7 @@ export async function createMilestone(
   await writeMarkdownWithFrontmatter(
     milestoneOverviewPath(phaseId, milestoneId, cwd),
     {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       type: "milestone-overview",
       id: milestoneId,
       phaseId,
@@ -496,7 +496,7 @@ async function appendReconciliationOverrideLog(input: {
   await fs.ensureDir(path.dirname(overridesPath));
 
   const payload = {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     overrides: [] as Array<{
       date: string;
       phaseId: string;

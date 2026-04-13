@@ -49,8 +49,8 @@ describe("cli/commands/learn", () => {
 
     await program.parseAsync(["node", "test", "learn", "--path", "apps/web", "--json"]);
 
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("\"schemaVersion\": \"1.0\""));
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("\"analyzedPaths\""));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"schemaVersion": "2.0"'));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"analyzedPaths"'));
   });
 
   it("uses the sdk learn surface", async () => {
@@ -63,7 +63,7 @@ describe("cli/commands/learn", () => {
       data: {
         text: "Scope\n- apps/web",
         report: {
-          schemaVersion: "1.0",
+          schemaVersion: "2.0",
           timestamp: "2026-03-26T00:00:00.000Z",
           analyzedPaths: ["apps/web"],
           findings: [],

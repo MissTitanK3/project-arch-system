@@ -39,7 +39,7 @@ describe.sequential("core/manifests/graph", () => {
         path.join(tempDir, ".arch", "nodes", "milestones.json"),
       );
 
-      expect(graph.schemaVersion).toBe("1.0");
+      expect(graph.schemaVersion).toBe("2.0");
       expect(graph.nodes.tasks).toBeGreaterThan(0);
       expect(graph.nodes.milestones).toBeGreaterThan(0);
       expect(tasks.tasks.length).toBe(graph.nodes.tasks);

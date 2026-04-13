@@ -1374,10 +1374,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone work should treat this document as the source of truth for how canonical agent entry-point content is shared, adapted, and kept aligned across files.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      agentEntryPointContentModelPath,
-      agentEntryPointContentModelGuide,
-    );
+    await writeMarkdownFile(agentEntryPointContentModelPath, agentEntryPointContentModelGuide);
   }
 
   const agentEntryPointScaffoldingPath = path.join(
@@ -1443,10 +1440,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone work should treat this document as the source of truth for how canonical agent entry-point files are materialized by `pa init` and how re-init should treat those files.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      agentEntryPointScaffoldingPath,
-      agentEntryPointScaffoldingGuide,
-    );
+    await writeMarkdownFile(agentEntryPointScaffoldingPath, agentEntryPointScaffoldingGuide);
   }
 
   const agentEntryPointExclusionsPath = path.join(
@@ -1511,10 +1505,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone work should treat this document as the source of truth for what milestone 6 intentionally excludes and how later compatibility support may hook into the canonical scaffold without replacing it.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      agentEntryPointExclusionsPath,
-      agentEntryPointExclusionsGuide,
-    );
+    await writeMarkdownFile(agentEntryPointExclusionsPath, agentEntryPointExclusionsGuide);
   }
 
   const workflowScaffoldingScopePath = path.join(
@@ -1579,10 +1570,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone 7 work should treat this document as the source of truth for why workflow scaffolding is downstream helper behavior rather than foundational agent-surface policy.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      workflowScaffoldingScopePath,
-      workflowScaffoldingScopeGuide,
-    );
+    await writeMarkdownFile(workflowScaffoldingScopePath, workflowScaffoldingScopeGuide);
   }
 
   const workflowInitialSetPath = path.join(
@@ -1750,10 +1738,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone 7 work should treat this document as the source of truth for how workflow files consume canonical CLI context without reintroducing placeholder-driven or duplicated context-resolution behavior.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      workflowContextConsumptionPath,
-      workflowContextConsumptionGuide,
-    );
+    await writeMarkdownFile(workflowContextConsumptionPath, workflowContextConsumptionGuide);
   }
 
   const workflowInitTierPlacementPath = path.join(
@@ -1824,10 +1809,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone 7 work should treat this document as the source of truth for workflow optionality and tier placement, so workflow generation does not reopen default-versus-add-on decisions.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      workflowInitTierPlacementPath,
-      workflowInitTierPlacementGuide,
-    );
+    await writeMarkdownFile(workflowInitTierPlacementPath, workflowInitTierPlacementGuide);
   }
 
   const workflowGenerationSurfacesPath = path.join(
@@ -1852,13 +1834,13 @@ export async function scaffoldGovernanceGuidanceDocs(
       "",
       "The first-pass supported workflow-generation surface is:",
       "",
-      "- `.github/workflows/*.md` as the first-party generated workflow-document surface",
+      "- `.project-arch/workflows/*.workflow.md` as the first-party generated workflow-document surface",
       "",
       "This surface is selected because it gives `pa` one concrete repository-visible location for generated workflow guidance without competing with the canonical entry-point files that remain the primary instruction system.",
       "",
       "## First-Party Versus Compatibility",
       "",
-      "- first-party supported workflow-generation surface: `.github/workflows/*.md`",
+      "- first-party supported workflow-generation surface: `.project-arch/workflows/*.workflow.md`",
       "- compatibility-only or future workflow surfaces: any additional tool-specific or extension-specific workflow directories",
       "",
       "Workflow files generated into the supported first-pass surface remain subordinate helper artifacts. They do not replace `AGENTS.md`, vendor-native entry-point files, or the canonical CLI context contract.",
@@ -1890,10 +1872,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone 9 work should treat this document as the source of truth for which workflow target surfaces are supported in the first implementation pass and which candidate surfaces remain excluded or future compatibility work.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      workflowGenerationSurfacesPath,
-      workflowGenerationSurfacesGuide,
-    );
+    await writeMarkdownFile(workflowGenerationSurfacesPath, workflowGenerationSurfacesGuide);
   }
 
   const workflowFileInventoryPath = path.join(
@@ -1918,17 +1897,17 @@ export async function scaffoldGovernanceGuidanceDocs(
       "",
       "All first-pass generated workflow files live under the supported workflow-document surface:",
       "",
-      "- `.github/workflows/`",
+      "- `.project-arch/workflows/`",
       "",
       "## First-Pass File Inventory",
       "",
       "| Workflow | File | Purpose |",
       "| -------- | ---- | ------- |",
-      "| `before-coding` | `.github/workflows/before-coding.md` | Prepare an agent to start coding against the correct task and repository context. |",
-      "| `after-coding` | `.github/workflows/after-coding.md` | Run the immediate post-edit validation and governance loop. |",
-      "| `complete-task` | `.github/workflows/complete-task.md` | Close out an active task with the required validation and documentation steps. |",
-      "| `new-module` | `.github/workflows/new-module.md` | Guide structural additions such as new modules, packages, or app areas through repository governance. |",
-      "| `diagnose` | `.github/workflows/diagnose.md` | Provide a repeatable debugging, drift-analysis, and structural-health workflow. |",
+      "| `before-coding` | `.project-arch/workflows/before-coding.workflow.md` | Prepare an agent to start coding against the correct task and repository context. |",
+      "| `after-coding` | `.project-arch/workflows/after-coding.workflow.md` | Run the immediate post-edit validation and governance loop. |",
+      "| `complete-task` | `.project-arch/workflows/complete-task.workflow.md` | Close out an active task with the required validation and documentation steps. |",
+      "| `new-module` | `.project-arch/workflows/new-module.workflow.md` | Guide structural additions such as new modules, packages, or app areas through repository governance. |",
+      "| `diagnose` | `.project-arch/workflows/diagnose.workflow.md` | Provide a repeatable debugging, drift-analysis, and structural-health workflow. |",
       "",
       "## File Model Decision",
       "",
@@ -2086,10 +2065,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone 9 work should treat this document as the source of truth for invocation mode, overwrite behavior, regeneration policy, and unsupported-surface handling for generated workflow files.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      workflowGenerationBehaviorPath,
-      workflowGenerationBehaviorGuide,
-    );
+    await writeMarkdownFile(workflowGenerationBehaviorPath, workflowGenerationBehaviorGuide);
   }
 
   const cliContextContractPath = path.join(
@@ -2603,7 +2579,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "",
       "```json",
       "{",
-      '  "schemaVersion": "1.0",',
+      '  "schemaVersion": "2.0",',
       '  "timestamp": "2026-03-26T16:03:00Z",',
       '  "analyzedPaths": ["packages/ui"],',
       '  "findings": [',
@@ -2730,10 +2706,7 @@ export async function scaffoldGovernanceGuidanceDocs(
       "Later milestone 10 work should treat this document as the source of truth for command ownership, reuse boundaries, and user-facing command selection guidance.",
       "",
     ].join("\n");
-    await writeMarkdownFile(
-      learnCheckDoctorRelationshipPath,
-      learnCheckDoctorRelationshipGuide,
-    );
+    await writeMarkdownFile(learnCheckDoctorRelationshipPath, learnCheckDoctorRelationshipGuide);
   }
 
   const learnFutureExtensionBoundariesPath = path.join(

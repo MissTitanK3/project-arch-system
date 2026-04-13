@@ -4,7 +4,7 @@ import { phaseManifestSchema, type PhaseManifest } from "./phase";
 describe("schemas/phase", () => {
   describe("phaseManifestSchema", () => {
     const validManifest: PhaseManifest = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       phases: [
         { id: "phase-1", projectId: "shared", createdAt: "2026-03-01" },
         { id: "phase-2", projectId: "storefront", createdAt: "2026-03-07" },
@@ -28,31 +28,31 @@ describe("schemas/phase", () => {
     });
 
     it("should accept manifest with empty phases array", () => {
-        const withEmptyPhases = {
-          schemaVersion: "1.0" as const,
-          phases: [],
-          activeProject: null,
-          activePhase: null,
-          activeMilestone: null,
-        };
+      const withEmptyPhases = {
+        schemaVersion: "2.0" as const,
+        phases: [],
+        activeProject: null,
+        activePhase: null,
+        activeMilestone: null,
+      };
       const result = phaseManifestSchema.parse(withEmptyPhases);
       expect(result.phases).toEqual([]);
     });
 
     it("should accept manifest with single phase", () => {
-        const singlePhase = {
-          schemaVersion: "1.0" as const,
-          phases: [{ id: "phase-1", projectId: "shared", createdAt: "2026-03-07" }],
-          activeProject: "shared",
-          activePhase: "phase-1",
-          activeMilestone: null,
-        };
+      const singlePhase = {
+        schemaVersion: "2.0" as const,
+        phases: [{ id: "phase-1", projectId: "shared", createdAt: "2026-03-07" }],
+        activeProject: "shared",
+        activePhase: "phase-1",
+        activeMilestone: null,
+      };
       const result = phaseManifestSchema.parse(singlePhase);
       expect(result.phases).toHaveLength(1);
     });
 
     it("should reject manifest with invalid schemaVersion", () => {
-      const invalid = { ...validManifest, schemaVersion: "2.0" };
+      const invalid = { ...validManifest, schemaVersion: "9.9" };
       expect(() => phaseManifestSchema.parse(invalid)).toThrow();
     });
 
@@ -84,26 +84,26 @@ describe("schemas/phase", () => {
 
     describe("phase entries", () => {
       it("should reject phase with empty id", () => {
-          const invalid = {
-            ...validManifest,
-            phases: [{ id: "", projectId: "shared", createdAt: "2026-03-07" }],
-          };
+        const invalid = {
+          ...validManifest,
+          phases: [{ id: "", projectId: "shared", createdAt: "2026-03-07" }],
+        };
         expect(() => phaseManifestSchema.parse(invalid)).toThrow();
       });
 
       it("should reject phase with missing id", () => {
-          const invalid = {
-            ...validManifest,
-            phases: [{ projectId: "shared", createdAt: "2026-03-07" }],
-          };
+        const invalid = {
+          ...validManifest,
+          phases: [{ projectId: "shared", createdAt: "2026-03-07" }],
+        };
         expect(() => phaseManifestSchema.parse(invalid)).toThrow();
       });
 
       it("should reject phase with missing createdAt", () => {
-          const invalid = {
-            ...validManifest,
-            phases: [{ id: "phase-1", projectId: "shared" }],
-          };
+        const invalid = {
+          ...validManifest,
+          phases: [{ id: "phase-1", projectId: "shared" }],
+        };
         expect(() => phaseManifestSchema.parse(invalid)).toThrow();
       });
 
@@ -229,7 +229,7 @@ describe("schemas/phase", () => {
     describe("multiple phases", () => {
       it("should handle many phases", () => {
         const manyPhases = {
-          schemaVersion: "1.0" as const,
+          schemaVersion: "2.0" as const,
           phases: Array.from({ length: 10 }, (_, i) => ({
             id: `phase-${i + 1}`,
             projectId: i < 5 ? "shared" : "storefront",
@@ -248,7 +248,7 @@ describe("schemas/phase", () => {
 
       it("should preserve phase order", () => {
         const ordered = {
-          schemaVersion: "1.0" as const,
+          schemaVersion: "2.0" as const,
           phases: [
             { id: "alpha", projectId: "shared", createdAt: "2026-03-01" },
             { id: "beta", projectId: "shared", createdAt: "2026-03-02" },

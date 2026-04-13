@@ -149,7 +149,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(readmeContent).toContain(
       "[`governance/init-sprawl-guardrails.md`](governance/init-sprawl-guardrails.md)",
     );
-    expect(readmeContent).toContain("[`governance/taxonomy-migration.md`](governance/taxonomy-migration.md)");
+    expect(readmeContent).toContain(
+      "[`governance/taxonomy-migration.md`](governance/taxonomy-migration.md)",
+    );
   });
 
   it("creates family READMEs with explicit boundary guidance", async () => {
@@ -176,23 +178,21 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       "utf8",
     );
     expect(runtimeContent).toContain("user-facing workflow definitions that belong in `systems/`");
-    expect(runtimeContent).toContain("data schemas or persistence ownership that belong in `data/`");
+    expect(runtimeContent).toContain(
+      "data schemas or persistence ownership that belong in `data/`",
+    );
 
     const contentContent = await fs.readFile(
       path.join(tempDir, "architecture", "content", "README.md"),
       "utf8",
     );
-    expect(contentContent).toContain(
-      "subsystem behavior specifications that belong in `systems/`",
-    );
+    expect(contentContent).toContain("subsystem behavior specifications that belong in `systems/`");
 
     const productFramingContent = await fs.readFile(
       path.join(tempDir, "architecture", "product-framing", "README.md"),
       "utf8",
     );
-    expect(productFramingContent).toContain(
-      "subsystem behavior detail that belongs in `systems/`",
-    );
+    expect(productFramingContent).toContain("subsystem behavior detail that belongs in `systems/`");
 
     const foundationContent = await fs.readFile(
       path.join(tempDir, "architecture", "foundation", "README.md"),
@@ -404,9 +404,13 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(overviewContent).toContain("- roadmap");
     expect(overviewContent).toContain("- architecture");
     expect(overviewContent).toContain("Create additional named projects");
-    expect(overviewContent).toContain("`storefront`, `backoffice`, `customer-portal`, or `ops-console`");
+    expect(overviewContent).toContain(
+      "`storefront`, `backoffice`, `customer-portal`, or `ops-console`",
+    );
     expect(overviewContent).toContain("Do not treat `app-*` as a required naming convention.");
-    expect(overviewContent).toContain("`manifest.json` with stable identity and ownership metadata");
+    expect(overviewContent).toContain(
+      "`manifest.json` with stable identity and ownership metadata",
+    );
   });
 
   it("documents the project-scoped roadmap model in seeded init guidance", async () => {
@@ -476,7 +480,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     const overviewTask = matter(
       await fs.readFile(path.join(taskRoot, "001-define-project-overview.md"), "utf8"),
     );
-    expect(overviewTask.data.publicDocs).toContain("architecture/product-framing/project-overview.md");
+    expect(overviewTask.data.publicDocs).toContain(
+      "architecture/product-framing/project-overview.md",
+    );
     expect(overviewTask.data.traceLinks).toContain(
       "roadmap/projects/shared/phases/phase-1/milestones/milestone-1-setup/targets.md",
     );
@@ -621,7 +627,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     await fs.remove(tempDir2);
   });
 
-  it("creates phase 1 and milestone 1 setup by default", async () => {
+  it("creates phase 1 and milestone 1 setup only under shared project paths", async () => {
     await initializeProject(
       {
         template: "nextjs-turbo",
@@ -630,14 +636,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       tempDir,
     );
 
-    const phase1Dir = path.join(
-      tempDir,
-      "roadmap",
-      "projects",
-      "shared",
-      "phases",
-      "phase-1",
-    );
+    const phase1Dir = path.join(tempDir, "roadmap", "projects", "shared", "phases", "phase-1");
     expect(await fs.pathExists(phase1Dir)).toBe(true);
     expect(await fs.pathExists(path.join(phase1Dir, "milestones"))).toBe(true);
     expect(
@@ -649,7 +648,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       await fs.pathExists(
         path.join(tempDir, "roadmap", "phases", "phase-1", "milestones", "milestone-1-setup"),
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("creates all required architecture directories", async () => {
@@ -695,13 +694,11 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       tempDir,
     );
 
-    expect(await fs.pathExists(path.join(tempDir, "architecture", "governance", "REPO-MODEL.md"))).toBe(
-      true,
-    );
     expect(
-      await fs.pathExists(
-        path.join(tempDir, "architecture", "governance", "init-tier-model.md"),
-      ),
+      await fs.pathExists(path.join(tempDir, "architecture", "governance", "REPO-MODEL.md")),
+    ).toBe(true);
+    expect(
+      await fs.pathExists(path.join(tempDir, "architecture", "governance", "init-tier-model.md")),
     ).toBe(true);
     expect(
       await fs.pathExists(
@@ -796,7 +793,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(repoIndexContent).toContain(
       "Future scaffold admission rules are defined in `architecture/governance/init-sprawl-guardrails.md`",
     );
-    expect(repoIndexContent).toContain("Normalization guidance lives in `architecture/governance/taxonomy-migration.md`");
+    expect(repoIndexContent).toContain(
+      "Normalization guidance lives in `architecture/governance/taxonomy-migration.md`",
+    );
     expect(repoIndexContent).toContain(
       "Init scaffold scope is defined by the tier model in `architecture/governance/init-tier-model.md`",
     );
@@ -852,7 +851,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(defaultGuide).toContain("smallest coherent default scaffold");
     expect(defaultGuide).toContain("Default `pa init` includes:");
     expect(defaultGuide).toContain("- Tier A surfaces");
-    expect(defaultGuide).toContain("- applicable Tier B surfaces required by the selected template");
+    expect(defaultGuide).toContain(
+      "- applicable Tier B surfaces required by the selected template",
+    );
     expect(defaultGuide).toContain("Default `pa init` does not include by default:");
     expect(defaultGuide).toContain("- Tier C catalog-only topics");
     expect(defaultGuide).toContain("- Tier D optional add-ons");
@@ -860,13 +861,19 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(defaultGuide).toContain("## Default Roadmap Layout");
     expect(defaultGuide).toContain("`roadmap/projects/shared/phases/phase-1/...`");
     expect(defaultGuide).toContain("## Reserved Bootstrap Project");
-    expect(defaultGuide).toContain("`shared` is the reserved bootstrap project created by default init.");
+    expect(defaultGuide).toContain(
+      "`shared` is the reserved bootstrap project created by default init.",
+    );
     expect(defaultGuide).toContain("## Adding Custom Projects");
     expect(defaultGuide).toContain("`roadmap/projects/<name>/manifest.json`");
-    expect(defaultGuide).toContain("examples include `storefront`, `backoffice`, `customer-portal`, and `ops-console`");
+    expect(defaultGuide).toContain(
+      "examples include `storefront`, `backoffice`, `customer-portal`, and `ops-console`",
+    );
     expect(defaultGuide).toContain("`app-*` naming is optional, not required");
     expect(defaultGuide).toContain("use `ownedPaths` for the surfaces the project owns");
-    expect(defaultGuide).toContain("use `sharedDependencies` for cross-project dependencies rather than ownership");
+    expect(defaultGuide).toContain(
+      "use `sharedDependencies` for cross-project dependencies rather than ownership",
+    );
     expect(defaultGuide).toContain("## What Must Stay Out Of Default Init");
     expect(defaultGuide).toContain("## Decision Rules");
     expect(defaultGuide).toContain("## Guardrails");
@@ -899,7 +906,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(fullGuide).toContain("## What Broadening Means");
     expect(fullGuide).toContain("## Tier Rules For Full Mode");
     expect(fullGuide).toContain("## Guardrails");
-    expect(fullGuide).toContain("`--full` must remain the broadest first-party scaffold mode, not a domain generator");
+    expect(fullGuide).toContain(
+      "`--full` must remain the broadest first-party scaffold mode, not a domain generator",
+    );
   });
 
   it("creates an init surface mapping guide for major scaffold categories", async () => {
@@ -920,7 +929,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(mappingGuide).toContain("## Surface Category Map");
     expect(mappingGuide).toContain("Core roadmap and project-arch planning surfaces");
     expect(mappingGuide).toContain("single roadmap root and reserved `shared` bootstrap project");
-    expect(mappingGuide).toContain("Canonical architecture entry docs and recommended top-level architecture families");
+    expect(mappingGuide).toContain(
+      "Canonical architecture entry docs and recommended top-level architecture families",
+    );
     expect(mappingGuide).toContain("Core required standards");
     expect(mappingGuide).toContain("Template-specific required standards");
     expect(mappingGuide).toContain("Broader standards catalog topics");
@@ -933,7 +944,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(mappingGuide).toContain("### Governance And Operations");
     expect(mappingGuide).toContain("### Templates And Taxonomy Guidance");
     expect(mappingGuide).toContain("### Roadmap Layout");
-    expect(mappingGuide).toContain("the canonical initialized planning model is `roadmap/projects/<project>/phases/...`");
+    expect(mappingGuide).toContain(
+      "the canonical initialized planning model is `roadmap/projects/<project>/phases/...`",
+    );
     expect(mappingGuide).toContain("the reserved `shared` project belongs in Tier A");
     expect(mappingGuide).toContain("### Agent-Related Surfaces");
   });
@@ -1008,11 +1021,19 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(planningTranchesGuide).toContain("### 6. Documentation Structure And Authoring Model");
     expect(planningTranchesGuide).toContain("### 7. Taxonomy Normalization And Reconciliation");
     expect(planningTranchesGuide).toContain("### 8. Validation And Cleanup");
-    expect(planningTranchesGuide).toContain("Setup milestones should seed planning tranches, not domain nouns.");
+    expect(planningTranchesGuide).toContain(
+      "Setup milestones should seed planning tranches, not domain nouns.",
+    );
     expect(planningTranchesGuide).toContain("Discovery should still be used for:");
-    expect(architectureReadme).toContain("[`governance/setup-planning-tranches.md`](governance/setup-planning-tranches.md)");
-    expect(repoIndexContent).toContain("Reusable setup planning lanes are defined in `architecture/governance/setup-planning-tranches.md`.");
-    expect(repoModel).toContain("Reusable setup planning lanes are defined in `architecture/governance/setup-planning-tranches.md`.");
+    expect(architectureReadme).toContain(
+      "[`governance/setup-planning-tranches.md`](governance/setup-planning-tranches.md)",
+    );
+    expect(repoIndexContent).toContain(
+      "Reusable setup planning lanes are defined in `architecture/governance/setup-planning-tranches.md`.",
+    );
+    expect(repoModel).toContain(
+      "Reusable setup planning lanes are defined in `architecture/governance/setup-planning-tranches.md`.",
+    );
   });
 
   it("creates reusable setup ordering guidance for late synthesis and dependency sequencing", async () => {
@@ -1046,14 +1067,22 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(orderingGuide).toContain("## Dependency Rules");
     expect(orderingGuide).toContain("## Early, Mid, And Late Placement");
     expect(orderingGuide).toContain("## Finalization Rule");
-    expect(orderingGuide).toContain("Tasks such as `finalize architecture foundation` are end-of-sequence synthesis tasks.");
+    expect(orderingGuide).toContain(
+      "Tasks such as `finalize architecture foundation` are end-of-sequence synthesis tasks.",
+    );
     expect(orderingGuide).toContain("1. project framing");
     expect(orderingGuide).toContain("8. final synthesis and validation");
     expect(orderingGuide).toContain("define system boundaries");
     expect(orderingGuide).toContain("finalize architecture foundation readiness");
-    expect(architectureReadme).toContain("[`governance/setup-task-ordering.md`](governance/setup-task-ordering.md)");
-    expect(repoIndexContent).toContain("Reusable setup ordering rules are defined in `architecture/governance/setup-task-ordering.md`.");
-    expect(repoModel).toContain("Reusable setup ordering rules are defined in `architecture/governance/setup-task-ordering.md`.");
+    expect(architectureReadme).toContain(
+      "[`governance/setup-task-ordering.md`](governance/setup-task-ordering.md)",
+    );
+    expect(repoIndexContent).toContain(
+      "Reusable setup ordering rules are defined in `architecture/governance/setup-task-ordering.md`.",
+    );
+    expect(repoModel).toContain(
+      "Reusable setup ordering rules are defined in `architecture/governance/setup-task-ordering.md`.",
+    );
   });
 
   it("creates reusable discovery-versus-planned boundary guidance for setup milestones", async () => {
@@ -1091,7 +1120,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(boundaryGuide).toContain("project framing");
     expect(boundaryGuide).toContain("project-specific edge cases");
     expect(boundaryGuide).toContain("a discovered task repeats a generic setup category");
-    expect(boundaryGuide).toContain("repeated discovered tasks should be treated as feedback on the setup template");
+    expect(boundaryGuide).toContain(
+      "repeated discovered tasks should be treated as feedback on the setup template",
+    );
     expect(architectureReadme).toContain(
       "[`governance/setup-discovery-boundary.md`](governance/setup-discovery-boundary.md)",
     );
@@ -1139,8 +1170,12 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(placementGuide).toContain("1. definition work");
     expect(placementGuide).toContain("2. synthesis and reconciliation");
     expect(placementGuide).toContain("3. validation and cleanup");
-    expect(placementGuide).toContain("Validation should review synthesized structure, not partially completed inputs.");
-    expect(placementGuide).toContain("A milestone may combine validation and cleanup in one late-stage task");
+    expect(placementGuide).toContain(
+      "Validation should review synthesized structure, not partially completed inputs.",
+    );
+    expect(placementGuide).toContain(
+      "A milestone may combine validation and cleanup in one late-stage task",
+    );
     expect(architectureReadme).toContain(
       "[`governance/setup-validation-placement.md`](governance/setup-validation-placement.md)",
     );
@@ -1187,11 +1222,15 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(templateShapeGuide).toContain("## Implementation Note");
     expect(templateShapeGuide).toContain("5. define taxonomy and authority model");
     expect(templateShapeGuide).toContain("6. define lifecycle and state boundaries");
-    expect(templateShapeGuide).toContain("9. define documentation structure and authoring workflow");
+    expect(templateShapeGuide).toContain(
+      "9. define documentation structure and authoring workflow",
+    );
     expect(templateShapeGuide).toContain("10. reconcile taxonomy and terminology");
     expect(templateShapeGuide).toContain("11. finalize setup synthesis");
     expect(templateShapeGuide).toContain("12. validate and clean up setup outputs");
-    expect(templateShapeGuide).toContain("The current init scaffold may still use a smaller bootstrap sequence");
+    expect(templateShapeGuide).toContain(
+      "The current init scaffold may still use a smaller bootstrap sequence",
+    );
     expect(architectureReadme).toContain(
       "[`governance/setup-template-shape.md`](governance/setup-template-shape.md)",
     );
@@ -1252,19 +1291,41 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(strategyGuide).toContain("`.windsurf/rules/project-arch.md`");
     expect(strategyGuide).toContain("`.claude/rules/project-arch.md`");
     expect(strategyGuide).toContain("`.amazonq/rules/project-arch.md`");
-    expect(strategyGuide).toContain("Compatibility surfaces such as `.agent/*` are optional compatibility surfaces");
+    expect(strategyGuide).toContain(
+      "Compatibility surfaces such as `.agent/*` are optional compatibility surfaces",
+    );
     expect(strategyGuide).toContain("supported only as optional compatibility");
     expect(strategyGuide).toContain("not part of the default first-party scaffold model");
-    expect(strategyGuide).toContain("`.agent/instructions.md` must not be described as equal in authority");
-    expect(strategyGuide).toContain("`.agent/workflows/` must not be treated as part of the default `pa init` model.");
-    expect(strategyGuide).toContain("`AGENTS.md` is the canonical source of truth for always-on cross-agent instructions.");
-    expect(strategyGuide).toContain("`CLAUDE.md`, `GEMINI.md`, and vendor-native rule files may mirror or adapt");
-    expect(strategyGuide).toContain("when mirrored content conflicts with `AGENTS.md`, `AGENTS.md` wins");
-    expect(strategyGuide).toContain("when a compatibility surface conflicts with any canonical first-party surface");
-    expect(strategyGuide).toContain("later entry-point work must scaffold the canonical first-party surface set");
-    expect(strategyGuide).toContain("workflow files must remain subordinate to the canonical first-party instruction set");
-    expect(strategyGuide).toContain("Milestone 6 should implement canonical entry points against this strategy.");
-    expect(strategyGuide).toContain("Milestone 7 should implement workflow scaffolding only after respecting this strategy");
+    expect(strategyGuide).toContain(
+      "`.agent/instructions.md` must not be described as equal in authority",
+    );
+    expect(strategyGuide).toContain(
+      "`.agent/workflows/` must not be treated as part of the default `pa init` model.",
+    );
+    expect(strategyGuide).toContain(
+      "`AGENTS.md` is the canonical source of truth for always-on cross-agent instructions.",
+    );
+    expect(strategyGuide).toContain(
+      "`CLAUDE.md`, `GEMINI.md`, and vendor-native rule files may mirror or adapt",
+    );
+    expect(strategyGuide).toContain(
+      "when mirrored content conflicts with `AGENTS.md`, `AGENTS.md` wins",
+    );
+    expect(strategyGuide).toContain(
+      "when a compatibility surface conflicts with any canonical first-party surface",
+    );
+    expect(strategyGuide).toContain(
+      "later entry-point work must scaffold the canonical first-party surface set",
+    );
+    expect(strategyGuide).toContain(
+      "workflow files must remain subordinate to the canonical first-party instruction set",
+    );
+    expect(strategyGuide).toContain(
+      "Milestone 6 should implement canonical entry points against this strategy.",
+    );
+    expect(strategyGuide).toContain(
+      "Milestone 7 should implement workflow scaffolding only after respecting this strategy",
+    );
     expect(strategyGuide).toContain("lower-case `agents.md` entry surface");
     expect(architectureReadme).toContain(
       "[`governance/agent-surface-strategy.md`](governance/agent-surface-strategy.md)",
@@ -1367,7 +1428,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(contentModelGuide).toContain("## Drift Prevention Rule");
     expect(contentModelGuide).toContain("## Reuse Contract");
     expect(contentModelGuide).toContain("`AGENTS.md` is the canonical source of truth");
-    expect(contentModelGuide).toContain("`CLAUDE.md` and `GEMINI.md` are canonical vendor-specific root entry points");
+    expect(contentModelGuide).toContain(
+      "`CLAUDE.md` and `GEMINI.md` are canonical vendor-specific root entry points",
+    );
     expect(contentModelGuide).toContain("`.github/copilot-instructions.md`");
     expect(contentModelGuide).toContain("tool requires a specialized syntax such as frontmatter");
     expect(architectureReadme).toContain(
@@ -1418,7 +1481,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(scaffoldingGuide).toContain("## Reuse Contract");
     expect(scaffoldingGuide).toContain("`--force`");
     expect(scaffoldingGuide).toContain("root-level entry-point files belong at repository root");
-    expect(scaffoldingGuide).toContain("vendor-native supporting files should live in the native locations");
+    expect(scaffoldingGuide).toContain(
+      "vendor-native supporting files should live in the native locations",
+    );
     expect(scaffoldingGuide).toContain("workflow files remain outside this scaffolding behavior");
     expect(architectureReadme).toContain(
       "[`governance/agent-entry-point-scaffolding.md`](governance/agent-entry-point-scaffolding.md)",
@@ -1468,7 +1533,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(exclusionGuide).toContain("`.agent/instructions.md`");
     expect(exclusionGuide).toContain("`.agent/workflows/`");
     expect(exclusionGuide).toContain("workflow scaffolding remains a later milestone");
-    expect(exclusionGuide).toContain("compatibility generation is clearly labeled as optional or add-on behavior");
+    expect(exclusionGuide).toContain(
+      "compatibility generation is clearly labeled as optional or add-on behavior",
+    );
     expect(architectureReadme).toContain(
       "[`governance/agent-entry-point-exclusions.md`](governance/agent-entry-point-exclusions.md)",
     );
@@ -1571,9 +1638,13 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(initialSetGuide).toContain("## Reuse Contract");
     expect(initialSetGuide).toContain("highest-value recurring agent helper flows");
     expect(initialSetGuide).toContain("Purpose: prepare an agent to start a coding session");
-    expect(initialSetGuide).toContain("Purpose: run the immediate post-edit governance and validation loop");
+    expect(initialSetGuide).toContain(
+      "Purpose: run the immediate post-edit governance and validation loop",
+    );
     expect(initialSetGuide).toContain("Purpose: close out an active task cleanly");
-    expect(initialSetGuide).toContain("Purpose: guide agents through the repository-governed setup path");
+    expect(initialSetGuide).toContain(
+      "Purpose: guide agents through the repository-governed setup path",
+    );
     expect(initialSetGuide).toContain("Purpose: provide a repeatable helper flow for debugging");
     expect(initialSetGuide).toContain("niche repository-specific flows");
     expect(initialSetGuide).toContain("workflow proliferation for every individual `pa` command");
@@ -1626,7 +1697,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(workflowConsumptionGuide).toContain("## Reuse Contract");
     expect(workflowConsumptionGuide).toContain("`pa context --json`");
     expect(workflowConsumptionGuide).toContain("`<phase>`, `<milestone>`, or `<task>`");
-    expect(workflowConsumptionGuide).toContain("workflows should stop and surface that context resolution is incomplete");
+    expect(workflowConsumptionGuide).toContain(
+      "workflows should stop and surface that context resolution is incomplete",
+    );
     expect(workflowConsumptionGuide).toContain("fail safely rather than guessing");
     expect(workflowConsumptionGuide).toContain("payload contract should be extended centrally");
     expect(architectureReadme).toContain(
@@ -1675,12 +1748,18 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(placementGuide).toContain("## Relationship To Canonical Entry Points");
     expect(placementGuide).toContain("## Anti-Drift Rule");
     expect(placementGuide).toContain("## Reuse Contract");
-    expect(placementGuide).toContain("Workflow scaffolding belongs in Tier D as optional add-on behavior.");
+    expect(placementGuide).toContain(
+      "Workflow scaffolding belongs in Tier D as optional add-on behavior.",
+    );
     expect(placementGuide).toContain("default `pa init`: does not scaffold workflow files");
-    expect(placementGuide).toContain("`pa init --full`: does not automatically scaffold workflow files");
+    expect(placementGuide).toContain(
+      "`pa init --full`: does not automatically scaffold workflow files",
+    );
     expect(placementGuide).toContain("explicit add-on or later workflow adoption path");
     expect(placementGuide).toContain("canonical entry points remain Tier A foundational surfaces");
-    expect(placementGuide).toContain("must not move workflow scaffolding into default init or implicit `--full` behavior");
+    expect(placementGuide).toContain(
+      "must not move workflow scaffolding into default init or implicit `--full` behavior",
+    );
     expect(architectureReadme).toContain(
       "[`governance/workflow-init-tier-placement.md`](governance/workflow-init-tier-placement.md)",
     );
@@ -1726,10 +1805,16 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(surfacesGuide).toContain("## Selection Rationale");
     expect(surfacesGuide).toContain("## Relationship To Canonical Entry Points");
     expect(surfacesGuide).toContain("## Reuse Contract");
-    expect(surfacesGuide).toContain("`.github/workflows/*.md` as the first-party generated workflow-document surface");
+    expect(surfacesGuide).toContain(
+      "`.project-arch/workflows/*.workflow.md` as the first-party generated workflow-document surface",
+    );
     expect(surfacesGuide).toContain("`.agent/workflows/`");
-    expect(surfacesGuide).toContain("multiple parallel workflow surfaces in the same repository by default");
-    expect(surfacesGuide).toContain("canonical entry points remain the authoritative instruction surfaces");
+    expect(surfacesGuide).toContain(
+      "multiple parallel workflow surfaces in the same repository by default",
+    );
+    expect(surfacesGuide).toContain(
+      "canonical entry points remain the authoritative instruction surfaces",
+    );
     expect(architectureReadme).toContain(
       "[`governance/workflow-generation-surfaces.md`](governance/workflow-generation-surfaces.md)",
     );
@@ -1753,6 +1838,10 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     await expect(
       fs.pathExists(path.join(tempDir, ".github", "workflows", "before-coding.md")),
     ).resolves.toBe(false);
+
+    await expect(
+      fs.pathExists(path.join(tempDir, ".project-arch", "workflows", "before-coding.md")),
+    ).resolves.toBe(false);
   });
 
   it("materializes first-pass workflow files when workflow generation is explicitly enabled", async () => {
@@ -1765,12 +1854,27 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       tempDir,
     );
 
-    const workflowDir = path.join(tempDir, ".github", "workflows");
-    const beforeCoding = await fs.readFile(path.join(workflowDir, "before-coding.md"), "utf8");
-    const afterCoding = await fs.readFile(path.join(workflowDir, "after-coding.md"), "utf8");
-    const completeTask = await fs.readFile(path.join(workflowDir, "complete-task.md"), "utf8");
-    const newModule = await fs.readFile(path.join(workflowDir, "new-module.md"), "utf8");
-    const diagnose = await fs.readFile(path.join(workflowDir, "diagnose.md"), "utf8");
+    const workflowDir = path.join(tempDir, ".project-arch", "workflows");
+    const beforeCoding = await fs.readFile(
+      path.join(workflowDir, "before-coding.workflow.md"),
+      "utf8",
+    );
+    const afterCoding = await fs.readFile(
+      path.join(workflowDir, "after-coding.workflow.md"),
+      "utf8",
+    );
+    const completeTask = await fs.readFile(
+      path.join(workflowDir, "complete-task.workflow.md"),
+      "utf8",
+    );
+    const newModule = await fs.readFile(path.join(workflowDir, "new-module.workflow.md"), "utf8");
+    const diagnose = await fs.readFile(path.join(workflowDir, "diagnose.workflow.md"), "utf8");
+
+    await expect(fs.pathExists(path.join(workflowDir, "before-coding.md"))).resolves.toBe(false);
+    await expect(fs.pathExists(path.join(workflowDir, "after-coding.md"))).resolves.toBe(false);
+    await expect(fs.pathExists(path.join(workflowDir, "complete-task.md"))).resolves.toBe(false);
+    await expect(fs.pathExists(path.join(workflowDir, "new-module.md"))).resolves.toBe(false);
+    await expect(fs.pathExists(path.join(workflowDir, "diagnose.md"))).resolves.toBe(false);
 
     expect(beforeCoding).toContain("# Before Coding Workflow");
     expect(beforeCoding).toContain("## Required Context");
@@ -1780,17 +1884,51 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(beforeCoding).toContain("## Adaptation Note");
     expect(beforeCoding).toContain("`pa context --json`");
     expect(beforeCoding).toContain("`AGENTS.md`");
-    expect(beforeCoding).toContain("1. Resolve current structured context through `pa context --json` once that surface is available.");
-    expect(beforeCoding).toContain("Do not start coding until the active task, target surfaces, and governing documents are clear.");
+    expect(beforeCoding).toContain(
+      "project-arch-owned workflow-document surface (`.project-arch/workflows/*.workflow.md`)",
+    );
+    expect(beforeCoding).not.toContain(".github/workflows/*.md");
+    expect(beforeCoding).toContain(
+      "1. Resolve current structured context through `pa context --json` once that surface is available.",
+    );
+    expect(beforeCoding).toContain(
+      "Do not start coding until the active task, target surfaces, and governing documents are clear.",
+    );
     expect(afterCoding).toContain("# After Coding Workflow");
-    expect(afterCoding).toContain("Run `pa check` to validate the repository after implementation.");
-    expect(afterCoding).toContain("If validation fails, return to diagnosis or repair work instead of proceeding to task completion.");
+    expect(afterCoding).toContain(
+      "Run `pa check` to validate the repository after implementation.",
+    );
+    expect(afterCoding).toContain(
+      "If validation fails, return to diagnosis or repair work instead of proceeding to task completion.",
+    );
+    expect(afterCoding).toContain(
+      "project-arch-owned `.project-arch/workflows/*.workflow.md` surface",
+    );
+    expect(afterCoding).not.toContain(".github/workflows/*.md");
     expect(completeTask).toContain("# Complete Task Workflow");
-    expect(completeTask).toContain("Update the active task file with progress, implementation notes, and verification results.");
+    expect(completeTask).toContain(
+      "Update the active task file with progress, implementation notes, and verification results.",
+    );
+    expect(completeTask).toContain(
+      "project-arch-owned `.project-arch/workflows/*.workflow.md` surface",
+    );
+    expect(completeTask).not.toContain(".github/workflows/*.md");
     expect(newModule).toContain("# New Module Workflow");
-    expect(newModule).toContain("Update architecture and arch-model artifacts that describe the new module boundary.");
+    expect(newModule).toContain(
+      "Update architecture and arch-model artifacts that describe the new module boundary.",
+    );
+    expect(newModule).toContain(
+      "project-arch-owned `.project-arch/workflows/*.workflow.md` surface",
+    );
+    expect(newModule).not.toContain(".github/workflows/*.md");
     expect(diagnose).toContain("# Diagnose Workflow");
-    expect(diagnose).toContain("Summarize the diagnosed issue in terms of repository governance, not only local symptoms.");
+    expect(diagnose).toContain(
+      "Summarize the diagnosed issue in terms of repository governance, not only local symptoms.",
+    );
+    expect(diagnose).toContain(
+      "project-arch-owned `.project-arch/workflows/*.workflow.md` surface",
+    );
+    expect(diagnose).not.toContain(".github/workflows/*.md");
   });
 
   it("preserves existing workflow files on re-init without force and reports skips", async () => {
@@ -1802,7 +1940,12 @@ describe.sequential("initializeProject - Standards Coverage", () => {
 
     await initializeProject(options, tempDir);
 
-    const workflowPath = path.join(tempDir, ".github", "workflows", "before-coding.md");
+    const workflowPath = path.join(
+      tempDir,
+      ".project-arch",
+      "workflows",
+      "before-coding.workflow.md",
+    );
     const customWorkflow = "# Custom Before Coding Workflow\n\nUser-modified content.\n";
     await fs.writeFile(workflowPath, customWorkflow, "utf8");
 
@@ -1819,7 +1962,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     await expect(fs.readFile(workflowPath, "utf8")).resolves.toBe(customWorkflow);
     expect(output).toContain("Skipped existing managed files:");
     expect(output).toContain(
-      "Skipped (already exists): .github/workflows/before-coding.md — use --force to overwrite",
+      "Skipped (already exists): .project-arch/workflows/before-coding.workflow.md — use --force to overwrite",
     );
   });
 
@@ -1832,7 +1975,12 @@ describe.sequential("initializeProject - Standards Coverage", () => {
 
     await initializeProject(options, tempDir);
 
-    const workflowPath = path.join(tempDir, ".github", "workflows", "before-coding.md");
+    const workflowPath = path.join(
+      tempDir,
+      ".project-arch",
+      "workflows",
+      "before-coding.workflow.md",
+    );
     const customWorkflow = "# Custom Before Coding Workflow\n\nUser-modified content.\n";
     await fs.writeFile(workflowPath, customWorkflow, "utf8");
 
@@ -1849,7 +1997,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     const rerendered = await fs.readFile(workflowPath, "utf8");
     expect(rerendered).not.toBe(customWorkflow);
     expect(rerendered).toContain("# Before Coding Workflow");
-    expect(output).toContain("Overwriting: .github/workflows/before-coding.md");
+    expect(output).toContain("Overwriting: .project-arch/workflows/before-coding.workflow.md");
   });
 
   it("keeps workflow generation idempotent without duplicate or variant filenames", async () => {
@@ -1862,15 +2010,15 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     await initializeProject(options, tempDir);
     await initializeProject(options, tempDir);
 
-    const workflowDir = path.join(tempDir, ".github", "workflows");
+    const workflowDir = path.join(tempDir, ".project-arch", "workflows");
     const files = (await fs.readdir(workflowDir)).sort();
 
     expect(files).toEqual([
-      "after-coding.md",
-      "before-coding.md",
-      "complete-task.md",
-      "diagnose.md",
-      "new-module.md",
+      "after-coding.workflow.md",
+      "before-coding.workflow.md",
+      "complete-task.workflow.md",
+      "diagnose.workflow.md",
+      "new-module.workflow.md",
     ]);
   });
 
@@ -1908,12 +2056,12 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(inventoryGuide).toContain("## Out-Of-Scope Workflow Files");
     expect(inventoryGuide).toContain("## Inventory Rationale");
     expect(inventoryGuide).toContain("## Reuse Contract");
-    expect(inventoryGuide).toContain("`.github/workflows/`");
-    expect(inventoryGuide).toContain("`.github/workflows/before-coding.md`");
-    expect(inventoryGuide).toContain("`.github/workflows/after-coding.md`");
-    expect(inventoryGuide).toContain("`.github/workflows/complete-task.md`");
-    expect(inventoryGuide).toContain("`.github/workflows/new-module.md`");
-    expect(inventoryGuide).toContain("`.github/workflows/diagnose.md`");
+    expect(inventoryGuide).toContain("`.project-arch/workflows/`");
+    expect(inventoryGuide).toContain("`.project-arch/workflows/before-coding.workflow.md`");
+    expect(inventoryGuide).toContain("`.project-arch/workflows/after-coding.workflow.md`");
+    expect(inventoryGuide).toContain("`.project-arch/workflows/complete-task.workflow.md`");
+    expect(inventoryGuide).toContain("`.project-arch/workflows/new-module.workflow.md`");
+    expect(inventoryGuide).toContain("`.project-arch/workflows/diagnose.workflow.md`");
     expect(inventoryGuide).toContain("first pass uses one file per workflow");
     expect(inventoryGuide).toContain("does not introduce shared helper workflow files");
     expect(architectureReadme).toContain(
@@ -1962,11 +2110,17 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(contentModelGuide).toContain("## Fail-Safe Behavior");
     expect(contentModelGuide).toContain("## Optional Adaptation Block");
     expect(contentModelGuide).toContain("## Reuse Contract");
-    expect(contentModelGuide).toContain("`AGENTS.md` remains the canonical always-on instruction source");
+    expect(contentModelGuide).toContain(
+      "`AGENTS.md` remains the canonical always-on instruction source",
+    );
     expect(contentModelGuide).toContain("`pa context --json`");
     expect(contentModelGuide).toContain("`<phase>`, `<milestone>`, or `<task>`");
-    expect(contentModelGuide).toContain("if required active context is missing, stop and surface the missing context");
-    expect(contentModelGuide).toContain("if workflow guidance conflicts with canonical entry points, `AGENTS.md`");
+    expect(contentModelGuide).toContain(
+      "if required active context is missing, stop and surface the missing context",
+    );
+    expect(contentModelGuide).toContain(
+      "if workflow guidance conflicts with canonical entry points, `AGENTS.md`",
+    );
     expect(architectureReadme).toContain(
       "[`governance/workflow-content-model.md`](governance/workflow-content-model.md)",
     );
@@ -2013,10 +2167,14 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(behaviorGuide).toContain("## Unsupported Or Partial Surface Handling");
     expect(behaviorGuide).toContain("## Relationship To Canonical Entry Points");
     expect(behaviorGuide).toContain("## Reuse Contract");
-    expect(behaviorGuide).toContain("should be invoked through an explicit add-on or later workflow-generation path");
+    expect(behaviorGuide).toContain(
+      "should be invoked through an explicit add-on or later workflow-generation path",
+    );
     expect(behaviorGuide).toContain("should not be generated by default `pa init`");
     expect(behaviorGuide).toContain("should not be silently generated by `pa init --full`");
-    expect(behaviorGuide).toContain("re-running generation without force should preserve existing workflow files");
+    expect(behaviorGuide).toContain(
+      "re-running generation without force should preserve existing workflow files",
+    );
     expect(behaviorGuide).toContain("regeneration with force may overwrite managed workflow files");
     expect(behaviorGuide).toContain("if the target workflow surface is unsupported");
     expect(architectureReadme).toContain(
@@ -2065,7 +2223,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(contractGuide).toContain("## Reuse Contract");
     expect(contractGuide).toContain("`pa context --json`");
     expect(contractGuide).toContain("`<phase>`, `<milestone>`, and `<task>`");
-    expect(contractGuide).toContain("The context command is for context resolution, not for workflow execution");
+    expect(contractGuide).toContain(
+      "The context command is for context resolution, not for workflow execution",
+    );
     expect(contractGuide).toContain("It should not:");
     expect(contractGuide).toContain("replace recommendation commands such as `pa next`");
     expect(architectureReadme).toContain(
@@ -2119,7 +2279,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(payloadGuide).toContain('"active": {');
     expect(payloadGuide).toContain('"recommended": {');
     expect(payloadGuide).toContain("`active.phase.id`, `active.phase.path`, `active.phase.title`");
-    expect(payloadGuide).toContain("`active.task.id`, `active.task.path`, `active.task.title`, `active.task.status`");
+    expect(payloadGuide).toContain(
+      "`active.task.id`, `active.task.path`, `active.task.title`, `active.task.status`",
+    );
     expect(payloadGuide).toContain("`recommended` is the next suggested context");
     expect(payloadGuide).toContain("`<phase>`, `<milestone>`, or `<task>`");
     expect(architectureReadme).toContain(
@@ -2171,9 +2333,15 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(consumptionGuide).toContain("## Reuse Contract");
     expect(consumptionGuide).toContain("`pa context --json`");
     expect(consumptionGuide).toContain("`<phase>`, `<milestone>`, or `<task>`");
-    expect(consumptionGuide).toContain("consumers should stop and surface that context resolution is incomplete");
-    expect(consumptionGuide).toContain("should not silently invent phase, milestone, or task identifiers");
-    expect(consumptionGuide).toContain("should not parse human-oriented output from other commands");
+    expect(consumptionGuide).toContain(
+      "consumers should stop and surface that context resolution is incomplete",
+    );
+    expect(consumptionGuide).toContain(
+      "should not silently invent phase, milestone, or task identifiers",
+    );
+    expect(consumptionGuide).toContain(
+      "should not parse human-oriented output from other commands",
+    );
     expect(architectureReadme).toContain(
       "[`governance/cli-context-consumption.md`](governance/cli-context-consumption.md)",
     );
@@ -2195,12 +2363,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     );
 
     const relationshipGuide = await fs.readFile(
-      path.join(
-        tempDir,
-        "architecture",
-        "governance",
-        "cli-context-surface-relationships.md",
-      ),
+      path.join(tempDir, "architecture", "governance", "cli-context-surface-relationships.md"),
       "utf8",
     );
     const architectureReadme = await fs.readFile(
@@ -2227,7 +2390,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(relationshipGuide).toContain("## Reuse Contract");
     expect(relationshipGuide).toContain("`pa context --json`");
     expect(relationshipGuide).toContain("`pa next`");
-    expect(relationshipGuide).toContain("do not treat `pa next` as the canonical active-context source");
+    expect(relationshipGuide).toContain(
+      "do not treat `pa next` as the canonical active-context source",
+    );
     expect(relationshipGuide).toContain("do not turn `pa context` into a broad reporting endpoint");
     expect(architectureReadme).toContain(
       "[`governance/cli-context-surface-relationships.md`](governance/cli-context-surface-relationships.md)",
@@ -2280,7 +2445,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(boundaryGuide).toContain("scoped, read-only analysis command");
     expect(boundaryGuide).toContain("`pa check` owns broad validation");
     expect(boundaryGuide).toContain("`pa doctor` owns preflight command orchestration");
-    expect(boundaryGuide).toContain("must not modify architecture files, roadmap files, or code automatically");
+    expect(boundaryGuide).toContain(
+      "must not modify architecture files, roadmap files, or code automatically",
+    );
     expect(architectureReadme).toContain(
       "[`governance/learn-command-boundary.md`](governance/learn-command-boundary.md)",
     );
@@ -2333,8 +2500,10 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(reportGuide).toContain("`analyzedPaths`");
     expect(reportGuide).toContain("`findings: LearnFinding[]`");
     expect(reportGuide).toContain("`suggestedCommands: string[]`");
-    expect(reportGuide).toContain("suggestions must not imply that `pa learn --path` mutates repository state");
-    expect(reportGuide).toContain('"schemaVersion": "1.0"');
+    expect(reportGuide).toContain(
+      "suggestions must not imply that `pa learn --path` mutates repository state",
+    );
+    expect(reportGuide).toContain('"schemaVersion": "2.0"');
     expect(reportGuide).toContain(
       '"recommendedAction": "pa task new <phase> <milestone> --project <projectId>"',
     );
@@ -2359,12 +2528,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     );
 
     const relationshipGuide = await fs.readFile(
-      path.join(
-        tempDir,
-        "architecture",
-        "governance",
-        "learn-check-doctor-relationship.md",
-      ),
+      path.join(tempDir, "architecture", "governance", "learn-check-doctor-relationship.md"),
       "utf8",
     );
     const architectureReadme = await fs.readFile(
@@ -2392,9 +2556,15 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(relationshipGuide).toContain("## Reuse Contract");
     expect(relationshipGuide).toContain("`pa check` owns repository-wide structural validation");
     expect(relationshipGuide).toContain("`pa doctor` owns preflight command orchestration");
-    expect(relationshipGuide).toContain("`pa learn --path` owns scoped interpretation of relevant drift");
-    expect(relationshipGuide).toContain("must not absorb linting, policy checks, or full-repository validation orchestration");
-    expect(relationshipGuide).toContain("do not turn `pa learn --path` into a second repository-wide validator");
+    expect(relationshipGuide).toContain(
+      "`pa learn --path` owns scoped interpretation of relevant drift",
+    );
+    expect(relationshipGuide).toContain(
+      "must not absorb linting, policy checks, or full-repository validation orchestration",
+    );
+    expect(relationshipGuide).toContain(
+      "do not turn `pa learn --path` into a second repository-wide validator",
+    );
     expect(architectureReadme).toContain(
       "[`governance/learn-check-doctor-relationship.md`](governance/learn-check-doctor-relationship.md)",
     );
@@ -2416,12 +2586,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     );
 
     const extensionGuide = await fs.readFile(
-      path.join(
-        tempDir,
-        "architecture",
-        "governance",
-        "learn-future-extension-boundaries.md",
-      ),
+      path.join(tempDir, "architecture", "governance", "learn-future-extension-boundaries.md"),
       "utf8",
     );
     const architectureReadme = await fs.readFile(
@@ -2451,7 +2616,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(extensionGuide).toContain("- `--fix`");
     expect(extensionGuide).toContain("- `--apply`");
     expect(extensionGuide).toContain("requires a later, separate decision before implementation");
-    expect(extensionGuide).toContain("do not let recommendation output silently become execution behavior");
+    expect(extensionGuide).toContain(
+      "do not let recommendation output silently become execution behavior",
+    );
     expect(architectureReadme).toContain(
       "[`governance/learn-future-extension-boundaries.md`](governance/learn-future-extension-boundaries.md)",
     );
@@ -2548,7 +2715,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(await fs.pathExists(policyPath)).toBe(true);
 
     const policy = await fs.readJson(policyPath);
-    expect(policy.schemaVersion).toBe("1.0");
+    expect(policy.schemaVersion).toBe("2.0");
     expect(policy.defaultProfile).toBe("default");
     expect(policy.profiles?.default?.timing?.phase?.skipDoneIfCompletedContainer).toBe(true);
   });
@@ -2625,7 +2792,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
 
     const policyPath = path.join(tempDir, "roadmap", "policy.json");
     const customPolicy = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       defaultProfile: "custom",
       profiles: {
         custom: {
@@ -2668,7 +2835,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
 
     const policyPath = path.join(tempDir, "roadmap", "policy.json");
     const customPolicy = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       defaultProfile: "custom",
       profiles: {
         custom: {

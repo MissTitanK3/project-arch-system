@@ -52,7 +52,7 @@ describe("cli/commands/checkChangedScope", () => {
     await ensureDir(path.dirname(oldPath));
     await ensureDir(path.dirname(manifestPath));
     await writeFile(oldPath, "export const oldValue = 1;\n", "utf8");
-    await writeFile(manifestPath, '{"schemaVersion":"1.0"}\n', "utf8");
+    await writeFile(manifestPath, '{"schemaVersion": "2.0"}\n', "utf8");
 
     runGit(["add", "."], tempDir);
     runGit(["commit", "-m", "seed"], tempDir);

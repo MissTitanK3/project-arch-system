@@ -213,7 +213,7 @@ export async function runBackfillImplemented(
     await fs.writeJson(
       jsonPath,
       {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         type: "backfill-candidates",
         ...result,
       },

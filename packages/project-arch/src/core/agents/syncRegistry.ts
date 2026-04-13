@@ -74,7 +74,7 @@ export async function syncRegistry(
     : (options.now ?? new Date()).toISOString();
 
   const nextRegistry = agentSkillRegistrySchema.parse({
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     generatedAt,
     skills: nextSkills,
   });

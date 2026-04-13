@@ -9,7 +9,7 @@ describe("core/templates/validationContract", () => {
     const phaseId = "phase-2";
     const contract = defaultValidationContractTemplate(phaseId);
 
-    expect(contract.schemaVersion).toBe("1.0");
+    expect(contract.schemaVersion).toBe("2.0");
     expect(contract.phaseId).toBe(phaseId);
     expect(contract.checks.length).toBe(3);
     expect(contract.checks.map((check) => check.id)).toEqual([
@@ -25,7 +25,7 @@ describe("core/templates/validationContract", () => {
   it("builds minimal validation contract with empty checks", () => {
     const contract = minimalValidationContractTemplate("phase-1");
 
-    expect(contract.schemaVersion).toBe("1.0");
+    expect(contract.schemaVersion).toBe("2.0");
     expect(contract.phaseId).toBe("phase-1");
     expect(contract.checks).toEqual([]);
     expect(contract.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);

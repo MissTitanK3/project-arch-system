@@ -73,7 +73,7 @@ describe("core/reconciliation/backfillImplemented", () => {
     const reconcileDir = path.join(context.tempDir, ".project-arch", "reconcile");
     await ensureDir(reconcileDir);
     await writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-001-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation complete",
@@ -110,7 +110,7 @@ describe("core/reconciliation/backfillImplemented", () => {
     const reconcileDir = path.join(context.tempDir, ".project-arch", "reconcile");
     await ensureDir(reconcileDir);
     await writeJson(path.join(reconcileDir, "001-2026-03-12.json"), {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-001-2026-03-12",
       type: "local-reconciliation",
       status: "reconciliation suggested",

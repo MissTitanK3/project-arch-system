@@ -47,11 +47,12 @@ describe("schemas/reconciliationReport", () => {
 
   describe("reconciliationReportSchema", () => {
     const validLocalReport: ReconciliationReport = {
-      schemaVersion: "1.0",
+      schemaVersion: "2.0",
       id: "reconcile-001",
       type: "local-reconciliation",
       status: "reconciliation complete",
       taskId: "008",
+      runId: "run-2026-03-31-001",
       date: "2026-03-12",
       changedFiles: ["architecture/workflows/implementation-reconciliation.md"],
       affectedAreas: ["architecture/workflows"],
@@ -66,6 +67,16 @@ describe("schemas/reconciliationReport", () => {
     it("should accept a valid local-reconciliation report with all required fields", () => {
       const result = reconciliationReportSchema.parse(validLocalReport);
       expect(result).toEqual(validLocalReport);
+    });
+
+    it("should allow runId to be omitted for non-agent reconciliation flows", () => {
+      const withoutRunId = {
+        ...validLocalReport,
+      };
+      delete (withoutRunId as { runId?: string }).runId;
+
+      const result = reconciliationReportSchema.parse(withoutRunId);
+      expect(result.runId).toBeUndefined();
     });
 
     it("should accept a valid local-reconciliation report with all optional fields", () => {
@@ -83,7 +94,7 @@ describe("schemas/reconciliationReport", () => {
 
     it("should accept a valid tooling-feedback report", () => {
       const feedbackReport: ReconciliationReport = {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "feedback-001",
         type: "tooling-feedback",
         status: "reconciliation suggested",
@@ -127,13 +138,13 @@ describe("schemas/reconciliationReport", () => {
     });
 
     it("should reject a report with wrong schemaVersion", () => {
-      const invalid = { ...validLocalReport, schemaVersion: "2.0" };
+      const invalid = { ...validLocalReport, schemaVersion: "9.9" };
       expect(() => reconciliationReportSchema.parse(invalid)).toThrow();
     });
 
     it("should accept a report where all array fields are empty", () => {
       const minimal: ReconciliationReport = {
-        schemaVersion: "1.0",
+        schemaVersion: "2.0",
         id: "reconcile-002",
         type: "local-reconciliation",
         status: "no reconciliation needed",
