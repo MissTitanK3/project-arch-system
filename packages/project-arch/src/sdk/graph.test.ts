@@ -26,19 +26,34 @@ describe("sdk/graph", () => {
       const result = await graphBuild({ cwd: tempDir });
 
       resultAssertions.assertSuccess(result);
-      expect(result.data.path).toBe(".arch/graph.json");
+      expect(result.data.path).toBe("architecture/metadata/traceability/graph.json");
     });
 
     it("should create graph file on disk", async () => {
       await graphBuild({ cwd: tempDir });
 
-      const graphPath = path.join(tempDir, ".arch", "graph.json");
+      const graphPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "graph.json",
+      );
       expect(await pathExists(graphPath)).toBe(true);
     });
 
     it("should support read-only build mode without writing artifacts", async () => {
-      const graphPath = path.join(tempDir, ".arch", "graph.json");
-      await rm(path.join(tempDir, ".arch"), { recursive: true, force: true });
+      const graphPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "graph.json",
+      );
+      await rm(path.join(tempDir, "architecture", "metadata", "traceability"), {
+        recursive: true,
+        force: true,
+      });
 
       const result = await graphBuild({ cwd: tempDir, write: false });
 
@@ -67,12 +82,17 @@ describe("sdk/graph", () => {
     });
 
     it("should fail when graph file is missing", async () => {
-      await rm(path.join(tempDir, ".arch"), { recursive: true, force: true });
+      await rm(path.join(tempDir, "architecture", "metadata", "traceability"), {
+        recursive: true,
+        force: true,
+      });
 
       const result = await graphRead(tempDir);
 
       resultAssertions.assertError(result);
-      expect(result.errors?.join(" ")).toContain(".arch/graph.json not found");
+      expect(result.errors?.join(" ")).toContain(
+        "architecture/metadata/traceability/graph.json not found",
+      );
     });
   });
 

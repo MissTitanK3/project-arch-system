@@ -50,8 +50,9 @@ describe("cli/commands/help", () => {
       expect(output).toContain("workflows");
       expect(output).toContain(".project-arch/workflows/*.workflow.md");
       expect(output).toContain(".github/workflows/*.md");
-      expect(output).toContain("non-canonical");
-      expect(output).not.toContain("Canonical fresh-output surface: .github/workflows/*.md");
+      expect(output).toContain("Legacy note");
+      expect(output).toContain("First-run no-test baseline");
+      expect(output).toContain("No projects matched the filters");
       expect(output).toContain("lanes");
       expect(output).toContain("pa agent run <taskRef> --runtime <runtime>");
       expect(output).toContain("pa runtime list [--json]");
@@ -97,8 +98,9 @@ describe("cli/commands/help", () => {
       expect(output).toContain("pa runtime unlink <profileId> [--json]");
       expect(output).toContain(".project-arch/workflows/*.workflow.md");
       expect(output).toContain(".github/workflows/*.md");
-      expect(output).toContain("non-canonical");
-      expect(output).not.toContain("Canonical fresh-output surface: .github/workflows/*.md");
+      expect(output).toContain("Legacy note");
+      expect(output).toContain("First-run no-test baseline");
+      expect(output).toContain("No projects matched the filters");
       expect(output).toContain("pa task");
       expect(output).toContain("pa decision");
     });
@@ -115,8 +117,7 @@ describe("cli/commands/help", () => {
       expect(output).toContain("Common Workflows");
       expect(output).toContain(".project-arch/workflows/*.workflow.md");
       expect(output).toContain(".github/workflows/*.md");
-      expect(output).toContain("non-canonical");
-      expect(output).not.toContain("Canonical fresh-output surface: .github/workflows/*.md");
+      expect(output).toContain("compatibility-only");
       expect(output).toContain("Feature Development");
       expect(output).toContain("pa lint frontmatter --fix");
       expect(output).toContain("pnpm lint:md");

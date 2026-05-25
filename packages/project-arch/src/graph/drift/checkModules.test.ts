@@ -36,7 +36,7 @@ describe("graph/drift/checkModules", () => {
     if (tempDir) await rm(tempDir, { recursive: true, force: true });
   });
 
-  it("should warn when arch-model/modules.json is missing", async () => {
+  it("should warn when canonical modules metadata is missing", async () => {
     const findings = await checkModules(tempDir, []);
 
     expect(findings).toHaveLength(1);
@@ -48,9 +48,12 @@ describe("graph/drift/checkModules", () => {
     await mkdir(path.join(tempDir, "apps", "web"), { recursive: true });
     await mkdir(path.join(tempDir, "packages", "ui"), { recursive: true });
 
-    await writeJsonDeterministic(path.join(tempDir, "arch-model", "modules.json"), {
-      modules: [{ name: "apps/web", owner: "team-a" }],
-    });
+    await writeJsonDeterministic(
+      path.join(tempDir, "architecture", "metadata", "codebase-map", "modules.json"),
+      {
+        modules: [{ name: "apps/web", owner: "team-a" }],
+      },
+    );
 
     const findings = await checkModules(tempDir, []);
 
@@ -67,9 +70,12 @@ describe("graph/drift/checkModules", () => {
   it("should skip missing-decision error when module is covered by decision codeTarget", async () => {
     await mkdir(path.join(tempDir, "packages", "api"), { recursive: true });
 
-    await writeJsonDeterministic(path.join(tempDir, "arch-model", "modules.json"), {
-      modules: [],
-    });
+    await writeJsonDeterministic(
+      path.join(tempDir, "architecture", "metadata", "codebase-map", "modules.json"),
+      {
+        modules: [],
+      },
+    );
 
     const findings = await checkModules(tempDir, [decisionRecord(["packages/api/src"])]);
     expect(

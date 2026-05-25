@@ -31,12 +31,12 @@ describe.sequential("core/manifests/graph", () => {
         schemaVersion: string;
         nodes: Record<string, number>;
         edges: Record<string, number>;
-      }>(path.join(tempDir, ".arch", "graph.json"));
+      }>(path.join(tempDir, "architecture", "metadata", "traceability", "graph.json"));
       const tasks = await readJson<{ tasks: Array<{ id: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "tasks.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
       );
       const milestones = await readJson<{ milestones: Array<{ id: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "milestones.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "milestones.json"),
       );
 
       expect(graph.schemaVersion).toBe("2.0");
@@ -49,8 +49,21 @@ describe.sequential("core/manifests/graph", () => {
     it("should preserve byte-identical graph artifacts across no-op rebuilds", async () => {
       await rebuildArchitectureGraph(tempDir);
 
-      const graphPath = path.join(tempDir, ".arch", "graph.json");
-      const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+      const graphPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "graph.json",
+      );
+      const tasksPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "nodes",
+        "tasks.json",
+      );
       const firstGraphContent = await fs.readFile(graphPath, "utf8");
       const firstTasksContent = await fs.readFile(tasksPath, "utf8");
       const firstGraphStat = await fs.stat(graphPath);
@@ -67,15 +80,32 @@ describe.sequential("core/manifests/graph", () => {
     }, 120_000);
 
     it("should support read-only mode that skips graph artifact writes", async () => {
-      await fs.remove(path.join(tempDir, ".arch"));
+      await fs.remove(path.join(tempDir, "architecture", "metadata", "traceability"));
 
       await rebuildArchitectureGraph(tempDir, { write: false });
 
-      expect(await fs.pathExists(path.join(tempDir, ".arch", "graph.json"))).toBe(false);
-      expect(await fs.pathExists(path.join(tempDir, ".arch", "nodes", "tasks.json"))).toBe(false);
-      expect(await fs.pathExists(path.join(tempDir, ".arch", "edges", "task_to_module.json"))).toBe(
-        false,
-      );
+      expect(
+        await fs.pathExists(
+          path.join(tempDir, "architecture", "metadata", "traceability", "graph.json"),
+        ),
+      ).toBe(false);
+      expect(
+        await fs.pathExists(
+          path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
+        ),
+      ).toBe(false);
+      expect(
+        await fs.pathExists(
+          path.join(
+            tempDir,
+            "architecture",
+            "metadata",
+            "traceability",
+            "edges",
+            "task_to_module.json",
+          ),
+        ),
+      ).toBe(false);
     }, 120_000);
 
     it("should include task-to-decision edges for linked items", async () => {
@@ -113,7 +143,14 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const edges = await readJson<{ edges: Array<{ task: string; decision: string }> }>(
-        path.join(tempDir, ".arch", "edges", "task_to_decision.json"),
+        path.join(
+          tempDir,
+          "architecture",
+          "metadata",
+          "traceability",
+          "edges",
+          "task_to_decision.json",
+        ),
       );
 
       expect(edges.edges).toContainEqual({ task: taskRef, decision: decisionId });
@@ -139,8 +176,8 @@ describe.sequential("core/manifests/graph", () => {
       warnSpy.mockRestore();
     }, 120_000);
 
-    it("should handle project with domains.json", async () => {
-      const domainsDir = path.join(tempDir, "arch-domains");
+    it("should handle project with metadata domains.json", async () => {
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -163,7 +200,7 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const domains = await readJson<{ domains: Array<{ name: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "domains.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "domains.json"),
       );
 
       expect(domains.domains).toHaveLength(2);
@@ -171,8 +208,8 @@ describe.sequential("core/manifests/graph", () => {
       expect(domains.domains[1].name).toBe("api");
     }, 120_000);
 
-    it("should handle project with arch-model/modules.json", async () => {
-      const archModelDir = path.join(tempDir, "arch-model");
+    it("should handle project with metadata codebase-map/modules.json", async () => {
+      const archModelDir = path.join(tempDir, "architecture", "metadata", "codebase-map");
       await fs.mkdir(archModelDir, { recursive: true });
       await writeFile(
         path.join(archModelDir, "modules.json"),
@@ -187,16 +224,16 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const modules = await readJson<{ modules: Array<{ name: string; type: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "modules.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "modules.json"),
       );
 
       expect(modules.modules.length).toBeGreaterThan(0);
-      // Modules from arch-model are included in the graph
+      // Modules from architecture metadata are included in the graph
       // Just verify the graph was built successfully
     }, 120_000);
 
     it("should handle invalid data in domains.json", async () => {
-      const domainsDir = path.join(tempDir, "arch-domains");
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -208,7 +245,7 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const domains = await readJson<{ domains: Array<{ name: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "domains.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "domains.json"),
       );
 
       // Should only include valid domains
@@ -217,7 +254,7 @@ describe.sequential("core/manifests/graph", () => {
     }, 120_000);
 
     it("should handle invalid data in modules.json", async () => {
-      const archModelDir = path.join(tempDir, "arch-model");
+      const archModelDir = path.join(tempDir, "architecture", "metadata", "codebase-map");
       await fs.mkdir(archModelDir, { recursive: true });
       await writeFile(
         path.join(archModelDir, "modules.json"),
@@ -234,7 +271,7 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const modules = await readJson<{ modules: Array<{ name: string; type: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "modules.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "modules.json"),
       );
 
       // Should include modules from aimap if valid data present
@@ -275,7 +312,14 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const edges = await readJson<{ edges: Array<{ task: string; decision: string }> }>(
-        path.join(tempDir, ".arch", "edges", "task_to_decision.json"),
+        path.join(
+          tempDir,
+          "architecture",
+          "metadata",
+          "traceability",
+          "edges",
+          "task_to_decision.json",
+        ),
       );
 
       // Should not include edge to non-existent decision
@@ -312,10 +356,17 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const modules = await readJson<{ modules: Array<{ name: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "modules.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "modules.json"),
       );
       const edges = await readJson<{ edges: Array<{ task: string; module: string }> }>(
-        path.join(tempDir, ".arch", "edges", "task_to_module.json"),
+        path.join(
+          tempDir,
+          "architecture",
+          "metadata",
+          "traceability",
+          "edges",
+          "task_to_module.json",
+        ),
       );
 
       // Should create modules from packages - module names are "packages/auth" not just "auth"
@@ -366,7 +417,7 @@ describe.sequential("core/manifests/graph", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const modules = await readJson<{ modules: Array<{ name: string }> }>(
-        path.join(tempDir, ".arch", "nodes", "modules.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "modules.json"),
       );
 
       const names = modules.modules.map((moduleNode) => moduleNode.name);
@@ -406,7 +457,7 @@ describe.sequential("core/manifests/graph", () => {
         ),
       );
       await writeFile(
-        path.join(tempDir, "arch-model", "modules.json"),
+        path.join(tempDir, "architecture", "metadata", "codebase-map", "modules.json"),
         JSON.stringify(
           {
             modules: [
@@ -449,7 +500,7 @@ describe.sequential("core/manifests/graph", () => {
           layer: "runtime" | "docs" | "generated" | "infra";
           confidence: "declared" | "inferred";
         }>;
-      }>(path.join(tempDir, ".arch", "nodes", "modules.json"));
+      }>(path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "modules.json"));
 
       const runtimeModule = modules.modules.find((entry) => entry.name === "packages/ui");
       const docsModule = modules.modules.find((entry) => entry.name === "architecture/decisions");
@@ -459,6 +510,101 @@ describe.sequential("core/manifests/graph", () => {
       expect(docsModule?.layer).toBe("docs");
       expect(docsModule?.confidence).toBe("inferred");
       expect(modules.modules.some((entry) => entry.name === "package.json")).toBe(false);
+    }, 120_000);
+
+    it("should prefer canonical task files when canonical and legacy mirrors both exist", async () => {
+      const phaseId = "dedup-phase";
+      const milestoneId = "dedup-milestone";
+
+      await createPhase(phaseId, tempDir);
+      await createMilestone(phaseId, milestoneId, tempDir);
+
+      const canonicalTaskPath = await createTask({
+        phaseId,
+        milestoneId,
+        lane: "planned",
+        title: "Canonical Graph Identity Task",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      const fileName = path.basename(canonicalTaskPath);
+      const legacyTaskPath = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        phaseId,
+        "milestones",
+        milestoneId,
+        "tasks",
+        "planned",
+        fileName,
+      );
+
+      await writeFile(
+        legacyTaskPath,
+        `---
+id: "001"
+title: Broken Legacy Mirror
+---
+
+invalid legacy mirror
+`,
+      );
+
+      await rebuildArchitectureGraph(tempDir);
+
+      const tasks = await readJson<{
+        tasks: Array<{ id: string; title: string; milestone: string }>;
+      }>(path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"));
+
+      const taskRef = `${phaseId}/${milestoneId}/001`;
+      const taskEntries = tasks.tasks.filter((entry) => entry.id === taskRef);
+
+      expect(taskEntries).toHaveLength(1);
+      expect(taskEntries[0].title).toBe("Canonical Graph Identity Task");
+    }, 120_000);
+
+    it("should tolerate legacy-only task mirrors when canonical files are absent", async () => {
+      const phaseId = "legacy-fallback-phase";
+      const milestoneId = "legacy-fallback-milestone";
+
+      await createPhase(phaseId, tempDir);
+      await createMilestone(phaseId, milestoneId, tempDir);
+
+      const canonicalTaskPath = await createTask({
+        phaseId,
+        milestoneId,
+        lane: "planned",
+        title: "Legacy Fallback Task",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      const fileName = path.basename(canonicalTaskPath);
+      const legacyTaskPath = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        phaseId,
+        "milestones",
+        milestoneId,
+        "tasks",
+        "planned",
+        fileName,
+      );
+
+      await fs.ensureDir(path.dirname(legacyTaskPath));
+      await fs.copyFile(canonicalTaskPath, legacyTaskPath);
+      await fs.remove(canonicalTaskPath);
+
+      await rebuildArchitectureGraph(tempDir);
+
+      const tasks = await readJson<{ tasks: Array<{ id: string }> }>(
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
+      );
+
+      expect(tasks.tasks.some((entry) => entry.id === `${phaseId}/${milestoneId}/001`)).toBe(true);
     }, 120_000);
   });
 });

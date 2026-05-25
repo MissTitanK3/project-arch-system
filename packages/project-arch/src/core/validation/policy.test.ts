@@ -107,7 +107,13 @@ describe.sequential("core/validation/policy", () => {
   });
 
   it("detects domain ownership and architecture boundary violations", async () => {
-    const domainsPath = path.join(context.tempDir, "arch-domains", "domains.json");
+    const domainsPath = path.join(
+      context.tempDir,
+      "architecture",
+      "metadata",
+      "domains",
+      "domains.json",
+    );
     await writeJsonDeterministic(domainsPath, {
       domains: [{ name: "payments", ownedPackages: ["packages/api"] }],
     });
@@ -188,6 +194,8 @@ describe.sequential("core/validation/policy", () => {
     const phaseOverviewPath = path.join(
       context.tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "overview.md",
@@ -346,6 +354,8 @@ describe.sequential("core/validation/policy", () => {
     const phaseOverviewPath = path.join(
       context.tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "overview.md",
@@ -407,6 +417,8 @@ describe.sequential("core/validation/policy", () => {
     const phaseOverviewPath = path.join(
       context.tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "overview.md",
@@ -463,6 +475,8 @@ describe.sequential("core/validation/policy", () => {
     const phaseOverviewPath = path.join(
       context.tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "overview.md",

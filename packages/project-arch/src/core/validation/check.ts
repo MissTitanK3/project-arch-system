@@ -154,7 +154,8 @@ const STABLE_DIAGNOSTIC_CODE_MAPPINGS: Array<{ pattern: RegExp; code: string }> 
   { pattern: /^Missing graph artifact '/, code: "MISSING_GRAPH_ARTIFACT" },
   { pattern: /^Graph parity mismatch:/, code: "GRAPH_PARITY_MISMATCH" },
   {
-    pattern: /^Invalid concept-map schema at arch-model\/concept-map\.json:/,
+    pattern:
+      /^Invalid concept-map schema at (?:architecture\/metadata\/codebase-map\/concept-map\.json|arch-model\/concept-map\.json):/,
     code: "INVALID_CONCEPT_MAP_SCHEMA",
   },
   {
@@ -252,14 +253,22 @@ export async function runRepositoryChecks(
   const declaredDomains = await loadDeclaredDomains(cwd);
   const moduleGraphConfig = await loadModuleGraphConfig(cwd);
 
-  const conceptMapPath = path.join(cwd, "arch-model", "concept-map.json");
+  const conceptMapPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "codebase-map", "concept-map.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "codebase-map", "concept-map.json")
+    : path.join(cwd, "arch-model", "concept-map.json");
   if (await pathExists(conceptMapPath)) {
     try {
       const conceptMapRaw = await readJson<unknown>(conceptMapPath);
       conceptMapSchema.parse(conceptMapRaw);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      if (addError(`Invalid concept-map schema at arch-model/concept-map.json: ${detail}`)) {
+      if (
+        addError(
+          `Invalid concept-map schema at architecture/metadata/codebase-map/concept-map.json: ${detail}`,
+        )
+      ) {
         return toResult();
       }
     }
@@ -331,7 +340,7 @@ export async function runRepositoryChecks(
       if (runtimeModule && !declaredModules.has(runtimeModule)) {
         if (
           addError(
-            `Task ${key} references undeclared module '${runtimeModule}' via '${target}'. Declare it in arch-model/modules.json before implementation.`,
+            `Task ${key} references undeclared module '${runtimeModule}' via '${target}'. Declare it in architecture/metadata/codebase-map/modules.json before implementation.`,
           )
         ) {
           return toResult();
@@ -353,7 +362,7 @@ export async function runRepositoryChecks(
       if (domainName && !declaredDomains.has(domainName)) {
         if (
           addError(
-            `Task ${key} references undeclared domain '${domainName}' in tag '${tag}'. Declare it in arch-domains/domains.json before implementation.`,
+            `Task ${key} references undeclared domain '${domainName}' in tag '${tag}'. Declare it in architecture/metadata/domains/domains.json before implementation.`,
           )
         ) {
           return toResult();
@@ -402,7 +411,7 @@ export async function runRepositoryChecks(
       if (runtimeModule && !declaredModules.has(runtimeModule)) {
         if (
           addError(
-            `Decision ${id} references undeclared module '${runtimeModule}' via '${target}'. Declare it in arch-model/modules.json before implementation.`,
+            `Decision ${id} references undeclared module '${runtimeModule}' via '${target}'. Declare it in architecture/metadata/codebase-map/modules.json before implementation.`,
           )
         ) {
           return toResult();
@@ -964,7 +973,9 @@ async function loadDeclaredTargetAreas(
   const matches = [...content.matchAll(/`([^`]+)`/g)]
     .map((match) => normalizeRepoRef(match[1] ?? ""))
     .filter((value) =>
-      /^(apps|packages|architecture|arch-model|arch-domains|roadmap)\//.test(value),
+      /^(apps|packages|architecture|architecture\/metadata|arch-model|arch-domains|roadmap)\//.test(
+        value,
+      ),
     );
 
   return [...new Set(matches)].sort((a, b) => a.localeCompare(b));
@@ -1021,27 +1032,32 @@ async function runTaskGraphParityChecks(
     return failFast;
   };
 
-  const graphPath = path.join(cwd, ".arch", "graph.json");
-  const graphTasksPath = path.join(cwd, ".arch", "nodes", "tasks.json");
-  const milestoneToTaskPath = path.join(cwd, ".arch", "edges", "milestone_to_task.json");
+  const traceabilityRoot = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "traceability", "graph.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "traceability")
+    : path.join(cwd, ".arch");
+  const graphPath = path.join(traceabilityRoot, "graph.json");
+  const graphTasksPath = path.join(traceabilityRoot, "nodes", "tasks.json");
+  const milestoneToTaskPath = path.join(traceabilityRoot, "edges", "milestone_to_task.json");
 
   if (!(await pathExists(graphPath))) {
     addError(
-      "Missing graph artifact '.arch/graph.json'. Rebuild graph artifacts before running parity validation.",
+      "Missing graph artifact 'architecture/metadata/traceability/graph.json'. Rebuild graph artifacts before running parity validation.",
     );
     return errors;
   }
 
   if (!(await pathExists(graphTasksPath))) {
     addError(
-      "Missing graph artifact '.arch/nodes/tasks.json'. Rebuild graph artifacts before running parity validation.",
+      "Missing graph artifact 'architecture/metadata/traceability/nodes/tasks.json'. Rebuild graph artifacts before running parity validation.",
     );
     return errors;
   }
 
   if (!(await pathExists(milestoneToTaskPath))) {
     addError(
-      "Missing graph artifact '.arch/edges/milestone_to_task.json'. Rebuild graph artifacts before running parity validation.",
+      "Missing graph artifact 'architecture/metadata/traceability/edges/milestone_to_task.json'. Rebuild graph artifacts before running parity validation.",
     );
     return errors;
   }
@@ -1068,7 +1084,7 @@ async function runTaskGraphParityChecks(
   if (graphSummaryCount !== undefined && graphSummaryCount !== graphNodeCount) {
     if (
       addError(
-        `Graph parity mismatch: .arch/graph.json reports nodes.tasks=${graphSummaryCount}, but .arch/nodes/tasks.json has ${graphNodeCount} task nodes.`,
+        `Graph parity mismatch: architecture/metadata/traceability/graph.json reports nodes.tasks=${graphSummaryCount}, but architecture/metadata/traceability/nodes/tasks.json has ${graphNodeCount} task nodes.`,
       )
     ) {
       return errors;
@@ -1078,7 +1094,7 @@ async function runTaskGraphParityChecks(
   if (roadmapCount !== graphNodeCount) {
     if (
       addError(
-        `Graph parity mismatch: roadmap task files count is ${roadmapCount}, but .arch task node count is ${graphNodeCount} (.arch/nodes/tasks.json).`,
+        `Graph parity mismatch: roadmap task files count is ${roadmapCount}, but traceability task node count is ${graphNodeCount} (architecture/metadata/traceability/nodes/tasks.json).`,
       )
     ) {
       return errors;
@@ -1088,7 +1104,9 @@ async function runTaskGraphParityChecks(
   for (const taskRef of roadmapTaskMap.keys()) {
     if (!graphTaskMap.has(taskRef)) {
       if (
-        addError(`Graph parity mismatch: missing task node '${taskRef}' in .arch/nodes/tasks.json`)
+        addError(
+          `Graph parity mismatch: missing task node '${taskRef}' in architecture/metadata/traceability/nodes/tasks.json`,
+        )
       ) {
         return errors;
       }
@@ -1105,7 +1123,7 @@ async function runTaskGraphParityChecks(
     if (!milestoneEdges.has(expectedEdge)) {
       if (
         addError(
-          `Graph parity mismatch: missing milestone-task edge '${milestoneRef}' -> '${taskRef}' in .arch/edges/milestone_to_task.json`,
+          `Graph parity mismatch: missing milestone-task edge '${milestoneRef}' -> '${taskRef}' in architecture/metadata/traceability/edges/milestone_to_task.json`,
         )
       ) {
         return errors;
@@ -1116,7 +1134,7 @@ async function runTaskGraphParityChecks(
     if (graphStatus !== undefined && graphStatus !== roadmapStatus) {
       if (
         addError(
-          `Graph parity mismatch: status drift for task '${taskRef}' (roadmap='${roadmapStatus}', graph='${graphStatus}') in .arch/nodes/tasks.json`,
+          `Graph parity mismatch: status drift for task '${taskRef}' (roadmap='${roadmapStatus}', graph='${graphStatus}') in architecture/metadata/traceability/nodes/tasks.json`,
         )
       ) {
         return errors;
@@ -1138,7 +1156,11 @@ function parseDomainTag(tag: string): string | null {
 }
 
 async function loadDeclaredModules(cwd: string): Promise<Set<string>> {
-  const modulesPath = path.join(cwd, "arch-model", "modules.json");
+  const modulesPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json")
+    : path.join(cwd, "arch-model", "modules.json");
   if (!(await pathExists(modulesPath))) {
     return new Set<string>();
   }
@@ -1156,7 +1178,11 @@ async function loadDeclaredModules(cwd: string): Promise<Set<string>> {
 }
 
 async function loadDeclaredDomains(cwd: string): Promise<Set<string>> {
-  const domainsPath = path.join(cwd, "arch-domains", "domains.json");
+  const domainsPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "domains", "domains.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "domains", "domains.json")
+    : path.join(cwd, "arch-domains", "domains.json");
   if (!(await pathExists(domainsPath))) {
     return new Set<string>();
   }
@@ -1210,20 +1236,22 @@ function parseDiagnosticCode(message: string): { code: string | null; message: s
 
 function extractPath(message: string): string | null {
   const quotedMatch = message.match(
-    /'((?:\.arch|\.project-arch|arch-model|arch-domains|roadmap|apps|packages)\/[^'\s]+)'/,
+    /'((?:\.arch|\.project-arch|architecture\/metadata|arch-model|arch-domains|roadmap|apps|packages|architecture)\/[^'\s]+)'/,
   );
   if (quotedMatch) {
     return quotedMatch[1];
   }
 
   const inlineMatch = message.match(
-    /(?:\.arch|\.project-arch|arch-model|arch-domains|roadmap|apps|packages)\/[^\s'\])]+/,
+    /(?:\.arch|\.project-arch|architecture\/metadata|arch-model|arch-domains|roadmap|apps|packages|architecture)\/[^\s'\])]+/,
   );
   if (inlineMatch) {
     return inlineMatch[0];
   }
 
-  const conceptMapMatch = message.match(/at\s+(arch-model\/concept-map\.json)/);
+  const conceptMapMatch = message.match(
+    /at\s+(architecture\/metadata\/codebase-map\/concept-map\.json|arch-model\/concept-map\.json)/,
+  );
   if (conceptMapMatch) {
     return conceptMapMatch[1];
   }

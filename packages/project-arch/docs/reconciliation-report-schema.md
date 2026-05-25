@@ -4,13 +4,13 @@ This document defines the output contract for reconciliation reports produced by
 
 ## Contract Version
 
-- Current version: `1.0`
+- Current version: `2.0`
 - Status: stable
 
 ## Versioning Rules
 
-- Patch (`1.0.x`): clarifications only, no payload shape changes.
-- Minor (`1.x`): additive changes only (new optional fields).
+- Patch (`2.0.x`): clarifications only, no payload shape changes.
+- Minor (`2.x`): additive changes only (new optional fields).
 - Major (`x.0`): breaking changes (field removal, rename, or type change).
 
 ## Source
@@ -20,15 +20,16 @@ Derives from the output contract described in `feedback/reconciliation-implement
 
 ---
 
-## Shape (`1.0`)
+## Shape (`2.0`)
 
 ```typescript
 {
-  schemaVersion: "1.0",
+  schemaVersion: "2.0",
   id: string,
   type: "local-reconciliation" | "tooling-feedback",
   status: "no reconciliation needed" | "reconciliation suggested" | "reconciliation required" | "reconciliation complete",
   taskId: string,
+  runId?: string,
   date: "YYYY-MM-DD",
   author?: string,
   summary?: string,
@@ -50,11 +51,12 @@ Derives from the output contract described in `feedback/reconciliation-implement
 
 | Field                | Required | Type         | Description                                                                                                       |
 | -------------------- | -------- | ------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `schemaVersion`      | yes      | `"1.0"`      | Locked contract version.                                                                                          |
+| `schemaVersion`      | yes      | `"2.0"`      | Locked contract version.                                                                                          |
 | `id`                 | yes      | `string`     | Unique identifier for this report instance.                                                                       |
 | `type`               | yes      | enum         | `local-reconciliation` — scoped to the current repository. `tooling-feedback` — scoped to `project-arch` tooling. |
 | `status`             | yes      | enum         | One of the four reconciliation statuses (see below).                                                              |
 | `taskId`             | yes      | `string`     | The task ID that triggered this report.                                                                           |
+| `runId`              | no       | `string`     | Optional execution run identifier associated with the reconciliation event.                                       |
 | `date`               | yes      | `YYYY-MM-DD` | ISO 8601 date the report was produced.                                                                            |
 | `author`             | no       | `string`     | Agent or human who produced the report.                                                                           |
 | `summary`            | no       | `string`     | One or two sentences describing what triggered this report and what it covers.                                    |
@@ -128,11 +130,12 @@ The Markdown report template defined in `architecture/workflows/implementation-r
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "reconcile-001",
   "type": "local-reconciliation",
   "status": "reconciliation complete",
   "taskId": "001",
+  "runId": "run-2026-03-12-001",
   "date": "2026-03-12",
   "author": "agent",
   "summary": "Implemented implementation-reconciliation.md workflow doc and registered the reconciliation report schema.",
@@ -155,7 +158,7 @@ The Markdown report template defined in `architecture/workflows/implementation-r
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "feedback-001",
   "type": "tooling-feedback",
   "status": "reconciliation suggested",

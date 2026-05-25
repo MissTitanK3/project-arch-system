@@ -18,6 +18,20 @@ export interface SyncRegistryResult {
   skillCount: number;
 }
 
+async function resolveDefaultAgentsRoot(projectRoot: string): Promise<string> {
+  const canonical = path.join(projectRoot, ".project-arch", "agents");
+  if (await fs.pathExists(canonical)) {
+    return canonical;
+  }
+
+  const legacy = path.join(projectRoot, ".arch", "agents-of-arch");
+  if (await fs.pathExists(legacy)) {
+    return legacy;
+  }
+
+  return canonical;
+}
+
 function stableSkillPayload(
   resolved: ReturnType<typeof resolveSkills>,
   projectRoot: string,
@@ -59,7 +73,7 @@ export async function syncRegistry(
   projectRoot = process.cwd(),
   options: SyncRegistryOptions = {},
 ): Promise<SyncRegistryResult> {
-  const agentsRoot = options.archAgentsDir ?? path.join(projectRoot, ".arch", "agents-of-arch");
+  const agentsRoot = options.archAgentsDir ?? (await resolveDefaultAgentsRoot(projectRoot));
   const registryPath = path.join(agentsRoot, "registry.json");
 
   const loaded = await loadSkills(projectRoot, { archAgentsDir: agentsRoot });

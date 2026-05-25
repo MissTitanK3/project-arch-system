@@ -77,7 +77,7 @@ describe("cli/commands/feedback", () => {
     const issueStore = new IssueStore(path.join(process.cwd(), ".arch"));
     await issueStore.initialize();
     await issueStore.saveIssue(createIssue({ id: "FB-AMB-001", status: "open" }));
-    await issueStore.saveIssue(createIssue({ id: "FB-OPT-001", status: "dismissed" }));
+    await issueStore.saveIssue(createIssue({ id: "FB-OPT-001", status: "closed" }));
 
     const program = new Command();
     program.exitOverride();

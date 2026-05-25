@@ -32,10 +32,72 @@ async function assertInitialized(cwd = process.cwd()): Promise<void> {
   await assertSupportedRuntimeCompatibility("Phase creation", cwd);
 }
 
+type PhaseWritePlan = {
+  now: string;
+  projectId: string;
+  phaseId: string;
+  canonicalPhaseDir: string;
+  legacyPhaseDir: string;
+};
+
+function planPhaseWrite(input: {
+  phaseId: string;
+  projectId: string;
+  cwd: string;
+  now: string;
+}): PhaseWritePlan {
+  return {
+    now: input.now,
+    projectId: input.projectId,
+    phaseId: input.phaseId,
+    canonicalPhaseDir: projectPhaseDir(input.projectId, input.phaseId, input.cwd),
+    legacyPhaseDir: phaseDir(input.phaseId, input.cwd),
+  };
+}
+
+async function writeCanonicalPhaseScaffold(plan: PhaseWritePlan, cwd: string): Promise<void> {
+  assertWithinRoot(plan.canonicalPhaseDir, cwd, "phase directory");
+  await ensureDir(projectPhasesRoot(plan.projectId, cwd));
+  await ensureDir(projectPhaseMilestonesDir(plan.projectId, plan.phaseId, cwd));
+  await ensureDir(projectPhaseDecisionsRoot(plan.projectId, plan.phaseId, cwd));
+  await ensureDecisionIndex(projectPhaseDecisionsRoot(plan.projectId, plan.phaseId, cwd));
+
+  await writeMarkdownWithFrontmatter(
+    projectPhaseOverviewPath(plan.projectId, plan.phaseId, cwd),
+    {
+      schemaVersion: "2.0",
+      type: "phase-overview",
+      id: plan.phaseId,
+      createdAt: plan.now,
+      updatedAt: plan.now,
+    },
+    phaseOverviewTemplate(plan.phaseId),
+  );
+}
+
+async function writeCompatibilityPhaseScaffold(plan: PhaseWritePlan, cwd: string): Promise<void> {
+  assertWithinRoot(plan.legacyPhaseDir, cwd, "phase directory");
+  await ensureDir(path.join(plan.legacyPhaseDir, "milestones"));
+  await ensureDir(phaseDecisionsRoot(plan.phaseId, cwd));
+  await ensureDecisionIndex(phaseDecisionsRoot(plan.phaseId, cwd));
+
+  await writeMarkdownWithFrontmatter(
+    path.join(plan.legacyPhaseDir, "overview.md"),
+    {
+      schemaVersion: "2.0",
+      type: "phase-overview",
+      id: plan.phaseId,
+      createdAt: plan.now,
+      updatedAt: plan.now,
+    },
+    phaseOverviewTemplate(plan.phaseId),
+  );
+}
+
 export async function createPhase(
   id: string,
   cwd = process.cwd(),
-  options: { projectId?: string } = {},
+  options: { projectId?: string; compatibilityLegacyWrite?: boolean } = {},
 ): Promise<void> {
   assertSafeId(id, "phaseId");
   await assertInitialized(cwd);
@@ -58,42 +120,13 @@ export async function createPhase(
   }
   await savePhaseManifest(manifest, cwd);
 
-  const pDir = projectPhaseDir(projectId, id, cwd);
-  assertWithinRoot(pDir, cwd, "phase directory");
-  await ensureDir(projectPhasesRoot(projectId, cwd));
-  await ensureDir(projectPhaseMilestonesDir(projectId, id, cwd));
-  await ensureDir(projectPhaseDecisionsRoot(projectId, id, cwd));
-  await ensureDecisionIndex(projectPhaseDecisionsRoot(projectId, id, cwd));
+  const plan = planPhaseWrite({ phaseId: id, projectId, cwd, now });
+  const shouldWriteCompatibilityLegacy = options.compatibilityLegacyWrite ?? false;
 
-  await writeMarkdownWithFrontmatter(
-    projectPhaseOverviewPath(projectId, id, cwd),
-    {
-      schemaVersion: "2.0",
-      type: "phase-overview",
-      id,
-      createdAt: now,
-      updatedAt: now,
-    },
-    phaseOverviewTemplate(id),
-  );
-
-  const legacyPhaseDir = phaseDir(id, cwd);
-  assertWithinRoot(legacyPhaseDir, cwd, "phase directory");
-  await ensureDir(path.join(legacyPhaseDir, "milestones"));
-  await ensureDir(phaseDecisionsRoot(id, cwd));
-  await ensureDecisionIndex(phaseDecisionsRoot(id, cwd));
-
-  await writeMarkdownWithFrontmatter(
-    path.join(legacyPhaseDir, "overview.md"),
-    {
-      schemaVersion: "2.0",
-      type: "phase-overview",
-      id,
-      createdAt: now,
-      updatedAt: now,
-    },
-    phaseOverviewTemplate(id),
-  );
+  await writeCanonicalPhaseScaffold(plan, cwd);
+  if (shouldWriteCompatibilityLegacy) {
+    await writeCompatibilityPhaseScaffold(plan, cwd);
+  }
 
   await rebuildArchitectureGraph(cwd);
 }

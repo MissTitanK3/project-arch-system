@@ -32,11 +32,25 @@ describe.sequential("sdk/report", () => {
     expect(result.data.text).toContain("Value");
     expect(result.data.text).toContain("active project");
     expect(result.data.text).toContain("active phase");
-    expect(result.data.report.compatibility.mode).toBe("hybrid");
+    expect(result.data.report.compatibility.mode).toBe("project-scoped-only");
+    expect(result.data.graphSnapshotLoaded).toBe(true);
+    expect(result.data.report.graph.snapshotLoaded).toBe(true);
+    expect(result.data.report.graph.metadata).not.toBeNull();
+    expect(typeof result.data.report.graph.lastSync).toBe("string");
     expect(result.data.report.activeProject).toBeDefined();
     expect(result.data.report.activePhase).toBeDefined();
     expect(result.data.report.docsCoverage).toBeDefined();
     expect(typeof result.data.graphSnapshotLoaded).toBe("boolean");
+  }, 120_000);
+
+  it("should surface hybrid reporting compatibility when the legacy mirror is present", async () => {
+    await fs.ensureDir(path.join(process.cwd(), "roadmap", "phases"));
+
+    const result = await reportGenerate();
+
+    resultAssertions.assertSuccess(result);
+    expect(result.data.report.compatibility.mode).toBe("hybrid");
+    expect(result.data.report.compatibility.supported).toBe(true);
   }, 120_000);
 
   it("should support verbose mode option", async () => {
@@ -66,6 +80,7 @@ describe.sequential("sdk/report", () => {
   }, 120_000);
 
   it("should continue generating report when graph snapshot is unavailable", async () => {
+    await fs.remove(path.join(process.cwd(), "architecture", "metadata", "traceability"));
     await fs.remove(path.join(process.cwd(), ".arch"));
 
     const result = await reportGenerate();
@@ -164,8 +179,11 @@ describe.sequential("sdk/report", () => {
     );
     expect(result.data.report.graph).toEqual(
       expect.objectContaining({
-        snapshotLoaded: expect.any(Boolean),
-        lastSync: expect.anything(),
+        snapshotLoaded: true,
+        lastSync: expect.any(String),
+        metadata: expect.objectContaining({
+          schemaVersion: expect.any(String),
+        }),
       }),
     );
   }, 120_000);

@@ -89,11 +89,14 @@ describe.sequential("graph/traceTask", () => {
     expect(trace.modules).toContain("packages/ui");
   }, 120_000);
 
-  it("should throw when .arch graph is missing", async () => {
-    await rm(path.join(tempDir, ".arch"), { recursive: true, force: true });
+  it("should throw when traceability graph is missing", async () => {
+    await rm(path.join(tempDir, "architecture", "metadata", "traceability"), {
+      recursive: true,
+      force: true,
+    });
 
     await expect(traceTask("phase/milestone/001", tempDir)).rejects.toThrow(
-      ".arch/graph.json not found",
+      "architecture/metadata/traceability/graph.json not found",
     );
   });
 
@@ -101,7 +104,7 @@ describe.sequential("graph/traceTask", () => {
     await buildGraph(tempDir);
 
     await expect(traceTask("missing/phase/999", tempDir)).rejects.toThrow(
-      "not found in .arch graph",
+      "not found in architecture metadata traceability graph",
     );
   }, 120_000);
 });

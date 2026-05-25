@@ -1,5 +1,10 @@
 import path from "path";
-import { loadPhaseManifest, resolvePhaseProjectId, resolvePhaseRecord } from "../manifests";
+import {
+  loadPhaseManifest,
+  loadProjectManifest,
+  resolvePhaseProjectId,
+  resolvePhaseRecord,
+} from "../manifests";
 import { assertSupportedRuntimeCompatibility } from "./compatibility";
 import {
   milestoneDir,
@@ -35,6 +40,17 @@ export async function resolvePhaseRuntimePaths(
   }
 
   const projectId = resolvePhaseProjectId(manifest, phaseId);
+  try {
+    await loadProjectManifest(projectId, cwd);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const wrappedError = Object.assign(
+      new Error(`Phase '${phaseId}' ownership project '${projectId}' is invalid: ${message}`),
+      { cause: error },
+    );
+    throw wrappedError;
+  }
+
   return {
     projectId,
     canonicalPhaseDir: projectPhaseDir(projectId, phaseId, cwd),

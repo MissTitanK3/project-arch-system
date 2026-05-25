@@ -45,7 +45,7 @@ describe("Help Topics", () => {
         "Canonical fresh-output surface: .project-arch/workflows/*.workflow.md",
       );
       expect(content).toContain(".github/workflows/*.md");
-      expect(content).toContain("non-canonical");
+      expect(content).toContain("compatibility-only context for older repos");
       expect(content).not.toContain("Canonical fresh-output surface: .github/workflows/*.md");
       expect(content).toContain("pa task new");
       expect(content).toContain("pa lint frontmatter --fix");
@@ -186,10 +186,12 @@ describe("Help Topics", () => {
         expect(commandsTopic).toContain("--with-workflows");
         expect(commandsTopic).toContain(".project-arch/workflows/*.workflow.md");
         expect(commandsTopic).toContain(".github/workflows/*.md");
-        expect(commandsTopic).toContain("non-canonical");
-        expect(commandsTopic).not.toContain(
-          "materialize first-pass workflow files in .github/workflows",
+        expect(commandsTopic).toContain(
+          "fresh init writes .project-arch/workflows/*.workflow.md instead",
         );
+        expect(commandsTopic).toContain("First-run no-test baseline");
+        expect(commandsTopic).toContain("No projects matched the filters");
+        expect(commandsTopic).toContain("expected and still exits successfully");
       });
 
       it("should include runtime command metadata registry derived from sdk metadata", () => {

@@ -20,10 +20,10 @@ describe.sequential("graph/buildGraph", () => {
     }
   });
 
-  it("should generate .arch/graph.json", async () => {
+  it("should generate canonical traceability graph artifacts", async () => {
     await buildGraph(tempDir);
 
-    const graphPath = path.join(tempDir, ".arch", "graph.json");
+    const graphPath = path.join(tempDir, "architecture", "metadata", "traceability", "graph.json");
     expect(await pathExists(graphPath)).toBe(true);
 
     const graph = await readJson<{ schemaVersion: string }>(graphPath);
@@ -37,7 +37,7 @@ describe.sequential("graph/buildGraph", () => {
     const graph = await readJson<{
       nodes: Record<string, number>;
       edges: Record<string, number>;
-    }>(path.join(tempDir, ".arch", "graph.json"));
+    }>(path.join(tempDir, "architecture", "metadata", "traceability", "graph.json"));
 
     expect(graph.nodes.tasks).toBeGreaterThan(0);
     expect(graph.nodes.milestones).toBeGreaterThan(0);

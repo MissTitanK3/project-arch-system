@@ -202,4 +202,58 @@ describe("createPhase", () => {
       "storefront",
     );
   });
+
+  it("fails clearly when phase project ownership target does not exist", async () => {
+    await expect(
+      createPhase("phase-missing-project", tempDir, { projectId: "ghost-project" }),
+    ).rejects.toThrow(/Missing project manifest|ghost-project/);
+  });
+
+  it("does not write legacy phase scaffold by default", async () => {
+    await createPhase("phase-canonical-only", tempDir);
+
+    const canonicalOverviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-canonical-only",
+      "overview.md",
+    );
+    const legacyOverviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-canonical-only",
+      "overview.md",
+    );
+
+    expect(await fs.pathExists(canonicalOverviewPath)).toBe(true);
+    expect(await fs.pathExists(legacyOverviewPath)).toBe(false);
+  });
+
+  it("writes compatibility legacy scaffold only when explicitly requested", async () => {
+    await createPhase("phase-compatibility", tempDir, { compatibilityLegacyWrite: true });
+
+    const canonicalOverviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-compatibility",
+      "overview.md",
+    );
+    const legacyOverviewPath = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-compatibility",
+      "overview.md",
+    );
+
+    expect(await fs.pathExists(canonicalOverviewPath)).toBe(true);
+    expect(await fs.pathExists(legacyOverviewPath)).toBe(true);
+  });
 });

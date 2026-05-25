@@ -11,12 +11,17 @@ export async function checkModules(
 ): Promise<DriftFinding[]> {
   const findings: DriftFinding[] = [];
 
-  const modulesPath = path.join(cwd, "arch-model", "modules.json");
+  const modulesPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json")
+    : path.join(cwd, "arch-model", "modules.json");
   if (!(await pathExists(modulesPath))) {
     findings.push({
       severity: "warning",
       code: "ARCH_MAP_MISSING",
-      message: "arch-model/modules.json not found; module drift checks skipped.",
+      message:
+        "architecture/metadata/codebase-map/modules.json not found; module drift checks skipped.",
     });
     return findings;
   }
@@ -49,7 +54,7 @@ export async function checkModules(
     findings.push({
       severity: "error",
       code: "UNMAPPED_MODULE",
-      message: `${moduleName} not declared in arch-model/modules.json`,
+      message: `${moduleName} not declared in architecture/metadata/codebase-map/modules.json`,
     });
 
     const coveredByDecision = decisionRecords.some((decision) =>

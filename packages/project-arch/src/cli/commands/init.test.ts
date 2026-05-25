@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Command } from "commander";
 import path from "path";
 import fs, { readdir } from "fs-extra";
 import { registerInitCommand } from "./init";
+import * as initSdk from "../../sdk/init";
 import { createTempDir, fileAssertions, type TestProjectContext } from "../../test/helpers";
 import { readMarkdownWithFrontmatter } from "../../utils/fs";
 import { initializeProject } from "../../core/init/initializeProject";
@@ -11,6 +12,26 @@ describe("cli/commands/init", () => {
   let context: TestProjectContext;
   const originalCwd = process.cwd();
 
+  async function findRepoRoot(startDir: string): Promise<string> {
+    let current = path.resolve(startDir);
+
+    while (true) {
+      const hasWorkspace = await fs.pathExists(path.join(current, "pnpm-workspace.yaml"));
+      const hasProjectArchPackage = await fs.pathExists(
+        path.join(current, "packages", "project-arch", "package.json"),
+      );
+      if (hasWorkspace && hasProjectArchPackage) {
+        return current;
+      }
+
+      const parent = path.dirname(current);
+      if (parent === current) {
+        throw new Error(`Unable to resolve repo root from '${startDir}'`);
+      }
+      current = parent;
+    }
+  }
+
   beforeEach(async () => {
     context = await createTempDir();
     process.chdir(context.tempDir);
@@ -18,6 +39,7 @@ describe("cli/commands/init", () => {
 
   afterEach(async () => {
     process.chdir(originalCwd);
+    vi.restoreAllMocks();
     await context.cleanup();
   });
 
@@ -45,14 +67,83 @@ describe("cli/commands/init", () => {
       const helpText = output.join("");
 
       expect(helpText).toContain("pa init");
+      expect(helpText).toContain("--mono");
       expect(helpText).toContain("--force");
+      expect(helpText).toContain("default: mono");
+      expect(helpText).toContain("compatibility alias");
       expect(helpText).toContain("nextjs-turbo");
       expect(helpText).toContain("--with-ai");
       expect(helpText).toContain("--with-workflows");
       expect(helpText).toContain(".project-arch/workflows/*.workflow.md");
       expect(helpText).toContain("legacy .github/workflows/*.md is non-canonical");
+      expect(helpText).toContain("Equivalent to --template mono");
+      expect(helpText).toContain(
+        "Creates directory structure: roadmap/, architecture/, .project-arch/",
+      );
+      expect(helpText).not.toContain("arch-domains/");
+      expect(helpText).not.toContain("arch-model/");
       expect(helpText).not.toContain("materialize first-pass workflow files in .github/workflows");
       expect(helpText).not.toContain("Create first-pass workflow files in .github/workflows");
+    });
+
+    it("normalizes --mono to template mono", async () => {
+      const initRunSpy = vi
+        .spyOn(initSdk, "initRun")
+        .mockResolvedValue({ success: true, data: { initialized: true } });
+
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await program.parseAsync(["node", "test", "init", "--mono"]);
+
+      expect(initRunSpy).toHaveBeenCalledTimes(1);
+      expect(initRunSpy.mock.calls[0][0]).toMatchObject({ template: "mono" });
+    });
+
+    it("supports -m as shorthand alias for --mono", async () => {
+      const initRunSpy = vi
+        .spyOn(initSdk, "initRun")
+        .mockResolvedValue({ success: true, data: { initialized: true } });
+
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await program.parseAsync(["node", "test", "init", "-m"]);
+
+      expect(initRunSpy).toHaveBeenCalledTimes(1);
+      expect(initRunSpy.mock.calls[0][0]).toMatchObject({ template: "mono" });
+    });
+
+    it("keeps --template mono as compatibility alias", async () => {
+      const initRunSpy = vi
+        .spyOn(initSdk, "initRun")
+        .mockResolvedValue({ success: true, data: { initialized: true } });
+
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await program.parseAsync(["node", "test", "init", "--template", "mono"]);
+
+      expect(initRunSpy).toHaveBeenCalledTimes(1);
+      expect(initRunSpy.mock.calls[0][0]).toMatchObject({ template: "mono" });
+    });
+
+    it("rejects conflicting --mono and non-mono --template combinations", async () => {
+      const initRunSpy = vi
+        .spyOn(initSdk, "initRun")
+        .mockResolvedValue({ success: true, data: { initialized: true } });
+
+      const program = new Command();
+      program.exitOverride();
+      registerInitCommand(program);
+
+      await expect(
+        program.parseAsync(["node", "test", "init", "--mono", "--template", "nextjs-turbo"]),
+      ).rejects.toThrow(/--mono cannot be combined with --template/i);
+      expect(initRunSpy).not.toHaveBeenCalled();
     });
 
     it("should execute init with default options", async () => {
@@ -65,10 +156,10 @@ describe("cli/commands/init", () => {
       // Verify core directories were created
       await fileAssertions.assertFileExists(context.tempDir, "roadmap");
       await fileAssertions.assertFileExists(context.tempDir, "architecture");
-      await fileAssertions.assertFileExists(context.tempDir, "arch-domains");
-      await fileAssertions.assertFileExists(context.tempDir, "arch-model");
-      await fileAssertions.assertFileExists(context.tempDir, ".arch/agents-of-arch/README.md");
-      await fileAssertions.assertFileExists(context.tempDir, ".arch/agents-of-arch/registry.json");
+      await fileAssertions.assertFileExists(context.tempDir, "architecture/metadata/domains");
+      await fileAssertions.assertFileExists(context.tempDir, "architecture/metadata/codebase-map");
+      await fileAssertions.assertFileExists(context.tempDir, ".project-arch/agents/README.md");
+      await fileAssertions.assertFileExists(context.tempDir, ".project-arch/agents/registry.json");
     });
 
     it("should execute init with custom template option", async () => {
@@ -120,8 +211,8 @@ describe("cli/commands/init", () => {
 
       await fileAssertions.assertFileExists(context.tempDir, "roadmap");
       await fileAssertions.assertFileExists(context.tempDir, "architecture");
-      await fileAssertions.assertFileExists(context.tempDir, "arch-domains");
-      await fileAssertions.assertFileExists(context.tempDir, "arch-model");
+      await fileAssertions.assertFileExists(context.tempDir, "architecture/metadata/domains");
+      await fileAssertions.assertFileExists(context.tempDir, "architecture/metadata/codebase-map");
     });
 
     it("should not create legacy apps directory", async () => {
@@ -379,7 +470,7 @@ describe("cli/commands/init", () => {
 
   describe("root sandbox init scripts", () => {
     it("defines tier-specific sandbox init commands in package.json", async () => {
-      const repoRoot = path.resolve(originalCwd, "..", "..");
+      const repoRoot = await findRepoRoot(originalCwd);
       const packageJsonPath = path.join(repoRoot, "package.json");
       const helperScriptPath = path.join(repoRoot, "scripts", "sandbox-init.mjs");
       const packageJson = await fs.readJson(packageJsonPath);

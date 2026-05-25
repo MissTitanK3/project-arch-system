@@ -82,6 +82,7 @@ export function registerDoctorCommand(
                 issueCount: result.issues.length,
                 repairedCount: result.repairedCount,
               },
+              compatibility: result.compatibility,
               issues: result.issues,
             },
             null,
@@ -91,6 +92,12 @@ export function registerDoctorCommand(
       } else {
         console.log(`status: ${result.status}`);
         console.log(`issues: ${result.issues.length}`);
+        console.log(
+          `compatibility: ${result.compatibility.mode} (${result.compatibility.supported ? "supported" : "unsupported"})`,
+        );
+        console.log(
+          `compatibility roots: canonical=${result.compatibility.canonicalRootExists ? "present" : "missing"}, legacy=${result.compatibility.legacyRootExists ? "present" : "missing"}`,
+        );
         if (options.repair) {
           console.log(`repaired: ${result.repairedCount}`);
         }

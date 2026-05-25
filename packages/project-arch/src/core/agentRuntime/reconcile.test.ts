@@ -174,10 +174,8 @@ traceLinks: []
     expect(result.schemaVersion).toBe("2.0");
     expect(result.status).toBe("reconciled");
     expect(result.reconciliationStatus).toBe("completed");
-    expect(result.reportPath).toMatch(/^\.project-arch\/reconcile\/001-\d{4}-\d{2}-\d{2}\.json$/);
-    expect(result.reportMarkdownPath).toMatch(
-      /^\.project-arch\/reconcile\/001-\d{4}-\d{2}-\d{2}\.md$/,
-    );
+    expect(result.reportPath).toMatch(/^\.project-arch\/reconcile\/001-\d{8}T\d{9}\.json$/);
+    expect(result.reportMarkdownPath).toMatch(/^\.project-arch\/reconcile\/001-\d{8}T\d{9}\.md$/);
 
     const updatedRunRecord = await readAgentRunRecord(runId, context.tempDir);
     expect(updatedRunRecord.reconciliationStatus).toBe("completed");

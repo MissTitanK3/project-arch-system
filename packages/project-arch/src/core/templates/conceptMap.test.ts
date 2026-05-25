@@ -7,8 +7,7 @@ describe("core/templates/conceptMap", () => {
 
     expect(template.schemaVersion).toBe("2.0");
     expect(Array.isArray(template.concepts)).toBe(true);
-    expect(Array.isArray(template.dependencyGraph.nodes)).toBe(true);
-    expect(Array.isArray(template.dependencyGraph.edges)).toBe(true);
+    expect(Array.isArray(template.domainModuleMapping)).toBe(true);
     expect(Array.isArray(template.implementationChecklist)).toBe(true);
   });
 
@@ -16,23 +15,22 @@ describe("core/templates/conceptMap", () => {
     const template = defaultConceptMapTemplate();
     const concept = template.concepts[0];
 
-    expect(concept.concept).toBe("example-concept");
+    expect(concept.id).toBe("concept-example");
+    expect(concept.name).toBe("Example Concept");
     expect(concept.owningDomain).toBe("domain-name");
-    expect(concept.status).toBe("proposed");
-    expect(concept.relatedModules).toContain("packages/example");
-    expect(concept.relatedTasks).toContain("001");
+    expect(concept.moduleResponsibilities).toContain("packages/example");
+    expect(concept.implementationSurfaces[0]?.path).toBe("packages/example/src");
   });
 
-  it("should include dependency graph and checklist placeholders", () => {
+  it("should include domain mappings and checklist placeholders", () => {
     const template = defaultConceptMapTemplate();
 
-    expect(template.dependencyGraph.nodes).toContain("example-concept");
-    expect(template.dependencyGraph.edges[0]).toEqual({
-      from: "example-concept",
-      to: "prerequisite-concept",
-      type: "depends-on",
+    expect(template.domainModuleMapping[0]).toEqual({
+      domain: "domain-name",
+      module: "packages/example",
+      responsibility: "Owns the core concept implementation.",
     });
-    expect(template.implementationChecklist[0].concept).toBe("example-concept");
-    expect(template.implementationChecklist[0].completed).toBe(false);
+    expect(template.implementationChecklist[0].conceptId).toBe("concept-example");
+    expect(Array.isArray(template.implementationChecklist[0].checks)).toBe(true);
   });
 });

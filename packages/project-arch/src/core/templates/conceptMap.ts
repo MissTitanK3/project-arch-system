@@ -11,27 +11,30 @@
  */
 
 export interface ConceptMapping {
-  concept: string;
+  id: string;
+  name: string;
   description: string;
   owningDomain: string;
-  relatedModules: string[];
-  relatedTasks: string[];
-  relatedDecisions: string[];
+  moduleResponsibilities: string[];
+  implementationSurfaces: Array<{
+    type: string;
+    path: string;
+    description?: string;
+  }>;
   dependencies: string[];
-  status: "proposed" | "in_progress" | "implemented";
 }
 
 export interface ConceptMap {
   schemaVersion: string;
   concepts: ConceptMapping[];
-  dependencyGraph: {
-    nodes: string[];
-    edges: Array<{ from: string; to: string; type: string }>;
-  };
+  domainModuleMapping: Array<{
+    domain: string;
+    module: string;
+    responsibility: string;
+  }>;
   implementationChecklist: Array<{
-    concept: string;
-    completed: boolean;
-    blockers: string[];
+    conceptId: string;
+    checks: string[];
   }>;
 }
 
@@ -40,31 +43,34 @@ export function defaultConceptMapTemplate(): ConceptMap {
     schemaVersion: "2.0",
     concepts: [
       {
-        concept: "example-concept",
+        id: "concept-example",
+        name: "Example Concept",
         description: "Description of what this concept represents",
         owningDomain: "domain-name",
-        relatedModules: ["packages/example", "apps/example"],
-        relatedTasks: ["001", "002"],
-        relatedDecisions: ["ADR-001"],
+        moduleResponsibilities: ["packages/example", "apps/example"],
+        implementationSurfaces: [
+          {
+            type: "service",
+            path: "packages/example/src",
+            description: "Primary implementation surface for the concept.",
+          },
+        ],
         dependencies: ["prerequisite-concept"],
-        status: "proposed",
       },
     ],
-    dependencyGraph: {
-      nodes: ["example-concept", "prerequisite-concept"],
-      edges: [
-        {
-          from: "example-concept",
-          to: "prerequisite-concept",
-          type: "depends-on",
-        },
-      ],
-    },
+    domainModuleMapping: [
+      {
+        domain: "domain-name",
+        module: "packages/example",
+        responsibility: "Owns the core concept implementation.",
+      },
+    ],
     implementationChecklist: [
       {
-        concept: "example-concept",
-        completed: false,
-        blockers: [],
+        conceptId: "concept-example",
+        checks: [
+          "Document responsibilities in architecture/metadata/codebase-map/concept-map.json",
+        ],
       },
     ],
   };

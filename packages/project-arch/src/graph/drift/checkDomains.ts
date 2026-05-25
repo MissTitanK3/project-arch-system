@@ -13,13 +13,17 @@ export async function checkDomains(
   taskRecords: TaskRecord[],
 ): Promise<DriftFinding[]> {
   const findings: DriftFinding[] = [];
-  const domainsPath = path.join(cwd, "arch-domains", "domains.json");
+  const domainsPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "domains", "domains.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "domains", "domains.json")
+    : path.join(cwd, "arch-domains", "domains.json");
 
   if (!(await pathExists(domainsPath))) {
     findings.push({
       severity: "warning",
       code: "ARCH_DOMAINS_MISSING",
-      message: "arch-domains/domains.json not found; domain drift checks skipped.",
+      message: "architecture/metadata/domains/domains.json not found; domain drift checks skipped.",
     });
     return findings;
   }

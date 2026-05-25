@@ -8,7 +8,7 @@ import {
   reconciliationReportSchema,
 } from "../../schemas/reconciliationReport";
 import { detectReconciliationTriggers } from "./triggerDetection";
-import { currentDateISO } from "../../utils/date";
+import { currentDateISO, currentTimestampCompact } from "../../utils/date";
 import { renderReconciliationReportMarkdown } from "./reportMarkdown";
 import {
   loadReconciliationLifecycleSettings,
@@ -182,8 +182,9 @@ export async function runReconcile(options: RunReconcileOptions): Promise<RunRec
     (frontmatter.traceLinks ?? []).length === 0 ? ["Task has no traceLinks declared"] : [];
 
   // 5. Build report object
+  const timestamp = currentTimestampCompact();
   const date = currentDateISO();
-  const reportId = `reconcile-${frontmatter.id}-${date}`;
+  const reportId = `reconcile-${frontmatter.id}-${timestamp}`;
 
   const proposedActions: string[] = [];
   if (firedTriggers.some((t) => t.name === "module-boundary")) {
@@ -224,8 +225,8 @@ export async function runReconcile(options: RunReconcileOptions): Promise<RunRec
   const outDir = reconcileOutputDir(cwd);
   await fs.ensureDir(outDir);
 
-  const jsonPath = path.join(outDir, `${frontmatter.id}-${date}.json`);
-  const markdownPath = path.join(outDir, `${frontmatter.id}-${date}.md`);
+  const jsonPath = path.join(outDir, `${frontmatter.id}-${timestamp}.json`);
+  const markdownPath = path.join(outDir, `${frontmatter.id}-${timestamp}.md`);
 
   await assertRealpathWithinRoot(jsonPath, cwd, "reconciliation report json");
   await assertRealpathWithinRoot(markdownPath, cwd, "reconciliation report markdown");

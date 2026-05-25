@@ -31,6 +31,7 @@ import {
 import {
   ensureDecisionIndex,
   loadPhaseManifest,
+  loadProjectManifest,
   milestoneOverviewPath,
   rebuildArchitectureGraph,
   resolvePhaseProjectId,
@@ -54,10 +55,146 @@ async function assertInitialized(cwd = process.cwd()): Promise<void> {
   await assertSupportedRuntimeCompatibility("Milestone runtime", cwd);
 }
 
+type MilestoneWritePlan = {
+  now: string;
+  phaseId: string;
+  milestoneId: string;
+  projectId: string;
+  canonicalMilestoneDir: string;
+  legacyMilestoneDir: string;
+  canonicalTargetsPath: string;
+  legacyTargetsPath: string;
+};
+
+function planMilestoneWrite(input: {
+  phaseId: string;
+  milestoneId: string;
+  projectId: string;
+  cwd: string;
+  now: string;
+}): MilestoneWritePlan {
+  const canonicalMilestoneDir = projectMilestoneDir(
+    input.projectId,
+    input.phaseId,
+    input.milestoneId,
+    input.cwd,
+  );
+  const legacyMilestoneDir = milestoneDir(input.phaseId, input.milestoneId, input.cwd);
+
+  return {
+    now: input.now,
+    phaseId: input.phaseId,
+    milestoneId: input.milestoneId,
+    projectId: input.projectId,
+    canonicalMilestoneDir,
+    legacyMilestoneDir,
+    canonicalTargetsPath: projectMilestoneTargetsPath(
+      input.projectId,
+      input.phaseId,
+      input.milestoneId,
+      input.cwd,
+    ),
+    legacyTargetsPath: path.join(legacyMilestoneDir, "targets.md"),
+  };
+}
+
+async function writeCanonicalMilestoneScaffold(
+  plan: MilestoneWritePlan,
+  cwd: string,
+): Promise<void> {
+  assertWithinRoot(plan.canonicalMilestoneDir, cwd, "milestone directory");
+  await ensureDir(
+    projectMilestoneTaskLaneDir(plan.projectId, plan.phaseId, plan.milestoneId, "planned", cwd),
+  );
+  await ensureDir(
+    projectMilestoneTaskLaneDir(plan.projectId, plan.phaseId, plan.milestoneId, "discovered", cwd),
+  );
+  await ensureDir(
+    projectMilestoneTaskLaneDir(plan.projectId, plan.phaseId, plan.milestoneId, "backlog", cwd),
+  );
+  await ensureDir(
+    projectMilestoneDecisionsRoot(plan.projectId, plan.phaseId, plan.milestoneId, cwd),
+  );
+  await ensureDecisionIndex(
+    projectMilestoneDecisionsRoot(plan.projectId, plan.phaseId, plan.milestoneId, cwd),
+  );
+
+  const milestoneManifest = {
+    schemaVersion: "2.0",
+    id: plan.milestoneId,
+    phaseId: plan.phaseId,
+    createdAt: plan.now,
+    updatedAt: plan.now,
+  };
+  await writeJsonDeterministic(
+    path.join(plan.canonicalMilestoneDir, "manifest.json"),
+    milestoneManifest,
+  );
+
+  await writeMarkdownWithFrontmatter(
+    projectMilestoneOverviewPath(plan.projectId, plan.phaseId, plan.milestoneId, cwd),
+    {
+      schemaVersion: "2.0",
+      type: "milestone-overview",
+      id: plan.milestoneId,
+      phaseId: plan.phaseId,
+      createdAt: plan.now,
+      updatedAt: plan.now,
+    },
+    milestoneOverviewTemplate(plan.phaseId, plan.milestoneId),
+  );
+
+  if (!(await pathExists(plan.canonicalTargetsPath))) {
+    await fs.writeFile(plan.canonicalTargetsPath, `${milestoneTargetsTemplate()}\n`, "utf8");
+  }
+}
+
+async function writeCompatibilityMilestoneScaffold(
+  plan: MilestoneWritePlan,
+  cwd: string,
+): Promise<void> {
+  assertWithinRoot(plan.legacyMilestoneDir, cwd, "milestone directory");
+  await ensureDir(path.join(plan.legacyMilestoneDir, "tasks", "planned"));
+  await ensureDir(path.join(plan.legacyMilestoneDir, "tasks", "discovered"));
+  await ensureDir(path.join(plan.legacyMilestoneDir, "tasks", "backlog"));
+  await ensureDir(path.join(plan.legacyMilestoneDir, "decisions"));
+  await ensureDecisionIndex(path.join(plan.legacyMilestoneDir, "decisions"));
+
+  const milestoneManifest = {
+    schemaVersion: "2.0",
+    id: plan.milestoneId,
+    phaseId: plan.phaseId,
+    createdAt: plan.now,
+    updatedAt: plan.now,
+  };
+  await writeJsonDeterministic(
+    path.join(plan.legacyMilestoneDir, "manifest.json"),
+    milestoneManifest,
+  );
+
+  await writeMarkdownWithFrontmatter(
+    milestoneOverviewPath(plan.phaseId, plan.milestoneId, cwd),
+    {
+      schemaVersion: "2.0",
+      type: "milestone-overview",
+      id: plan.milestoneId,
+      phaseId: plan.phaseId,
+      createdAt: plan.now,
+      updatedAt: plan.now,
+    },
+    milestoneOverviewTemplate(plan.phaseId, plan.milestoneId),
+  );
+
+  if (!(await pathExists(plan.legacyTargetsPath))) {
+    await fs.writeFile(plan.legacyTargetsPath, `${milestoneTargetsTemplate()}\n`, "utf8");
+  }
+}
+
 export async function createMilestone(
   phaseId: string,
   milestoneId: string,
   cwd = process.cwd(),
+  options: { compatibilityLegacyWrite?: boolean } = {},
 ): Promise<void> {
   assertSafeId(phaseId, "phaseId");
   assertSafeId(milestoneId, "milestoneId");
@@ -70,71 +207,32 @@ export async function createMilestone(
   }
 
   const projectId = resolvePhaseProjectId(manifest, phaseId);
-  const canonicalMilestoneDir = projectMilestoneDir(projectId, phaseId, milestoneId, cwd);
-  const legacyMilestoneDir = milestoneDir(phaseId, milestoneId, cwd);
-  assertWithinRoot(canonicalMilestoneDir, cwd, "milestone directory");
-  if ((await pathExists(canonicalMilestoneDir)) || (await pathExists(legacyMilestoneDir))) {
+  try {
+    await loadProjectManifest(projectId, cwd);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const wrappedError = Object.assign(
+      new Error(
+        `Milestone '${phaseId}/${milestoneId}' ownership project '${projectId}' is invalid: ${message}`,
+      ),
+      { cause: error },
+    );
+    throw wrappedError;
+  }
+
+  const now = currentDateISO();
+  const plan = planMilestoneWrite({ phaseId, milestoneId, projectId, cwd, now });
+  if (
+    (await pathExists(plan.canonicalMilestoneDir)) ||
+    (await pathExists(plan.legacyMilestoneDir))
+  ) {
     throw new Error(`Milestone '${phaseId}/${milestoneId}' already exists`);
   }
 
-  await ensureDir(projectMilestoneTaskLaneDir(projectId, phaseId, milestoneId, "planned", cwd));
-  await ensureDir(projectMilestoneTaskLaneDir(projectId, phaseId, milestoneId, "discovered", cwd));
-  await ensureDir(projectMilestoneTaskLaneDir(projectId, phaseId, milestoneId, "backlog", cwd));
-  await ensureDir(projectMilestoneDecisionsRoot(projectId, phaseId, milestoneId, cwd));
-  await ensureDecisionIndex(projectMilestoneDecisionsRoot(projectId, phaseId, milestoneId, cwd));
-
-  await ensureDir(path.join(legacyMilestoneDir, "tasks", "planned"));
-  await ensureDir(path.join(legacyMilestoneDir, "tasks", "discovered"));
-  await ensureDir(path.join(legacyMilestoneDir, "tasks", "backlog"));
-  await ensureDir(path.join(legacyMilestoneDir, "decisions"));
-  await ensureDecisionIndex(path.join(legacyMilestoneDir, "decisions"));
-
-  const now = currentDateISO();
-  const milestoneManifest = {
-    schemaVersion: "2.0",
-    id: milestoneId,
-    phaseId,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await writeJsonDeterministic(
-    path.join(canonicalMilestoneDir, "manifest.json"),
-    milestoneManifest,
-  );
-  await writeJsonDeterministic(path.join(legacyMilestoneDir, "manifest.json"), milestoneManifest);
-
-  await writeMarkdownWithFrontmatter(
-    projectMilestoneOverviewPath(projectId, phaseId, milestoneId, cwd),
-    {
-      schemaVersion: "2.0",
-      type: "milestone-overview",
-      id: milestoneId,
-      phaseId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    milestoneOverviewTemplate(phaseId, milestoneId),
-  );
-  await writeMarkdownWithFrontmatter(
-    milestoneOverviewPath(phaseId, milestoneId, cwd),
-    {
-      schemaVersion: "2.0",
-      type: "milestone-overview",
-      id: milestoneId,
-      phaseId,
-      createdAt: now,
-      updatedAt: now,
-    },
-    milestoneOverviewTemplate(phaseId, milestoneId),
-  );
-
-  const targetsPath = projectMilestoneTargetsPath(projectId, phaseId, milestoneId, cwd);
-  if (!(await pathExists(targetsPath))) {
-    await fs.writeFile(targetsPath, `${milestoneTargetsTemplate()}\n`, "utf8");
-  }
-  const legacyTargetsPath = path.join(legacyMilestoneDir, "targets.md");
-  if (!(await pathExists(legacyTargetsPath))) {
-    await fs.writeFile(legacyTargetsPath, `${milestoneTargetsTemplate()}\n`, "utf8");
+  const shouldWriteCompatibilityLegacy = options.compatibilityLegacyWrite ?? false;
+  await writeCanonicalMilestoneScaffold(plan, cwd);
+  if (shouldWriteCompatibilityLegacy) {
+    await writeCompatibilityMilestoneScaffold(plan, cwd);
   }
 
   await rebuildArchitectureGraph(cwd);

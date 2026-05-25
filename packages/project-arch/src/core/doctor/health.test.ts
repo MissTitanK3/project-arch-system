@@ -13,6 +13,27 @@ describe("core/doctor/health", () => {
       const result = await runDoctorHealth({ cwd: context.tempDir });
       expect(result.status).toBe("healthy");
       expect(result.issues).toHaveLength(0);
+      expect(result.compatibility.mode).toBe("project-scoped-only");
+      expect(result.compatibility.supported).toBe(true);
+      expect(result.compatibility.canonicalRootExists).toBe(true);
+      expect(result.compatibility.legacyRootExists).toBe(false);
+    } finally {
+      await context.cleanup();
+    }
+  });
+
+  it("reports hybrid compatibility when legacy roadmap root remains", async () => {
+    const context = await createTestProject(originalCwd, undefined, { setCwd: false });
+    try {
+      const legacyRoot = path.join(context.tempDir, "roadmap", "phases");
+      await fs.ensureDir(legacyRoot);
+
+      const result = await runDoctorHealth({ cwd: context.tempDir });
+
+      expect(result.compatibility.mode).toBe("hybrid");
+      expect(result.compatibility.supported).toBe(true);
+      expect(result.compatibility.canonicalRootExists).toBe(true);
+      expect(result.compatibility.legacyRootExists).toBe(true);
     } finally {
       await context.cleanup();
     }
@@ -45,7 +66,13 @@ describe("core/doctor/health", () => {
         "planned",
       );
       const decisionIndex = path.join(context.tempDir, "roadmap", "decisions", "index.json");
-      const graphJson = path.join(context.tempDir, ".arch", "graph.json");
+      const graphJson = path.join(
+        context.tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "graph.json",
+      );
 
       await fs.remove(plannedLane);
       await fs.remove(decisionIndex);

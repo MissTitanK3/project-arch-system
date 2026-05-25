@@ -15,7 +15,7 @@ export async function graphBuild(
 ): Promise<OperationResult<{ path: string }>> {
   return wrap(async () => {
     await buildGraph(input.cwd, { write: input.write, layerMode: input.layerMode });
-    return { path: ".arch/graph.json" };
+    return { path: "architecture/metadata/traceability/graph.json" };
   });
 }
 
@@ -30,9 +30,13 @@ export async function graphRead(
   cwd = process.cwd(),
 ): Promise<OperationResult<Record<string, unknown>>> {
   return wrap(async () => {
-    const graphPath = path.join(cwd, ".arch", "graph.json");
+    const graphPath = (await pathExists(
+      path.join(cwd, "architecture", "metadata", "traceability", "graph.json"),
+    ))
+      ? path.join(cwd, "architecture", "metadata", "traceability", "graph.json")
+      : path.join(cwd, ".arch", "graph.json");
     if (!(await pathExists(graphPath))) {
-      throw new Error(".arch/graph.json not found");
+      throw new Error("architecture/metadata/traceability/graph.json not found");
     }
     return readJson<Record<string, unknown>>(graphPath);
   });

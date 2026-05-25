@@ -64,6 +64,25 @@ export interface InitOptions {
   force?: boolean;
 }
 
+export type InitScaffoldStrategyId = "mono";
+
+const monoScaffoldTemplateAliases = new Set(["mono", "nextjs-turbo"]);
+
+export function resolveInitScaffoldStrategy(template?: string): InitScaffoldStrategyId {
+  const normalizedTemplate =
+    typeof template === "string" && template.trim().length > 0
+      ? template.trim().toLowerCase()
+      : "mono";
+
+  if (monoScaffoldTemplateAliases.has(normalizedTemplate)) {
+    return "mono";
+  }
+
+  const requestedTemplate =
+    typeof template === "string" && template.trim().length > 0 ? template : String(template);
+  throw new Error(`Unsupported template '${requestedTemplate}'. Expected mono or nextjs-turbo`);
+}
+
 function milestoneTargetsTemplate(): string {
   return [
     "# Implementation Targets",
@@ -198,7 +217,7 @@ const generatedWorkflowDefinitions: GeneratedWorkflowDefinition[] = [
     ],
     commandSequence: [
       "Confirm the new surface is justified by the active task, milestone targets, and architecture governance documents.",
-      "Update architecture and arch-model artifacts that describe the new module boundary.",
+      "Update architecture docs and architecture metadata artifacts that describe the new module boundary.",
       "Run `pa check` after creating the structure and its supporting governance updates.",
     ],
     validationOrFollowUp: [
@@ -421,7 +440,7 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     ],
     implementationPlan: [
       "**Discover mode (existing codebase):**",
-      "Inspect packages/ and arch-model files to identify existing module responsibilities.",
+      "Inspect packages/ and architecture metadata files to identify existing module responsibilities.",
       "Group modules into problem-space domains derived from the current codebase and ownership hints.",
       "Write domain ownership and interaction rules in architecture/systems/system-boundaries.md.",
       "**Define mode (greenfield):**",
@@ -452,35 +471,35 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
     ],
     completionCriteria: [
       "architecture/governance/module-model.md describes each module responsibility and composition role.",
-      "All modules listed in arch-model/modules.json appear in the document.",
+      "All modules listed in architecture/metadata/codebase-map/modules.json appear in the document.",
       "Composition rules and dependency direction are stated.",
       "If codebase exists: module descriptions come from observed implementation.",
-      "If greenfield: module descriptions are derived from product-framing and arch-domains.",
+      "If greenfield: module descriptions are derived from product-framing and architecture metadata domains.",
       "pa check passes after file is populated.",
     ],
     objective:
-      "Create a human-readable module model that complements arch-model/modules.json so agents understand what each module owns and where new code belongs.",
+      "Create a human-readable module model that complements architecture/metadata/codebase-map/modules.json so agents understand what each module owns and where new code belongs.",
     questions: [
       "What does each packages/ module currently do or intend to do?",
       "Which modules are consumed by multiple apps versus used by only one?",
       "What dependency rules exist between modules?",
       "Are any modules planned but not yet scaffolded?",
-      "Are there modules in the codebase not yet listed in arch-model/modules.json?",
+      "Are there modules in the codebase not yet listed in architecture/metadata/codebase-map/modules.json?",
     ],
     implementationPlan: [
       "**Discover mode (existing codebase):**",
-      "Read arch-model/modules.json, ownership.json, and dependencies.json as starting points.",
+      "Read architecture/metadata/codebase-map/modules.json, ownership.json, and dependencies.json as starting points.",
       "Inspect each module public surface (for example src/index.ts) to confirm actual responsibility.",
       "Draft architecture/governance/module-model.md with one section per module describing purpose and dependency rules.",
-      "Reconcile gaps between arch-model data and observed module behavior.",
+      "Reconcile gaps between architecture metadata and observed module behavior.",
       "**Define mode (greenfield):**",
       "Read architecture/product-framing docs and derive intended module responsibilities.",
-      "Use arch-model/modules.json as the initial module inventory.",
+      "Use architecture/metadata/codebase-map/modules.json as the initial module inventory.",
       "Draft module sections with intended public surface and allowed dependencies, marking unknowns as TBD with reason.",
-      "Align module responsibilities with domain ownership in arch-domains/domains.json.",
+      "Align module responsibilities with domain ownership in architecture/metadata/domains/domains.json.",
     ],
     verification: [
-      "Confirm every module in arch-model/modules.json has a section in module-model.md.",
+      "Confirm every module in architecture/metadata/codebase-map/modules.json has a section in module-model.md.",
       "Confirm each module section states the primary responsibility.",
       "Confirm dependency rules are stated for each module set.",
       "Run node packages/project-arch/dist/cli.js check and verify OK.",
@@ -552,7 +571,7 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
       "Tasks 005, 006, and 007 are completed before this task is marked done.",
       "The canonical seed docs in `architecture/systems/`, `architecture/governance/`, and `architecture/runtime/` have non-placeholder content.",
       "architecture documents are internally consistent across overview, goals, journey, and scope.",
-      "Architecture family docs, standards, reference, and arch-domains include initial context for upcoming milestones.",
+      "Architecture family docs, standards, reference, and architecture metadata domains include initial context for upcoming milestones.",
       "pa check passes after docs foundation setup.",
     ],
     objective:
@@ -568,13 +587,13 @@ const bootstrapTasks: PlannedBootstrapTask[] = [
       "Review architecture/product-framing/prompt.md and all derived product-framing files for completeness and consistency.",
       "Review architecture/systems/system-boundaries.md, architecture/governance/module-model.md, and architecture/runtime/runtime-architecture.md after they are completed.",
       "Add initial context files in architecture/systems, architecture/governance, architecture/runtime, standards, and reference where needed.",
-      "Define initial domain boundaries in arch-domains with ownership and feature mapping.",
+      "Define initial domain boundaries in architecture/metadata/domains with ownership and feature mapping.",
       "Resolve conflicts or ambiguities between foundational documents.",
       "Link future milestones to architecture as the required reference source.",
     ],
     verification: [
       "Confirm architecture/product-framing has no placeholder lines left for required sections.",
-      "Confirm architecture/systems, architecture/governance, architecture/runtime, standards, reference, and arch-domains each include initial documentation.",
+      "Confirm architecture/systems, architecture/governance, architecture/runtime, standards, reference, and architecture metadata domains each include initial documentation.",
       "Confirm systems/system-boundaries.md, governance/module-model.md, and runtime/runtime-architecture.md are non-placeholder and aligned with product-framing docs.",
       "Confirm a new contributor can answer core project questions using architecture only.",
       "Run node packages/project-arch/dist/cli.js check and verify OK.",
@@ -590,7 +609,7 @@ async function ensureDirIfMissing(cwd: string, relativeDir: string): Promise<voi
 }
 
 async function scaffoldAgentsOfArch(cwd: string): Promise<void> {
-  const agentsRoot = path.join(cwd, ".arch", "agents-of-arch");
+  const agentsRoot = path.join(cwd, ".project-arch", "agents");
   const skillsRoot = path.join(agentsRoot, "skills");
   const userSkillsRoot = path.join(agentsRoot, "user-skills");
   const userTemplateRoot = path.join(userSkillsRoot, "_template");
@@ -633,10 +652,7 @@ async function scaffoldAgentsOfArch(cwd: string): Promise<void> {
   await syncRegistry(cwd, { archAgentsDir: agentsRoot });
 }
 
-export async function initializeProject(options: InitOptions, cwd = process.cwd()): Promise<void> {
-  if (options.template !== "nextjs-turbo") {
-    throw new Error(`Unsupported template '${options.template}'. Expected nextjs-turbo`);
-  }
+async function runMonoScaffoldStrategy(options: InitOptions, cwd = process.cwd()): Promise<void> {
   if (options.pm !== "pnpm") {
     throw new Error(`Unsupported package manager '${options.pm}'. Expected pnpm`);
   }
@@ -649,8 +665,9 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     skipped: [],
   };
   const fixedDirs = [
-    "arch-model",
-    "arch-domains",
+    "architecture/metadata/codebase-map",
+    "architecture/metadata/domains",
+    "architecture/metadata/traceability",
     "architecture/content",
     "architecture/data",
     "architecture/governance",
@@ -682,7 +699,6 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   const docsRoot = projectDocsRoot(cwd);
   await ensureDir(docsRoot);
   await ensureDir(path.join(docsRoot, "projects"));
-  await ensureDir(path.join(docsRoot, "phases"));
   await ensureDir(path.join(docsRoot, "decisions"));
   await ensureDecisionIndex(path.join(docsRoot, "decisions"));
 
@@ -1080,8 +1096,8 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "Read `system.md` first for the architecture entrypoint.",
       "Read `REPO_INDEX.md` second for the semantic model of the repository.",
-      "Read `../arch-model/README.md` for machine-readable codebase topology.",
-      "Read `../.arch/graph.json` for architecture traceability relationships.",
+      "Read `metadata/codebase-map/README.md` for machine-readable codebase topology.",
+      "Read `metadata/traceability/graph.json` for architecture traceability relationships.",
       "",
       "## Authority Rules",
       "",
@@ -1210,8 +1226,8 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "**Agents must review all standards before implementing code.**",
       "",
       "- [`repo-structure.md`](standards/repo-structure.md): Repository layout and structural constraints.",
-      "- [`react-standards.md`](standards/react-standards.md): React patterns, component conventions, and state boundaries.",
-      "- [`nextjs-standards.md`](standards/nextjs-standards.md): Next.js routing, rendering, and data fetching expectations.",
+      "- [`react-standards.md`](standards/react-standards.md): Optional React compatibility guidance for component conventions and state boundaries.",
+      "- [`nextjs-standards.md`](standards/nextjs-standards.md): Optional Next.js compatibility guidance for routing, rendering, and data fetching.",
       "- [`typescript-standards.md`](standards/typescript-standards.md): TypeScript usage patterns and type safety requirements.",
       "- [`markdown-standards.md`](standards/markdown-standards.md): Markdown formatting rules and linting expectations.",
       "- [`testing-standards.md`](standards/testing-standards.md): Testing strategies, coverage expectations, and test organization.",
@@ -1272,7 +1288,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "- [`templates-usage.md`](templates-usage.md): Guidance on when to use each template type (tasks, decisions, domains, etc.).",
       "- [`concept-map.json`](concept-map.json): Concept-to-artifact mapping for traceability.",
-      "- `../.arch/`: Machine-readable architecture traceability graph (tasks, decisions, modules, domains).",
+      "- [`metadata/traceability/`](metadata/traceability/): Machine-readable architecture traceability graph (tasks, decisions, modules, domains).",
       "- `reference/`: Legacy informational examples, design notes, and experiments (non-authoritative, transitional).",
       "",
       "## Canonical Vs Supporting Docs",
@@ -1289,12 +1305,12 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "4. **Read ALL `standards/` docs before proposing or implementing code.**",
       "5. Use legacy `foundation/`, `legacy-architecture/`, and `reference/` directories only when needed during the transition.",
       "6. Keep documentation updates synchronized with tasks and decisions in `roadmap/`.",
-      "7. Verify `.arch/graph.json` reflects expected task/decision/module/domain links.",
+      "7. Verify `architecture/metadata/traceability/graph.json` reflects expected task/decision/module/domain links.",
     ].join("\n");
     await writeMarkdownFile(aiDocsReadmePath, aiDocsReadme);
   }
 
-  const aiMapReadmePath = path.join(cwd, "arch-model", "README.md");
+  const aiMapReadmePath = path.join(cwd, "architecture", "metadata", "codebase-map", "README.md");
   if (!(await pathExists(aiMapReadmePath))) {
     const aiMapReadme = [
       "# AI Codebase Map",
@@ -1321,7 +1337,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     await writeMarkdownFile(aiMapReadmePath, aiMapReadme);
   }
 
-  const aiDomainsReadmePath = path.join(cwd, "arch-domains", "README.md");
+  const aiDomainsReadmePath = path.join(cwd, "architecture", "metadata", "domains", "README.md");
   if (!(await pathExists(aiDomainsReadmePath))) {
     const aiDomainsReadme = [
       "# AI Domain Map",
@@ -1344,12 +1360,18 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     await writeMarkdownFile(aiDomainsReadmePath, aiDomainsReadme);
   }
 
-  const domainsPath = path.join(cwd, "arch-domains", "domains.json");
+  const domainsPath = path.join(cwd, "architecture", "metadata", "domains", "domains.json");
   if (!(await pathExists(domainsPath))) {
     await writeJsonDeterministic(domainsPath, { domains: [] });
   }
 
-  const domainTemplatePath = path.join(cwd, "arch-domains", "DOMAIN_TEMPLATE.md");
+  const domainTemplatePath = path.join(
+    cwd,
+    "architecture",
+    "metadata",
+    "domains",
+    "DOMAIN_TEMPLATE.md",
+  );
   if (!(await pathExists(domainTemplatePath))) {
     await writeMarkdownFile(
       domainTemplatePath,
@@ -1452,7 +1474,13 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     await writeMarkdownFile(architectureSpecTemplatePath, defaultArchitectureSpecTemplate());
   }
 
-  const conceptMapPath = path.join(cwd, "architecture", "concept-map.json");
+  const conceptMapPath = path.join(
+    cwd,
+    "architecture",
+    "metadata",
+    "codebase-map",
+    "concept-map.json",
+  );
   if (!(await pathExists(conceptMapPath))) {
     await writeJsonDeterministic(conceptMapPath, defaultConceptMapTemplate());
   }
@@ -1498,7 +1526,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "**Use when**: Introducing a new business domain",
       "",
-      "**Template location**: `arch-domains/DOMAIN_TEMPLATE.md`",
+      "**Template location**: `architecture/metadata/domains/DOMAIN_TEMPLATE.md`",
       "",
       "**Frequency**: 1-5 times per project phase",
       "",
@@ -1522,7 +1550,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "**Use when**: Planning milestone or reviewing architectural traceability",
       "",
-      "**File**: `architecture/concept-map.json`",
+      "**File**: `architecture/metadata/codebase-map/concept-map.json`",
       "",
       "**Frequency**: Once per milestone (updated as needed)",
       "",
@@ -1657,23 +1685,41 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     })),
   };
 
-  const modulesPath = path.join(cwd, "arch-model", "modules.json");
+  const modulesPath = path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json");
   if (!(await pathExists(modulesPath))) {
     await writeJsonDeterministic(modulesPath, { modules });
   }
-  const entrypointsPath = path.join(cwd, "arch-model", "entrypoints.json");
+  const entrypointsPath = path.join(
+    cwd,
+    "architecture",
+    "metadata",
+    "codebase-map",
+    "entrypoints.json",
+  );
   if (!(await pathExists(entrypointsPath))) {
     await writeJsonDeterministic(entrypointsPath, { entrypoints });
   }
-  const dependenciesPath = path.join(cwd, "arch-model", "dependencies.json");
+  const dependenciesPath = path.join(
+    cwd,
+    "architecture",
+    "metadata",
+    "codebase-map",
+    "dependencies.json",
+  );
   if (!(await pathExists(dependenciesPath))) {
     await writeJsonDeterministic(dependenciesPath, dependencies);
   }
-  const ownershipPath = path.join(cwd, "arch-model", "ownership.json");
+  const ownershipPath = path.join(
+    cwd,
+    "architecture",
+    "metadata",
+    "codebase-map",
+    "ownership.json",
+  );
   if (!(await pathExists(ownershipPath))) {
     await writeJsonDeterministic(ownershipPath, ownership);
   }
-  const surfacesPath = path.join(cwd, "arch-model", "surfaces.json");
+  const surfacesPath = path.join(cwd, "architecture", "metadata", "codebase-map", "surfaces.json");
   if (!(await pathExists(surfacesPath))) {
     await writeJsonDeterministic(surfacesPath, surfaces);
   }
@@ -1698,7 +1744,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "Each layer answers a different question.",
       "",
       "- Product + Architecture Docs: Why and how the system works. Location: `architecture/` using the canonical taxonomy.",
-      "- Domains: What business problem-space is implemented. Location: `arch-domains`.",
+      "- Domains: What business problem-space is implemented. Location: `architecture/metadata/domains/`.",
       "- Execution: What is currently being built. Location: `roadmap`.",
       "- Runtime: Actual application code. Location: `apps`, `packages`.",
       "",
@@ -1797,7 +1843,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "---",
       "",
-      "### arch-domains/",
+      "### architecture/metadata/domains/",
       "",
       "Defines business domains and ownership boundaries.",
       "",
@@ -1814,7 +1860,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "",
       "---",
       "",
-      "### .arch/",
+      "### architecture/metadata/traceability/",
       "",
       "Defines machine-readable architecture traceability links.",
       "",
@@ -1898,7 +1944,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "4. `architecture/runtime`",
       "5. `architecture/governance`",
       "6. `architecture/standards`",
-      "7. `arch-domains`",
+      "7. `architecture/metadata/domains`",
       "8. `roadmap/decisions`",
       "9. `roadmap/projects`",
       "10. `architecture/templates`",
@@ -1926,7 +1972,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "If a required concept does not exist, agents must:",
       "",
       "1. create a decision proposal",
-      "2. document the concept in architecture, arch-domains, or arch-model as appropriate",
+      "2. document the concept in architecture and architecture metadata as appropriate",
       "3. wait for approval before implementation",
       "",
       "---",
@@ -2045,16 +2091,16 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       {
         area: "standards",
         fileName: "react-standards.md",
-        title: "React Standards",
+        title: "React Compatibility Standards",
         description:
-          "Define React implementation patterns, component conventions, and state boundaries.",
+          "Define optional React implementation patterns, component conventions, and state boundaries.",
       },
       {
         area: "standards",
         fileName: "nextjs-standards.md",
-        title: "Next.js Standards",
+        title: "Next.js Compatibility Standards",
         description:
-          "Define routing, rendering, data fetching, and cache behavior expectations for Next.js surfaces.",
+          "Define optional routing, rendering, data fetching, and cache behavior expectations for Next.js surfaces.",
       },
       {
         area: "standards",
@@ -2184,15 +2230,15 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       "1. `README.md`",
       "2. `product-framing/`",
       "3. `systems/`, `data/`, `runtime/`, `governance/`, `standards/`",
-      "4. `../arch-domains/`",
-      "5. `../arch-model/`",
+      "4. `metadata/domains/`",
+      "5. `metadata/codebase-map/`",
       "6. `../roadmap/`",
       "",
       "## Source Of Truth",
       "",
       "- Architecture meaning and constraints: `architecture/`",
-      "- Domain boundaries: `arch-domains/`",
-      "- Module topology and ownership: `arch-model/`",
+      "- Domain boundaries: `architecture/metadata/domains/`",
+      "- Module topology and ownership: `architecture/metadata/codebase-map/`",
       "- Execution state and delivery flow: `roadmap/`",
     ].join("\n");
     await writeMarkdownFile(architectureSystemPath, architectureSystem);
@@ -2211,11 +2257,97 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
     });
   }
 
+  const taskfilePath = path.join(cwd, "Taskfile.yml");
+  if (!(await pathExists(taskfilePath))) {
+    const taskfileContent = [
+      "version: '3'",
+      "",
+      "tasks:",
+      "  build:",
+      "    cmds:",
+      "      - turbo run build",
+      "",
+      "  typecheck:",
+      "    cmds:",
+      "      - pnpm -r --if-present run typecheck",
+      "",
+      "  lint:",
+      "    cmds:",
+      "      - pnpm -r --if-present run lint",
+      "",
+      "  lint:md:",
+      "    cmds:",
+      '      - markdownlint "**/*.md" --ignore "**/node_modules/**" --ignore "**/.next/**" --ignore "**/.turbo/**" --ignore "**/dist/**" --ignore ".project-arch/reconcile/**"',
+      "",
+      "  test:",
+      "    cmds:",
+      "      - pnpm -r --if-present run test",
+      "",
+      "  check:",
+      "    cmds:",
+      "      - task: ci:validate",
+      "      - task: arch:check",
+      "",
+      "  ci:validate:",
+      "    cmds:",
+      "      - |",
+      "        if find apps packages agents services tools desktop mobile -mindepth 2 -maxdepth 2 -name package.json -print -quit 2>/dev/null | grep -q .; then",
+      "          pnpm -r --if-present run typecheck",
+      "          pnpm -r --if-present run lint",
+      "          pnpm -r --if-present run test",
+      "        else",
+      '          echo "INFO: Fresh scaffold baseline: no workspace packages detected; skipping typecheck/lint/test."',
+      "        fi",
+      "",
+      "  arch:check:",
+      "    cmds:",
+      "      - |",
+      "        if command -v pa >/dev/null 2>&1; then",
+      "          pa check",
+      "        else",
+      "          echo \"INFO: Skipping architecture validation because 'pa' is not available on PATH in this shell.\"",
+      "          echo \"INFO: Run 'pa check' directly once the project-arch CLI is available.\"",
+      "        fi",
+      "",
+      "  arch:check:json:",
+      "    cmds:",
+      "      - pa check --json",
+      "",
+    ].join("\n");
+
+    await writeManagedFile(taskfilePath, taskfileContent, managedWriteState);
+  }
+
   const workspacePath = path.join(cwd, "pnpm-workspace.yaml");
   if (!(await pathExists(workspacePath))) {
-    const content = ["packages:", "  - packages/*", ""].join("\n");
+    const content = [
+      "packages:",
+      "  - apps/*",
+      "  - packages/*",
+      "  - agents/*",
+      "  - services/*",
+      "  - tools/*",
+      "  - desktop/*",
+      "  - mobile/*",
+      "",
+    ].join("\n");
     await ensureDir(path.dirname(workspacePath));
     await fs.writeFile(workspacePath, content, "utf8");
+  }
+
+  const tsconfigBasePath = path.join(cwd, "tsconfig.base.json");
+  if (!(await pathExists(tsconfigBasePath))) {
+    await writeJsonDeterministic(tsconfigBasePath, {
+      compilerOptions: {
+        target: "ES2020",
+        strict: true,
+        esModuleInterop: true,
+        resolveJsonModule: true,
+        skipLibCheck: true,
+        forceConsistentCasingInFileNames: true,
+        types: ["node"],
+      },
+    });
   }
 
   const rootPackagePath = path.join(cwd, "package.json");
@@ -2225,9 +2357,105 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
       private: true,
       packageManager: "pnpm@10.30.3",
       scripts: {
-        build: "turbo run build",
+        build: "task build",
+        typecheck: "task typecheck",
+        lint: "task lint",
+        "lint:md": "task lint:md",
+        test: "task test",
+        check: "task check",
+        "ci:validate": "task ci:validate",
+        "check:json": "task arch:check:json",
+      },
+      devDependencies: {
+        "markdownlint-cli": "^0.48.0",
       },
     });
+  }
+
+  const gitignorePath = path.join(cwd, ".gitignore");
+  if (!(await pathExists(gitignorePath))) {
+    const gitignoreContent = [
+      "node_modules/",
+      "dist/",
+      "coverage/",
+      ".turbo/",
+      "target/",
+      "__pycache__/",
+      ".pytest_cache/",
+      ".ruff_cache/",
+      ".mypy_cache/",
+      ".venv/",
+      "*.log",
+      ".DS_Store",
+      ".env",
+      ".env.local",
+      ".env.*.local",
+      "",
+    ].join("\n");
+    await writeManagedFile(gitignorePath, gitignoreContent, managedWriteState);
+  }
+
+  const envExamplePath = path.join(cwd, ".env.example");
+  if (!(await pathExists(envExamplePath))) {
+    const envExampleContent = [
+      "# Copy to .env for local development.",
+      "# Add project-specific keys as features are implemented.",
+      "APP_ENV=development",
+      "",
+    ].join("\n");
+    await writeManagedFile(envExamplePath, envExampleContent, managedWriteState);
+  }
+
+  const rootReadmePath = path.join(cwd, "README.md");
+  if (!(await pathExists(rootReadmePath))) {
+    const readmeContent = [
+      "# Project Scaffold",
+      "",
+      "This repository was initialized with `pa init --mono`.",
+      "",
+      "## Workflow",
+      "",
+      "### First-Run Quick Start",
+      "",
+      "Start with `task check`.",
+      "",
+      "Expected fresh-repo signals:",
+      "",
+      "- `No projects matched the filters` is intentional before workspace packages exist",
+      "- `task check` emits one intentional baseline message",
+      "- use `task arch:check:json` (or `pnpm check:json`) for machine-readable diagnostics",
+      "",
+      "For the rationale behind the baseline, see `architecture/governance/init-default-behavior.md`.",
+      "For the executable entrypoints, see `Taskfile.yml`.",
+      "",
+      "Use Taskfile as the primary entrypoint:",
+      "",
+      "- `task build`",
+      "- `task typecheck`",
+      "- `task lint`",
+      "- `task lint:md`",
+      "- `task test`",
+      "- `task check`",
+      "- `task arch:check:json`",
+      "",
+      "`task check` runs the full first-run validation path: workspace checks (`typecheck`/`lint`/`test`) followed by architecture validation (`pa check`).",
+      "If `pa` is not available on PATH in the current shell, `task check` reports how to run architecture validation once the CLI is available.",
+      "",
+      "On a fresh scaffold with no workspace packages yet, `task typecheck`, `task lint`, and `task test` may report `No projects matched the filters` and still exit successfully.",
+      "`task check` emits one intentional baseline message and continues with architecture validation.",
+      "",
+      "Use `task arch:check:json` (or `pnpm check:json`) for machine-readable architecture diagnostics.",
+      "",
+      "Package scripts are thin compatibility wrappers over Taskfile targets, so the same first-run baseline shows up under both `task ...` and `pnpm ...`.",
+      "",
+      "## Structure",
+      "",
+      "- `roadmap/`: planning and execution state",
+      "- `architecture/`: architecture docs and metadata",
+      "- `.project-arch/`: project-arch support artifacts",
+      "",
+    ].join("\n");
+    await writeManagedFile(rootReadmePath, readmeContent, managedWriteState);
   }
 
   await scaffoldAgentsGuide(cwd, { pathExists, writeMarkdownFile });
@@ -2245,7 +2473,7 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   await scaffoldAgentsOfArch(cwd);
 
   // Initialize feedback system stores
-  const archDir = path.join(cwd, ".arch");
+  const archDir = path.join(cwd, ".project-arch", "feedback");
   const observationStore = new ObservationStore(archDir);
   const issueStore = new IssueStore(archDir);
   await observationStore.initialize();
@@ -2254,4 +2482,16 @@ export async function initializeProject(options: InitOptions, cwd = process.cwd(
   flushManagedWriteLogs(managedWriteState);
   await rebuildArchitectureGraph(cwd);
   console.log(`Initialized project architecture layout on ${currentDateISO()}`);
+}
+
+export async function initializeProject(options: InitOptions, cwd = process.cwd()): Promise<void> {
+  const scaffoldStrategy = resolveInitScaffoldStrategy(options.template);
+
+  switch (scaffoldStrategy) {
+    case "mono":
+      await runMonoScaffoldStrategy(options, cwd);
+      return;
+    default:
+      throw new Error(`Unsupported scaffold strategy '${scaffoldStrategy}'.`);
+  }
 }

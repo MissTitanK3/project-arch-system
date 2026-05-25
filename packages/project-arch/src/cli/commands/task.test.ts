@@ -59,6 +59,53 @@ describe("cli/commands/task", () => {
         expect(output).toBeUndefined();
       }
     });
+
+    it("should keep task help aligned with milestone-1 command signature truth", () => {
+      const program = new Command();
+      const output: string[] = [];
+      program.configureOutput({
+        writeOut: (str) => output.push(str),
+        writeErr: (str) => output.push(str),
+      });
+      registerTaskCommand(program);
+
+      const taskCommand = program.commands.find((cmd) => cmd.name() === "task");
+      const newCmd = taskCommand?.commands.find((cmd) => cmd.name() === "new");
+      const discoverCmd = taskCommand?.commands.find((cmd) => cmd.name() === "discover");
+      const ideaCmd = taskCommand?.commands.find((cmd) => cmd.name() === "idea");
+
+      newCmd?.outputHelp();
+      const newHelp = output.join("");
+      output.length = 0;
+
+      discoverCmd?.outputHelp();
+      const discoverHelp = output.join("");
+      output.length = 0;
+
+      ideaCmd?.outputHelp();
+      const ideaHelp = output.join("");
+
+      expect(newHelp).toContain("Usage: pa task new <phaseId> <milestoneId>");
+      expect(newHelp).toContain(
+        "roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/tasks/planned/{id}-{slug}.md",
+      );
+      expect(newHelp).not.toContain("--project");
+
+      expect(discoverHelp).toContain(
+        "Usage: pa task discover <phaseId> <milestoneId> --from <taskId>",
+      );
+      expect(discoverHelp).toContain("--from <taskId>");
+      expect(discoverHelp).toContain(
+        "roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/tasks/discovered/{id}-{slug}.md",
+      );
+      expect(discoverHelp).not.toContain("--project");
+
+      expect(ideaHelp).toContain("Usage: pa task idea <phaseId> <milestoneId>");
+      expect(ideaHelp).toContain(
+        "roadmap/projects/{project}/phases/{phase}/milestones/{milestone}/tasks/backlog/{id}-{slug}.md",
+      );
+      expect(ideaHelp).not.toContain("--project");
+    });
   });
 
   describe("task new", () => {

@@ -184,6 +184,122 @@ Missing required title field.
       expect(content).toContain("lane: planned");
     });
 
+    it("should not write a legacy mirror by default", async () => {
+      const taskPath = await createTask({
+        phaseId: "phase-1",
+        milestoneId: "milestone-1-setup",
+        lane: "planned",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      const legacyTaskPath = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "planned",
+        path.basename(taskPath),
+      );
+
+      expect(await fs.pathExists(taskPath)).toBe(true);
+      expect(await fs.pathExists(legacyTaskPath)).toBe(false);
+    });
+
+    it("should not write a legacy mirror for discovered tasks by default", async () => {
+      // First create a planned task to discover from
+      await createTask({
+        phaseId: "phase-1",
+        milestoneId: "milestone-1-setup",
+        lane: "planned",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      // Then create a discovered task from it
+      const discoveredPath = await createTask({
+        phaseId: "phase-1",
+        milestoneId: "milestone-1-setup",
+        lane: "discovered",
+        discoveredFromTask: "001",
+        cwd: tempDir,
+      });
+
+      const legacyDiscoveredPath = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "discovered",
+        path.basename(discoveredPath),
+      );
+
+      expect(await fs.pathExists(discoveredPath)).toBe(true);
+      expect(await fs.pathExists(legacyDiscoveredPath)).toBe(false);
+    });
+
+    it("should not write a legacy mirror for backlog/idea tasks by default", async () => {
+      const ideaPath = await createTask({
+        phaseId: "phase-1",
+        milestoneId: "milestone-1-setup",
+        lane: "backlog",
+        discoveredFromTask: null,
+        cwd: tempDir,
+      });
+
+      const legacyIdeaPath = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "backlog",
+        path.basename(ideaPath),
+      );
+
+      expect(await fs.pathExists(ideaPath)).toBe(true);
+      expect(await fs.pathExists(legacyIdeaPath)).toBe(false);
+    });
+
+    it("should write both canonical and legacy when compatibilityLegacyWrite is true", async () => {
+      const taskPath = await createTask({
+        phaseId: "phase-1",
+        milestoneId: "milestone-1-setup",
+        lane: "planned",
+        discoveredFromTask: null,
+        compatibilityLegacyWrite: true,
+        cwd: tempDir,
+      });
+
+      const legacyTaskPath = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "planned",
+        path.basename(taskPath),
+      );
+
+      expect(await fs.pathExists(taskPath)).toBe(true);
+      expect(await fs.pathExists(legacyTaskPath)).toBe(true);
+
+      // Both files should contain the same frontmatter
+      const canonicalContent = await fs.readFile(taskPath, "utf8");
+      const legacyContent = await fs.readFile(legacyTaskPath, "utf8");
+      expect(canonicalContent).toEqual(legacyContent);
+    });
+
     it("should successfully create discovered task with --from", async () => {
       // First create a planned task
       await createTask({
@@ -208,6 +324,65 @@ Missing required title field.
       expect(content).toContain("discoveredFromTask:");
       expect(content).toContain("001");
       expect(content).toContain("lane: discovered");
+    });
+
+    it("should roll back both canonical and legacy files when graph sync fails with compatibilityLegacyWrite", async () => {
+      const plannedDir = path.join(
+        tempDir,
+        "roadmap",
+        "projects",
+        "shared",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "planned",
+      );
+
+      const legacyPlannedDir = path.join(
+        tempDir,
+        "roadmap",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "planned",
+      );
+
+      const beforeCanonical = (await fs.pathExists(plannedDir)) ? await fs.readdir(plannedDir) : [];
+      const beforeLegacy = (await fs.pathExists(legacyPlannedDir))
+        ? await fs.readdir(legacyPlannedDir)
+        : [];
+
+      const graphSpy = vi
+        .spyOn(graphManifests, "rebuildArchitectureGraph")
+        .mockRejectedValue(new Error("injected graph failure"));
+
+      try {
+        await expect(
+          createTask({
+            phaseId: "phase-1",
+            milestoneId: "milestone-1-setup",
+            lane: "planned",
+            discoveredFromTask: null,
+            compatibilityLegacyWrite: true,
+            cwd: tempDir,
+          }),
+        ).rejects.toThrow(/\.arch\/graph|rollback succeeded/i);
+      } finally {
+        graphSpy.mockRestore();
+      }
+
+      const afterCanonical = (await fs.pathExists(plannedDir)) ? await fs.readdir(plannedDir) : [];
+      const afterLegacy = (await fs.pathExists(legacyPlannedDir))
+        ? await fs.readdir(legacyPlannedDir)
+        : [];
+
+      // Both canonical and legacy should have been rolled back
+      expect(afterCanonical.length).toBe(beforeCanonical.length);
+      expect(afterLegacy.length).toBe(beforeLegacy.length);
     });
 
     it("should roll back roadmap task file when graph sync fails during create", async () => {
@@ -246,6 +421,63 @@ Missing required title field.
 
       const after = (await fs.pathExists(plannedDir)) ? await fs.readdir(plannedDir) : [];
       expect(after.length).toBe(before.length);
+    });
+  });
+
+  describe("Ownership resolution failures", () => {
+    it("should fail clearly when phase does not exist in manifest", async () => {
+      await expect(
+        createTask({
+          phaseId: "phase-missing",
+          milestoneId: "milestone-1-setup",
+          lane: "planned",
+          discoveredFromTask: null,
+          cwd: tempDir,
+        }),
+      ).rejects.toThrow("does not exist in roadmap/manifest.json");
+    });
+
+    it("should fail clearly when phase ownership maps to missing project manifest", async () => {
+      const manifestPath = path.join(tempDir, "roadmap", "manifest.json");
+      const manifest = await fs.readJson(manifestPath);
+      manifest.phases = manifest.phases.map((phase: { id: string; projectId: string }) =>
+        phase.id === "phase-1" ? { ...phase, projectId: "ghost-project" } : phase,
+      );
+      await fs.writeJson(manifestPath, manifest, { spaces: 2 });
+
+      const sharedPlannedDir = path.join(
+        tempDir,
+        "roadmap",
+        "projects",
+        "shared",
+        "phases",
+        "phase-1",
+        "milestones",
+        "milestone-1-setup",
+        "tasks",
+        "planned",
+      );
+      const sharedBefore = (await fs.pathExists(sharedPlannedDir))
+        ? await fs.readdir(sharedPlannedDir)
+        : [];
+
+      await expect(
+        createTask({
+          phaseId: "phase-1",
+          milestoneId: "milestone-1-setup",
+          lane: "planned",
+          discoveredFromTask: null,
+          cwd: tempDir,
+        }),
+      ).rejects.toThrow(/ownership project 'ghost-project' is invalid|Missing project manifest/);
+
+      const sharedAfter = (await fs.pathExists(sharedPlannedDir))
+        ? await fs.readdir(sharedPlannedDir)
+        : [];
+      expect(sharedAfter.length).toBe(sharedBefore.length);
+
+      const ghostProjectDir = path.join(tempDir, "roadmap", "projects", "ghost-project");
+      expect(await fs.pathExists(ghostProjectDir)).toBe(false);
     });
   });
 });

@@ -53,6 +53,24 @@ interface GraphTaskNode {
   lane?: string;
 }
 
+async function resolveGraphArtifactPath(
+  cwd: string,
+  canonicalRelativePath: string,
+  legacyRelativePath: string,
+): Promise<string | null> {
+  const canonicalPath = path.join(cwd, canonicalRelativePath);
+  if (await pathExists(canonicalPath)) {
+    return canonicalPath;
+  }
+
+  const legacyPath = path.join(cwd, legacyRelativePath);
+  if (await pathExists(legacyPath)) {
+    return legacyPath;
+  }
+
+  return null;
+}
+
 export interface ReportData {
   compatibility: {
     surface: "validation" | "reporting";
@@ -313,8 +331,12 @@ function renderGovernanceWarnings(warnings: string[]): string {
  * Load graph metadata including lastSync timestamp
  */
 async function loadGraphMetadata(cwd: string): Promise<GraphMetadata | null> {
-  const graphPath = path.join(cwd, ".arch", "graph.json");
-  if (!(await pathExists(graphPath))) {
+  const graphPath = await resolveGraphArtifactPath(
+    cwd,
+    "architecture/metadata/traceability/graph.json",
+    ".arch/graph.json",
+  );
+  if (!graphPath) {
     return null;
   }
   return await readJson<GraphMetadata>(graphPath);
@@ -327,9 +349,13 @@ async function checkParityDiagnostics(
   cwd: string,
   taskRecords: Awaited<ReturnType<typeof collectTaskRecords>>,
 ): Promise<{ ok: boolean; total: number; mismatches: number; diagnostics: ParityDiagnostic[] }> {
-  const graphTasksPath = path.join(cwd, ".arch", "nodes", "tasks.json");
+  const graphTasksPath = await resolveGraphArtifactPath(
+    cwd,
+    "architecture/metadata/traceability/nodes/tasks.json",
+    ".arch/nodes/tasks.json",
+  );
 
-  if (!(await pathExists(graphTasksPath))) {
+  if (!graphTasksPath) {
     return { ok: false, total: 0, mismatches: 0, diagnostics: [] };
   }
 
@@ -593,16 +619,16 @@ export function renderReportData(data: ReportData, options: { verbose?: boolean 
       data.graph.metadata
         ? `${Object.entries(data.graph.metadata.nodes)
             .map(([key, value]) => `${key}:${value ?? 0}`)
-            .join(", ")} [source: .arch/graph.json]`
-        : "none [source: .arch/graph.json]",
+            .join(", ")} [source: architecture/metadata/traceability/graph.json]`
+        : "none [source: architecture/metadata/traceability/graph.json]",
     ],
     [
       "graph edges",
       data.graph.metadata
         ? `${Object.entries(data.graph.metadata.edges)
             .map(([key, value]) => `${key}:${value}`)
-            .join(", ")} [source: .arch/graph.json]`
-        : "none [source: .arch/graph.json]",
+            .join(", ")} [source: architecture/metadata/traceability/graph.json]`
+        : "none [source: architecture/metadata/traceability/graph.json]",
     ],
   ];
 

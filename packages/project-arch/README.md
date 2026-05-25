@@ -196,7 +196,7 @@ Supported project creation options:
 
 ## JSON contracts for CI and automation
 
-- `pa check --json` emits a stable diagnostics envelope (`schemaVersion: "1.0"`)
+- `pa check --json` emits a stable diagnostics envelope (`schemaVersion: "2.0"`)
 - `pa doctor health --json` emits structural health status + issue catalog (`PAH*`)
 - `pa next --json` emits deterministic routing decision
 - `pa context --json` emits active repository context for downstream automation

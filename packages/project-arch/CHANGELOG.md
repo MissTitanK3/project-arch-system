@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-05-25
+
+### Added
+
+#### **Canonical Mono Init And First-Run Operator Workflow**
+
+- `pa init --mono` as the canonical scaffold entrypoint, with `mono` as the default init template and `nextjs-turbo` retained as a compatibility alias
+- Root scaffold workflow surfaces for initialized repositories: `Taskfile.yml`, Task-backed root package scripts, `pnpm-workspace.yaml`, `tsconfig.base.json`, `.gitignore`, `.env.example`, and a bootstrap `README.md`
+- Markdown lint support in initialized repositories via `task lint:md` and `pnpm lint:md`
+- First-run no-test baseline guidance across scaffolded docs, help output, and generated governance guidance so empty workspaces report intentional success instead of ambiguous failure
+
+#### **Roadmap Cleanup Execution Surface**
+
+- `pa roadmap cleanup legacy` command for dry-run preview and guarded apply flows
+- Cleanup inventory, classification, preservation-record writing, runtime re-confirmation, and post-cleanup graph refresh support for legacy roadmap mirror artifacts
+- Preservation records under `.project-arch/reconcile/` to document cleanup routing and deletion safety decisions
+
+### Changed
+
+- Canonical architecture metadata output now lives under `architecture/metadata/codebase-map/`, `architecture/metadata/domains/`, and `architecture/metadata/traceability/`
+- Graph, validation, report, doctor, and SDK graph surfaces now prefer canonical metadata paths while continuing to fall back to legacy locations where compatibility support exists
+- Phase, milestone, and task creation now default to canonical project-scoped writes, with compatibility legacy writes remaining opt-in for controlled transition scenarios
+- CLI version output now reads from package metadata instead of a hardcoded literal
+- `pa check` and `pa doctor health` now surface runtime compatibility context more explicitly
+- Help and README surfaces now describe the canonical mono scaffold, Taskfile-first workflow, and fresh-scaffold expectations more directly
+
+### Fixed
+
+- Generated scaffold validation flow now handles fresh repositories without workspace packages more gracefully
+- Static guidance and schema references now align with the live canonical metadata locations and command surface
+- Report and graph readers now avoid false negatives when canonical traceability artifacts exist outside the legacy `.arch/` path
+
+### Docs
+
+- Refreshed README, generated governance guidance, schema docs, and help topics to match canonical scaffold behavior
+- Added copy-ready PR draft in `PR_BODY_project-arch_2.2.0.md`
+
+### Test Coverage
+
+- Added coverage for mono init normalization, first-run scaffold behavior, roadmap cleanup preview/apply flows, package metadata version lookup, and canonical metadata-path compatibility
+
 ## [2.1.0] - 2026-04-13
 
 ### Added

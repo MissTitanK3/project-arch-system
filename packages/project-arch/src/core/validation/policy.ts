@@ -153,11 +153,11 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
           taskRef,
           taskFilePath,
           claimA: `Task targets module '${moduleName}'`,
-          claimB: `Module '${moduleName}' is not declared in arch-model/modules.json`,
+          claimB: `Module '${moduleName}' is not declared in architecture/metadata/codebase-map/modules.json`,
           rationale:
             "Code targets outside the declared architecture model violate boundary governance and bypass architecture review.",
           remediation:
-            "Declare the module in arch-model/modules.json before implementation, or update task codeTargets to declared modules.",
+            "Declare the module in architecture/metadata/codebase-map/modules.json before implementation, or update task codeTargets to declared modules.",
         });
       }
     }
@@ -179,7 +179,7 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
           rationale:
             "Creating new architecture concepts (such as a new module) requires an explicit decision trail.",
           remediation:
-            "Create and link an architecture decision, then declare the module in arch-model/modules.json before execution.",
+            "Create and link an architecture decision, then declare the module in architecture/metadata/codebase-map/modules.json before execution.",
         });
       }
     }
@@ -208,7 +208,7 @@ export async function runPolicyChecks(cwd = process.cwd()): Promise<PolicyCheckR
             claimB: `Domain '${domain.name}' owns: ${domain.ownedPackages.join(", ") || "(none)"}`,
             rationale:
               "Domain tags must align with declared ownership boundaries to prevent cross-domain implementation drift.",
-            remediation: `Retag the task with the correct domain or update arch-domains/domains.json ownership for '${domain.name}'.`,
+            remediation: `Retag the task with the correct domain or update architecture/metadata/domains/domains.json ownership for '${domain.name}'.`,
           });
         }
       }
@@ -409,7 +409,11 @@ export function renderPolicyExplanation(conflicts: PolicyConflict[]): string {
 }
 
 async function loadDeclaredModules(cwd: string): Promise<Set<string>> {
-  const modulesPath = path.join(cwd, "arch-model", "modules.json");
+  const modulesPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json")
+    : path.join(cwd, "arch-model", "modules.json");
   if (!(await pathExists(modulesPath))) {
     return new Set();
   }
@@ -428,7 +432,11 @@ async function loadDeclaredModules(cwd: string): Promise<Set<string>> {
 }
 
 async function loadDomains(cwd: string): Promise<DomainSpec[]> {
-  const domainsPath = path.join(cwd, "arch-domains", "domains.json");
+  const domainsPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "domains", "domains.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "domains", "domains.json")
+    : path.join(cwd, "arch-domains", "domains.json");
   if (!(await pathExists(domainsPath))) {
     return [];
   }

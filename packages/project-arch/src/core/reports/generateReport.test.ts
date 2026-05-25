@@ -447,7 +447,14 @@ describe.sequential("core/reports/generateReport", () => {
       });
 
       // Manually corrupt the graph to create a mismatch
-      const graphTasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+      const graphTasksPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "nodes",
+        "tasks.json",
+      );
 
       // Read graph tasks file properly
       const fs = await import("fs-extra");
@@ -499,7 +506,14 @@ describe.sequential("core/reports/generateReport", () => {
 
       // Create a mismatch by modifying graph directly
       const fs = await import("fs-extra");
-      const graphTasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+      const graphTasksPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "nodes",
+        "tasks.json",
+      );
       if (await fs.pathExists(graphTasksPath)) {
         const graphData = await fs.readJson(graphTasksPath);
 

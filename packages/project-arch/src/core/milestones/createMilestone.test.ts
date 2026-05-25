@@ -39,7 +39,7 @@ describe("createMilestone", () => {
       "milestones",
       "milestone-1-foundation",
     );
-    const mRoot = path.join(
+    const legacyRoot = path.join(
       tempDir,
       "roadmap",
       "phases",
@@ -56,17 +56,52 @@ describe("createMilestone", () => {
     expect(await fs.pathExists(path.join(projectRoot, "overview.md"))).toBe(true);
     expect(await fs.pathExists(path.join(projectRoot, "targets.md"))).toBe(true);
 
-    expect(await fs.pathExists(path.join(mRoot, "tasks", "planned"))).toBe(true);
-    expect(await fs.pathExists(path.join(mRoot, "tasks", "discovered"))).toBe(true);
-    expect(await fs.pathExists(path.join(mRoot, "tasks", "backlog"))).toBe(true);
-    expect(await fs.pathExists(path.join(mRoot, "decisions", "index.json"))).toBe(true);
-    expect(await fs.pathExists(path.join(mRoot, "manifest.json"))).toBe(true);
-    expect(await fs.pathExists(path.join(mRoot, "overview.md"))).toBe(true);
-    expect(await fs.pathExists(path.join(mRoot, "targets.md"))).toBe(true);
+    expect(await fs.pathExists(path.join(legacyRoot, "tasks", "planned"))).toBe(false);
+    expect(await fs.pathExists(path.join(legacyRoot, "tasks", "discovered"))).toBe(false);
+    expect(await fs.pathExists(path.join(legacyRoot, "tasks", "backlog"))).toBe(false);
+    expect(await fs.pathExists(path.join(legacyRoot, "decisions", "index.json"))).toBe(false);
+    expect(await fs.pathExists(path.join(legacyRoot, "manifest.json"))).toBe(false);
+    expect(await fs.pathExists(path.join(legacyRoot, "overview.md"))).toBe(false);
+    expect(await fs.pathExists(path.join(legacyRoot, "targets.md"))).toBe(false);
   });
 
   it("fails when phase does not exist", async () => {
     await expect(createMilestone("phase-999", "m1", tempDir)).rejects.toThrow("does not exist");
+  });
+
+  it("fails clearly when phase ownership maps to missing project manifest", async () => {
+    const manifestPath = path.join(tempDir, "roadmap", "manifest.json");
+    const manifest = await fs.readJson(manifestPath);
+    manifest.phases = manifest.phases.map((phase: { id: string; projectId: string }) =>
+      phase.id === "phase-2" ? { ...phase, projectId: "ghost-project" } : phase,
+    );
+    await fs.writeJson(manifestPath, manifest, { spaces: 2 });
+
+    await expect(createMilestone("phase-2", "milestone-ghost", tempDir)).rejects.toThrow(
+      /ownership project 'ghost-project' is invalid|Missing project manifest/,
+    );
+
+    const ghostProjectRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "ghost-project",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-ghost",
+    );
+    const legacyFallbackRoot = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-ghost",
+    );
+
+    expect(await fs.pathExists(ghostProjectRoot)).toBe(false);
+    expect(await fs.pathExists(legacyFallbackRoot)).toBe(false);
   });
 
   it("fails when creating duplicate milestone", async () => {
@@ -105,6 +140,8 @@ describe("createMilestone", () => {
     const taskDir = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -129,6 +166,8 @@ describe("createMilestone", () => {
     const manifestPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -146,6 +185,8 @@ describe("createMilestone", () => {
     const overviewPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -164,6 +205,8 @@ describe("createMilestone", () => {
     const targetsPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -182,6 +225,8 @@ describe("createMilestone", () => {
     const indexPath = path.join(
       tempDir,
       "roadmap",
+      "projects",
+      "shared",
       "phases",
       "phase-2",
       "milestones",
@@ -224,6 +269,39 @@ describe("createMilestone", () => {
       specialSlug,
     );
     expect(await fs.pathExists(mRoot)).toBe(true);
+  });
+
+  it("writes legacy milestone scaffold only when compatibility is explicitly requested", async () => {
+    await createMilestone("phase-2", "milestone-compatibility", tempDir, {
+      compatibilityLegacyWrite: true,
+    });
+
+    const projectRoot = path.join(
+      tempDir,
+      "roadmap",
+      "projects",
+      "shared",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-compatibility",
+    );
+    const legacyRoot = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      "phase-2",
+      "milestones",
+      "milestone-compatibility",
+    );
+
+    expect(await fs.pathExists(path.join(projectRoot, "manifest.json"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "overview.md"))).toBe(true);
+    expect(await fs.pathExists(path.join(projectRoot, "targets.md"))).toBe(true);
+
+    expect(await fs.pathExists(path.join(legacyRoot, "manifest.json"))).toBe(true);
+    expect(await fs.pathExists(path.join(legacyRoot, "overview.md"))).toBe(true);
+    expect(await fs.pathExists(path.join(legacyRoot, "targets.md"))).toBe(true);
   });
 
   it("blocks activation when planned lane has zero tasks", async () => {

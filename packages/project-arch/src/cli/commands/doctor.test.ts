@@ -35,6 +35,12 @@ describe("cli/commands/doctor", () => {
       status: "degraded",
       checkedAt: "2026-03-22",
       repairedCount: 1,
+      compatibility: {
+        mode: "hybrid",
+        supported: true,
+        canonicalRootExists: true,
+        legacyRootExists: true,
+      },
       issues: [
         {
           code: "PAH007",
@@ -57,6 +63,7 @@ describe("cli/commands/doctor", () => {
       schemaVersion: string;
       status: string;
       summary: { issueCount: number; repairedCount: number };
+      compatibility: { mode: string; supported: boolean };
       issues: Array<{ code: string }>;
     };
 
@@ -64,6 +71,7 @@ describe("cli/commands/doctor", () => {
     expect(payload.status).toBe("degraded");
     expect(payload.summary.issueCount).toBe(1);
     expect(payload.summary.repairedCount).toBe(1);
+    expect(payload.compatibility).toMatchObject({ mode: "hybrid", supported: true });
     expect(payload.issues[0].code).toBe("PAH007");
   });
 
@@ -74,6 +82,12 @@ describe("cli/commands/doctor", () => {
       status: "broken",
       checkedAt: "2026-03-22",
       repairedCount: 0,
+      compatibility: {
+        mode: "legacy-only",
+        supported: false,
+        canonicalRootExists: false,
+        legacyRootExists: true,
+      },
       issues: [
         {
           code: "PAH001",
@@ -88,10 +102,12 @@ describe("cli/commands/doctor", () => {
     });
 
     registerDoctorCommand(program);
-    vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
     await program.parseAsync(["node", "test", "doctor", "health"]);
 
+    expect(logSpy).toHaveBeenCalledWith("compatibility: legacy-only (unsupported)");
+    expect(logSpy).toHaveBeenCalledWith("compatibility roots: canonical=missing, legacy=present");
     expect(process.exitCode).toBe(1);
   });
 

@@ -26,6 +26,20 @@ export interface LoadSkillsOptions {
   archAgentsDir?: string;
 }
 
+async function resolveDefaultAgentsRoot(projectRoot: string): Promise<string> {
+  const canonical = path.join(projectRoot, ".project-arch", "agents");
+  if (await fs.pathExists(canonical)) {
+    return canonical;
+  }
+
+  const legacy = path.join(projectRoot, ".arch", "agents-of-arch");
+  if (await fs.pathExists(legacy)) {
+    return legacy;
+  }
+
+  return canonical;
+}
+
 function toPosixRelative(base: string, target: string): string {
   return path.relative(base, target).replace(/\\/g, "/");
 }
@@ -99,7 +113,7 @@ export async function loadSkills(
   projectRoot = process.cwd(),
   options: LoadSkillsOptions = {},
 ): Promise<LoadedSkills> {
-  const agentsRoot = options.archAgentsDir ?? path.join(projectRoot, ".arch", "agents-of-arch");
+  const agentsRoot = options.archAgentsDir ?? (await resolveDefaultAgentsRoot(projectRoot));
 
   return {
     builtin: await loadSkillSet(projectRoot, path.join(agentsRoot, "skills"), "builtin"),

@@ -20,6 +20,20 @@ export interface CreateUserSkillResult {
   checklistPath: string;
 }
 
+async function resolveDefaultAgentsRoot(projectRoot: string): Promise<string> {
+  const canonical = path.join(projectRoot, ".project-arch", "agents");
+  if (await pathExists(canonical)) {
+    return canonical;
+  }
+
+  const legacy = path.join(projectRoot, ".arch", "agents-of-arch");
+  if (await pathExists(legacy)) {
+    return legacy;
+  }
+
+  return canonical;
+}
+
 function titleFromId(id: string): string {
   return id
     .split("-")
@@ -76,7 +90,7 @@ export async function createUserSkill(
   projectRoot = process.cwd(),
   input: CreateUserSkillInput,
 ): Promise<CreateUserSkillResult> {
-  const agentsRoot = input.archAgentsDir ?? path.join(projectRoot, ".arch", "agents-of-arch");
+  const agentsRoot = input.archAgentsDir ?? (await resolveDefaultAgentsRoot(projectRoot));
   const skillDir = path.join(agentsRoot, "user-skills", input.id);
   const manifestPath = path.join(skillDir, "skill.json");
   const systemPath = path.join(skillDir, "system.md");

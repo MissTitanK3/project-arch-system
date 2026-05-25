@@ -27,6 +27,13 @@ import {
 } from "../runtime/projectPaths";
 import { assertSupportedRuntimeCompatibility } from "../runtime/compatibility";
 
+type TaskWritePlan = {
+  canonicalTargetPath: string;
+  legacyTargetPath: string;
+  frontmatter: ReturnType<typeof defaultTaskFrontmatter>;
+  body: string;
+};
+
 async function assertInitialized(cwd = process.cwd()): Promise<void> {
   if (!(await pathExists(projectDocsRoot(cwd)))) {
     throw new Error("roadmap not found. Run 'pa init' first.");
@@ -102,6 +109,55 @@ function taskDefaults(
   return { slugBase: "idea", title: "Backlog Idea" };
 }
 
+function planTaskWrite(input: {
+  phaseId: string;
+  milestoneId: string;
+  lane: TaskLane;
+  discoveredFromTask: string | null;
+  title?: string;
+  cwd: string;
+  id: string;
+  slug: string;
+  projectId: string;
+}): TaskWritePlan {
+  const canonicalTargetPath = path.join(
+    projectMilestoneTaskLaneDir(
+      input.projectId,
+      input.phaseId,
+      input.milestoneId,
+      input.lane,
+      input.cwd,
+    ),
+    `${input.id}-${input.slug}.md`,
+  );
+  const legacyTargetPath = path.join(
+    milestoneTaskLaneDir(input.phaseId, input.milestoneId, input.lane, input.cwd),
+    `${input.id}-${input.slug}.md`,
+  );
+
+  return {
+    canonicalTargetPath,
+    legacyTargetPath,
+    frontmatter: defaultTaskFrontmatter({
+      id: input.id,
+      slug: input.slug,
+      title: input.title ?? taskDefaults(input.phaseId, input.milestoneId, input.lane).title,
+      lane: input.lane,
+      createdAt: currentDateISO(),
+      discoveredFromTask: input.discoveredFromTask,
+    }),
+    body: defaultTaskBody(),
+  };
+}
+
+async function writeCanonicalTask(plan: TaskWritePlan): Promise<void> {
+  await writeMarkdownWithFrontmatter(plan.canonicalTargetPath, plan.frontmatter, plan.body);
+}
+
+async function writeCompatibilityTask(plan: TaskWritePlan): Promise<void> {
+  await writeMarkdownWithFrontmatter(plan.legacyTargetPath, plan.frontmatter, plan.body);
+}
+
 export async function createTask(input: {
   phaseId: string;
   milestoneId: string;
@@ -110,6 +166,7 @@ export async function createTask(input: {
   title?: string;
   slugBase?: string;
   cwd?: string;
+  compatibilityLegacyWrite?: boolean;
 }): Promise<string> {
   const cwd = input.cwd ?? process.cwd();
   assertSafeId(input.phaseId, "phaseId");
@@ -124,49 +181,40 @@ export async function createTask(input: {
   const id = nextTaskId(ids, input.lane);
   const slug = normalizeSlug(slugBase || title);
   const milestonePaths = await resolveMilestoneRuntimePaths(input.phaseId, input.milestoneId, cwd);
-
-  const canonicalTargetPath = path.join(
-    projectMilestoneTaskLaneDir(
-      milestonePaths.projectId,
-      input.phaseId,
-      input.milestoneId,
-      input.lane,
-      cwd,
-    ),
-    `${id}-${slug}.md`,
-  );
-  const legacyTargetPath = path.join(
-    milestoneTaskLaneDir(input.phaseId, input.milestoneId, input.lane, cwd),
-    `${id}-${slug}.md`,
-  );
-  assertWithinRoot(canonicalTargetPath, cwd, "task file");
-
-  const now = currentDateISO();
-  const frontmatter = defaultTaskFrontmatter({
+  const plan = planTaskWrite({
+    phaseId: input.phaseId,
+    milestoneId: input.milestoneId,
+    lane: input.lane,
+    discoveredFromTask: input.discoveredFromTask,
+    title,
+    cwd,
     id,
     slug,
-    title,
-    lane: input.lane,
-    createdAt: now,
-    discoveredFromTask: input.discoveredFromTask,
+    projectId: milestonePaths.projectId,
   });
+  assertWithinRoot(plan.canonicalTargetPath, cwd, "task file");
+  const shouldWriteCompatibilityLegacy = input.compatibilityLegacyWrite ?? false;
 
   await withAtomicTaskMutation({
     cwd,
     mutateRoadmap: async () => {
-      await writeMarkdownWithFrontmatter(canonicalTargetPath, frontmatter, defaultTaskBody());
-      await writeMarkdownWithFrontmatter(legacyTargetPath, frontmatter, defaultTaskBody());
+      await writeCanonicalTask(plan);
+      if (shouldWriteCompatibilityLegacy) {
+        await writeCompatibilityTask(plan);
+      }
     },
     rollbackRoadmap: async () => {
-      await fs.remove(canonicalTargetPath);
-      await fs.remove(legacyTargetPath);
+      await fs.remove(plan.canonicalTargetPath);
+      if (shouldWriteCompatibilityLegacy) {
+        await fs.remove(plan.legacyTargetPath);
+      }
     },
     syncGraph: async () => {
       await graphManifests.rebuildArchitectureGraph(cwd);
     },
   });
 
-  return canonicalTargetPath;
+  return plan.canonicalTargetPath;
 }
 
 export async function getTaskStatus(

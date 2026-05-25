@@ -8,6 +8,7 @@ import { writeJsonDeterministic } from "../../utils/fs";
 import { DOCTOR_HEALTH_CODES, DoctorHealthCode } from "./healthCodes";
 import { projectManifestSchema } from "../../schemas/project";
 import { inspectRuntimeProfileConfig } from "../agentRuntime/runtimeProfiles";
+import { detectRuntimeCompatibility } from "../runtime/compatibility";
 
 export type DoctorHealthSeverity = "error" | "warning";
 export type DoctorHealthStatus = "healthy" | "degraded" | "broken";
@@ -27,6 +28,12 @@ export interface DoctorHealthResult {
   issues: DoctorHealthIssue[];
   checkedAt: string;
   repairedCount: number;
+  compatibility: {
+    mode: "project-scoped-only" | "hybrid" | "legacy-only";
+    supported: boolean;
+    canonicalRootExists: boolean;
+    legacyRootExists: boolean;
+  };
 }
 
 interface InternalDoctorHealthIssue extends DoctorHealthIssue {
@@ -38,12 +45,12 @@ interface RunDoctorHealthOptions {
   repair?: boolean;
 }
 
-const REQUIRED_ROOT_DIRS = ["architecture", "roadmap", "arch-model", "arch-domains", ".arch"];
+const REQUIRED_ROOT_DIRS = ["architecture", "roadmap", ".project-arch"];
 const TASK_LANES = ["planned", "discovered", "backlog"];
 const GRAPH_ARTIFACTS = [
-  ".arch/graph.json",
-  ".arch/nodes/tasks.json",
-  ".arch/edges/milestone_to_task.json",
+  "architecture/metadata/traceability/graph.json",
+  "architecture/metadata/traceability/nodes/tasks.json",
+  "architecture/metadata/traceability/edges/milestone_to_task.json",
 ];
 
 function toPosixRelative(cwd: string, absolutePath: string): string {
@@ -532,6 +539,7 @@ export async function runDoctorHealth(
 ): Promise<DoctorHealthResult> {
   const cwd = options.cwd ?? process.cwd();
   const issues: InternalDoctorHealthIssue[] = [];
+  const compatibility = await detectRuntimeCompatibility(cwd);
 
   await collectMissingRootIssues(cwd, issues);
   await collectDecisionIndexIssue(cwd, path.join(cwd, "roadmap", "decisions"), issues);
@@ -554,6 +562,7 @@ export async function runDoctorHealth(
     issues: visibleIssues.map((issue) => ({ ...issue, repairAction: undefined })),
     checkedAt: currentDateISO(),
     repairedCount,
+    compatibility,
   };
 }
 

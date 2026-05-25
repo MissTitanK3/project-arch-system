@@ -138,9 +138,7 @@ describe("sdk/agent reconcile", () => {
     const result = await agentReconcile({ runId, cwd: context.tempDir });
     resultAssertions.assertSuccess(result);
     expect(result.data.status).toBe("reconciled");
-    expect(result.data.reportPath).toMatch(
-      /^\.project-arch\/reconcile\/001-\d{4}-\d{2}-\d{2}\.json$/,
-    );
+    expect(result.data.reportPath).toMatch(/^\.project-arch\/reconcile\/001-\d{8}T\d{9}\.json$/);
   });
 
   it("returns error when run record is missing", async () => {

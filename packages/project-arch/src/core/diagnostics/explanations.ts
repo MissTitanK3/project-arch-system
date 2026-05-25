@@ -49,7 +49,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
       "2. Verify the path is correct relative to the workspace root.",
       "3. If the code has not been created yet, either create the file/directory or remove the " +
         "reference until the implementation is in place.",
-      "4. If the module is in a new package, declare it in `arch-model/modules.json` first.",
+      "4. If the module is in a new package, declare it in `architecture/metadata/codebase-map/modules.json` first.",
     ].join("\n"),
   },
 
@@ -65,9 +65,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   TASK_UNDECLARED_MODULE: {
     description:
       "A task's `codeTargets` entry resolves to a module (apps/<name> or packages/<name>) " +
-      "that has not been declared in `arch-model/modules.json`.",
+      "that has not been declared in `architecture/metadata/codebase-map/modules.json`.",
     remediation: [
-      "1. Add the module to `arch-model/modules.json` (name, type, description).",
+      "1. Add the module to `architecture/metadata/codebase-map/modules.json` (name, type, description).",
       "2. Rebuild the graph: `pa graph build` (if available) or proceed and re-run `pa check`.",
       "3. If the module is intentionally excluded from the architecture model, use a deeper path " +
         "in `codeTargets` so it does not resolve to the undeclared module root.",
@@ -88,9 +88,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   TASK_UNDECLARED_DOMAIN: {
     description:
       "A task's `tags` array contains a `domain:<name>` tag that has not been declared in " +
-      "`arch-domains/domains.json`.",
+      "`architecture/metadata/domains/domains.json`.",
     remediation: [
-      "1. Add the domain to `arch-domains/domains.json` (name, description, owner).",
+      "1. Add the domain to `architecture/metadata/domains/domains.json` (name, description, owner).",
       "2. Alternatively, remove or correct the `domain:` tag if it was added by mistake.",
       "3. Re-run `pa check` to confirm the diagnostic resolves.",
     ].join("\n"),
@@ -120,7 +120,7 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   DECISION_UNDECLARED_MODULE: {
     description: "A decision's `links.codeTargets` entry resolves to an undeclared module.",
     remediation: [
-      "Declare the module in `arch-model/modules.json` or adjust the codeTargets path. " +
+      "Declare the module in `architecture/metadata/codebase-map/modules.json` or adjust the codeTargets path. " +
         "See TASK_UNDECLARED_MODULE remediation for details.",
     ].join("\n"),
   },
@@ -198,8 +198,8 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
 
   MISSING_GRAPH_ARTIFACT: {
     description:
-      "A required graph artifact (`.arch/graph.json`, `.arch/nodes/tasks.json`, or " +
-      "`.arch/edges/milestone_to_task.json`) is missing. Graph parity cannot be validated " +
+      "A required graph artifact (`architecture/metadata/traceability/graph.json`, `architecture/metadata/traceability/nodes/tasks.json`, or " +
+      "`architecture/metadata/traceability/edges/milestone_to_task.json`) is missing. Graph parity cannot be validated " +
       "without it.",
     remediation: [
       "Rebuild the graph artifacts with `pa graph build` (if available in your project), " +
@@ -223,10 +223,11 @@ export const DIAGNOSTIC_EXPLANATIONS: Readonly<Record<string, DiagnosticExplanat
   // ── Schema / config ──────────────────────────────────────────────────────────
 
   INVALID_CONCEPT_MAP_SCHEMA: {
-    description: "`arch-model/concept-map.json` does not conform to the expected schema.",
+    description:
+      "`architecture/metadata/codebase-map/concept-map.json` does not conform to the expected schema.",
     remediation: [
       "1. Run `pa help standards` to view the concept-map schema requirements.",
-      "2. Open `arch-model/concept-map.json` and fix the offending fields.",
+      "2. Open `architecture/metadata/codebase-map/concept-map.json` and fix the offending fields.",
       "3. Re-run `pa check` to confirm validity.",
     ].join("\n"),
   },

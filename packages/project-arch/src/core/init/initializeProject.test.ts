@@ -6,6 +6,7 @@ import { createTempDir, type TestProjectContext } from "../../test/helpers";
 import { initializeProject } from "./initializeProject";
 import { agentSkillSchema } from "../../schemas/agentSkill";
 import { agentSkillRegistrySchema } from "../../schemas/agentSkillRegistry";
+import { detectRuntimeCompatibility } from "../runtime/compatibility";
 
 describe.sequential("initializeProject - Standards Coverage", () => {
   let tempDir: string;
@@ -294,12 +295,10 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(agentsContent).toContain("#### Project Architecture CLI (pa)");
 
     // Task lane commands present (code fence format uses <phase>/<milestone>)
-    expect(agentsContent).toContain("pa task new <phase> <milestone> --project <projectId>");
-    expect(agentsContent).toContain(
-      "pa task discover <phase> <milestone> --project <projectId> --from <taskId>",
-    );
-    expect(agentsContent).toContain("pa task idea <phase> <milestone> --project <projectId>");
-    expect(agentsContent).toContain("pa task lanes <phase> <milestone> --project <projectId>");
+    expect(agentsContent).toContain("pa task new <phase> <milestone>");
+    expect(agentsContent).toContain("pa task discover <phase> <milestone> --from <taskId>");
+    expect(agentsContent).toContain("pa task idea <phase> <milestone>");
+    expect(agentsContent).toContain("pa task lanes <phase> <milestone>");
 
     // Feedback commands present
     expect(agentsContent).toContain("pa feedback list");
@@ -537,7 +536,21 @@ describe.sequential("initializeProject - Standards Coverage", () => {
         },
         tempDir,
       ),
-    ).rejects.toThrow("Unsupported template 'vite'. Expected nextjs-turbo");
+    ).rejects.toThrow("Unsupported template 'vite'. Expected mono or nextjs-turbo");
+  });
+
+  it("accepts mono template through the mono scaffold strategy boundary", async () => {
+    await expect(
+      initializeProject(
+        {
+          template: "mono",
+          pm: "pnpm",
+        },
+        tempDir,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(await fs.pathExists(path.join(tempDir, "roadmap", "projects", "shared"))).toBe(true);
   });
 
   it("throws for unsupported package manager", async () => {
@@ -552,7 +565,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     ).rejects.toThrow("Unsupported package manager 'npm'. Expected pnpm");
   });
 
-  it("captures pre-existing module entrypoints in arch-model", async () => {
+  it("captures pre-existing module entrypoints in architecture metadata codebase map", async () => {
     const webAppDir = path.join(tempDir, "apps", "web", "app");
     await fs.ensureDir(webAppDir);
     await fs.writeFile(
@@ -572,7 +585,13 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       tempDir,
     );
 
-    const entrypointsPath = path.join(tempDir, "arch-model", "entrypoints.json");
+    const entrypointsPath = path.join(
+      tempDir,
+      "architecture",
+      "metadata",
+      "codebase-map",
+      "entrypoints.json",
+    );
     const entrypointsData = await fs.readJson(entrypointsPath);
     const entries = Array.isArray(entrypointsData.entrypoints) ? entrypointsData.entrypoints : [];
 
@@ -661,8 +680,9 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     );
 
     const requiredDirs = [
-      "arch-model",
-      "arch-domains",
+      "architecture/metadata/codebase-map",
+      "architecture/metadata/domains",
+      "architecture/metadata/traceability",
       "architecture/content",
       "architecture/data",
       "architecture/governance",
@@ -849,7 +869,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
 
     expect(defaultGuide).toContain("# Default Init Behavior");
     expect(defaultGuide).toContain("smallest coherent default scaffold");
-    expect(defaultGuide).toContain("Default `pa init` includes:");
+    expect(defaultGuide).toContain("Bootstrap-specific `pa init` should create:");
     expect(defaultGuide).toContain("- Tier A surfaces");
     expect(defaultGuide).toContain(
       "- applicable Tier B surfaces required by the selected template",
@@ -859,7 +879,10 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(defaultGuide).toContain("- Tier D optional add-ons");
     expect(defaultGuide).toContain("## What Belongs In The Smallest Coherent Default Scaffold");
     expect(defaultGuide).toContain("## Default Roadmap Layout");
-    expect(defaultGuide).toContain("`roadmap/projects/shared/phases/phase-1/...`");
+    expect(defaultGuide).toContain("Bootstrap-specific `pa init` should create:");
+    expect(defaultGuide).toContain(
+      "`roadmap/projects/shared/phases/phase-1/...` (reserved bootstrap project)",
+    );
     expect(defaultGuide).toContain("## Reserved Bootstrap Project");
     expect(defaultGuide).toContain(
       "`shared` is the reserved bootstrap project created by default init.",
@@ -1915,7 +1938,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(completeTask).not.toContain(".github/workflows/*.md");
     expect(newModule).toContain("# New Module Workflow");
     expect(newModule).toContain(
-      "Update architecture and arch-model artifacts that describe the new module boundary.",
+      "Update architecture docs and architecture metadata artifacts that describe the new module boundary.",
     );
     expect(newModule).toContain(
       "project-arch-owned `.project-arch/workflows/*.workflow.md` surface",
@@ -2504,9 +2527,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       "suggestions must not imply that `pa learn --path` mutates repository state",
     );
     expect(reportGuide).toContain('"schemaVersion": "2.0"');
-    expect(reportGuide).toContain(
-      '"recommendedAction": "pa task new <phase> <milestone> --project <projectId>"',
-    );
+    expect(reportGuide).toContain('"recommendedAction": "pa task new <phase> <milestone>"');
     expect(architectureReadme).toContain(
       "[`governance/learn-report-contract.md`](governance/learn-report-contract.md)",
     );
@@ -2702,6 +2723,223 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(manifest.activePhase).toBe("phase-1");
   });
 
+  it("scaffolds canonical project-scoped roadmap content without legacy phase artifacts", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    expect(await fs.pathExists(path.join(tempDir, "roadmap", "projects", "shared"))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, "roadmap", "phases"))).toBe(false);
+    expect(await fs.pathExists(path.join(tempDir, "roadmap", "phases", "phase-1"))).toBe(false);
+
+    expect(await fs.pathExists(path.join(tempDir, "Taskfile.yml"))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, ".gitignore"))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, ".env.example"))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, "README.md"))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, "pnpm-workspace.yaml"))).toBe(true);
+    expect(await fs.pathExists(path.join(tempDir, "tsconfig.base.json"))).toBe(true);
+
+    const workspaceContent = await fs.readFile(path.join(tempDir, "pnpm-workspace.yaml"), "utf8");
+    expect(workspaceContent).toContain("- apps/*");
+    expect(workspaceContent).toContain("- packages/*");
+    expect(workspaceContent).toContain("- agents/*");
+    expect(workspaceContent).toContain("- services/*");
+    expect(workspaceContent).toContain("- tools/*");
+    expect(workspaceContent).toContain("- desktop/*");
+    expect(workspaceContent).toContain("- mobile/*");
+
+    const tsconfigBase = await fs.readJson(path.join(tempDir, "tsconfig.base.json"));
+    expect(tsconfigBase.compilerOptions?.target).toBe("ES2020");
+    expect(tsconfigBase.compilerOptions?.strict).toBe(true);
+    expect(tsconfigBase.compilerOptions?.types).toEqual(["node"]);
+
+    const taskfileContent = await fs.readFile(path.join(tempDir, "Taskfile.yml"), "utf8");
+    expect(taskfileContent).toContain("pnpm -r --if-present run typecheck");
+    expect(taskfileContent).toContain("pnpm -r --if-present run lint");
+    expect(taskfileContent).toContain("  lint:md:");
+    expect(taskfileContent).toContain(
+      'markdownlint "**/*.md" --ignore "**/node_modules/**" --ignore "**/.next/**" --ignore "**/.turbo/**" --ignore "**/dist/**" --ignore ".project-arch/reconcile/**"',
+    );
+    expect(taskfileContent).toContain("pnpm -r --if-present run test");
+    expect(taskfileContent).toContain("  arch:check:");
+    expect(taskfileContent).toContain("if command -v pa >/dev/null 2>&1");
+    expect(taskfileContent).toContain(
+      "Skipping architecture validation because 'pa' is not available on PATH",
+    );
+    expect(taskfileContent).toContain("  arch:check:json:");
+    expect(taskfileContent).toContain("      - pa check --json");
+    expect(taskfileContent).toContain("  ci:validate:");
+    expect(taskfileContent).toContain("if find apps packages agents services tools desktop mobile");
+    expect(taskfileContent).toContain(
+      "INFO: Fresh scaffold baseline: no workspace packages detected",
+    );
+    expect(taskfileContent).not.toContain("deps: [typecheck, lint, test]");
+    expect(taskfileContent).toContain("  check:");
+    expect(taskfileContent).toContain("      - task: ci:validate");
+    expect(taskfileContent).toContain("      - task: arch:check");
+    expect(taskfileContent).not.toContain("turbo run typecheck");
+    expect(taskfileContent).not.toContain("turbo run lint");
+    expect(taskfileContent).not.toContain("turbo run test");
+
+    const gitignoreContent = await fs.readFile(path.join(tempDir, ".gitignore"), "utf8");
+    expect(gitignoreContent).toContain("node_modules/");
+    expect(gitignoreContent).toContain("dist/");
+    expect(gitignoreContent).toContain("coverage/");
+    expect(gitignoreContent).toContain(".turbo/");
+    expect(gitignoreContent).toContain("target/");
+    expect(gitignoreContent).toContain("__pycache__/");
+    expect(gitignoreContent).toContain(".pytest_cache/");
+    expect(gitignoreContent).toContain(".ruff_cache/");
+    expect(gitignoreContent).toContain(".mypy_cache/");
+    expect(gitignoreContent).toContain(".venv/");
+    expect(gitignoreContent).not.toContain("Cargo.lock");
+    expect(gitignoreContent).not.toContain(".idea/");
+    expect(gitignoreContent).not.toContain(".vscode/");
+
+    const rootPackage = await fs.readJson(path.join(tempDir, "package.json"));
+    expect(rootPackage.scripts?.build).toBe("task build");
+    expect(rootPackage.scripts?.typecheck).toBe("task typecheck");
+    expect(rootPackage.scripts?.lint).toBe("task lint");
+    expect(rootPackage.scripts?.["lint:md"]).toBe("task lint:md");
+    expect(rootPackage.scripts?.test).toBe("task test");
+    expect(rootPackage.scripts?.check).toBe("task check");
+    expect(rootPackage.scripts?.["ci:validate"]).toBe("task ci:validate");
+    expect(rootPackage.scripts?.["check:json"]).toBe("task arch:check:json");
+    expect(rootPackage.devDependencies?.["markdownlint-cli"]).toBe("^0.48.0");
+
+    const rootReadme = await fs.readFile(path.join(tempDir, "README.md"), "utf8");
+    expect(rootReadme).toContain("## First-Run Quick Start");
+    expect(rootReadme).toContain("Start with `task check`.");
+    expect(rootReadme).toContain("Expected fresh-repo signals:");
+    expect(rootReadme).toContain(
+      "`No projects matched the filters` is intentional before workspace packages exist",
+    );
+    expect(rootReadme).toContain("For the rationale behind the baseline");
+    expect(rootReadme).toContain("For the executable entrypoints, see `Taskfile.yml`.");
+    expect(rootReadme).toContain("- `task lint:md`");
+    expect(rootReadme).toContain("`task check` runs the full first-run validation path");
+    expect(rootReadme).toContain("If `pa` is not available on PATH");
+    expect(rootReadme).toContain("No projects matched the filters");
+    expect(rootReadme).toContain("`task check` emits one intentional baseline message");
+    expect(rootReadme).toContain("still exit successfully");
+    expect(rootReadme).toContain("task arch:check:json");
+    expect(rootReadme).toContain("pnpm check:json");
+    expect(rootReadme).toContain("architecture/governance/init-default-behavior.md");
+    expect(rootReadme).toContain("For the executable entrypoints, see `Taskfile.yml`.");
+
+    const compatibility = await detectRuntimeCompatibility(tempDir);
+    expect(compatibility.mode).toBe("project-scoped-only");
+    expect(compatibility.supported).toBe(true);
+  });
+
+  it("preserves the approved first-run messaging consistency contract", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const taskfileContent = await fs.readFile(path.join(tempDir, "Taskfile.yml"), "utf8");
+    const rootReadme = await fs.readFile(path.join(tempDir, "README.md"), "utf8");
+    const initDefaultBehavior = await fs.readFile(
+      path.join(tempDir, "architecture", "governance", "init-default-behavior.md"),
+      "utf8",
+    );
+
+    expect(taskfileContent).toContain(
+      "INFO: Fresh scaffold baseline: no workspace packages detected; skipping typecheck/lint/test.",
+    );
+    expect(rootReadme).toContain(
+      "Package scripts are thin compatibility wrappers over Taskfile targets, so the same first-run baseline shows up under both `task ...` and `pnpm ...`.",
+    );
+    expect(rootReadme).toContain("`task lint:md`");
+    expect(rootReadme).toContain("No projects matched the filters");
+    expect(rootReadme).toContain("`task check` emits one intentional baseline message");
+
+    expect(initDefaultBehavior).toContain("fresh-scaffold no-test baseline");
+    expect(initDefaultBehavior).toContain("No projects matched the filters");
+    expect(initDefaultBehavior).toContain("`task check` emits one intentional baseline message");
+    expect(initDefaultBehavior).toContain("task arch:check:json");
+    expect(initDefaultBehavior).toContain("pnpm check:json");
+    expect(initDefaultBehavior).toContain(
+      "For operator flow, see `README.md`; for executable entrypoints, see `Taskfile.yml`.",
+    );
+    expect(initDefaultBehavior).toContain("if `pa` is unavailable on PATH");
+  });
+
+  it("keeps documentation guidance aligned with generated first-run entrypoints", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+      },
+      tempDir,
+    );
+
+    const taskfileContent = await fs.readFile(path.join(tempDir, "Taskfile.yml"), "utf8");
+    const rootReadme = await fs.readFile(path.join(tempDir, "README.md"), "utf8");
+    const initDefaultBehavior = await fs.readFile(
+      path.join(tempDir, "architecture", "governance", "init-default-behavior.md"),
+      "utf8",
+    );
+
+    for (const entry of ["  check:", "  arch:check:json:", "  ci:validate:"]) {
+      expect(taskfileContent).toContain(entry);
+    }
+
+    expect(taskfileContent).toContain("  lint:md:");
+
+    for (const anchor of [
+      "## First-Run Quick Start",
+      "Start with `task check`.",
+      "- `task lint:md`",
+      "`task arch:check:json`",
+      "pnpm check:json",
+      "For the rationale behind the baseline",
+      "For the executable entrypoints, see `Taskfile.yml`.",
+    ]) {
+      expect(rootReadme).toContain(anchor);
+    }
+
+    for (const anchor of [
+      "fresh-scaffold no-test baseline",
+      "No projects matched the filters",
+      "`task check` emits one intentional baseline message",
+      "task arch:check:json",
+      "pnpm check:json",
+      "For operator flow, see `README.md`; for executable entrypoints, see `Taskfile.yml`.",
+      "if `pa` is unavailable on PATH",
+    ]) {
+      expect(initDefaultBehavior).toContain(anchor);
+    }
+  });
+
+  it("materializes canonical workflow docs without creating legacy markdown workflow mirrors", async () => {
+    await initializeProject(
+      {
+        template: "nextjs-turbo",
+        pm: "pnpm",
+        withWorkflows: true,
+      },
+      tempDir,
+    );
+
+    expect(
+      await fs.pathExists(
+        path.join(tempDir, ".project-arch", "workflows", "before-coding.workflow.md"),
+      ),
+    ).toBe(true);
+    expect(
+      await fs.pathExists(path.join(tempDir, ".github", "workflows", "before-coding.md")),
+    ).toBe(false);
+  });
+
   it("creates roadmap policy.json with default profile", async () => {
     await initializeProject(
       {
@@ -2720,7 +2958,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(policy.profiles?.default?.timing?.phase?.skipDoneIfCompletedContainer).toBe(true);
   });
 
-  it("scaffolds agents-of-arch tree with foundational built-ins and user template", async () => {
+  it("scaffolds .project-arch agents tree with foundational built-ins and user template", async () => {
     await initializeProject(
       {
         template: "nextjs-turbo",
@@ -2729,7 +2967,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
       tempDir,
     );
 
-    const agentsRoot = path.join(tempDir, ".arch", "agents-of-arch");
+    const agentsRoot = path.join(tempDir, ".project-arch", "agents");
     const skillsRoot = path.join(agentsRoot, "skills");
     const templateRoot = path.join(agentsRoot, "user-skills", "_template");
     const registryPath = path.join(agentsRoot, "registry.json");
@@ -2773,7 +3011,7 @@ describe.sequential("initializeProject - Standards Coverage", () => {
 
     await initializeProject(options, tempDir);
 
-    const registryPath = path.join(tempDir, ".arch", "agents-of-arch", "registry.json");
+    const registryPath = path.join(tempDir, ".project-arch", "agents", "registry.json");
     const first = await fs.readFile(registryPath, "utf8");
 
     await initializeProject(options, tempDir);
@@ -2864,5 +3102,71 @@ describe.sequential("initializeProject - Standards Coverage", () => {
     expect(after).not.toEqual(customPolicy);
 
     expect(output).toContain("Overwriting: roadmap/policy.json");
+  });
+
+  describe("gitignore baseline contract", () => {
+    let ignoreDir: string;
+    let ignoreContext: TestProjectContext;
+
+    beforeEach(async () => {
+      ignoreContext = await createTempDir();
+      ignoreDir = ignoreContext.tempDir;
+    });
+
+    afterEach(async () => {
+      await ignoreContext.cleanup();
+    });
+
+    it("generates the approved Node-first baseline entries", async () => {
+      await initializeProject({ template: "nextjs-turbo", pm: "pnpm" }, ignoreDir);
+
+      const content = await fs.readFile(path.join(ignoreDir, ".gitignore"), "utf8");
+      expect(content).toContain("node_modules/");
+      expect(content).toContain("dist/");
+      expect(content).toContain("coverage/");
+      expect(content).toContain(".turbo/");
+    });
+
+    it("generates all six approved Rust and Python growth-safe entries", async () => {
+      await initializeProject({ template: "nextjs-turbo", pm: "pnpm" }, ignoreDir);
+
+      const content = await fs.readFile(path.join(ignoreDir, ".gitignore"), "utf8");
+      expect(content).toContain("target/");
+      expect(content).toContain("__pycache__/");
+      expect(content).toContain(".pytest_cache/");
+      expect(content).toContain(".ruff_cache/");
+      expect(content).toContain(".mypy_cache/");
+      expect(content).toContain(".venv/");
+    });
+
+    it("generates the approved utility entries", async () => {
+      await initializeProject({ template: "nextjs-turbo", pm: "pnpm" }, ignoreDir);
+
+      const content = await fs.readFile(path.join(ignoreDir, ".gitignore"), "utf8");
+      expect(content).toContain("*.log");
+      expect(content).toContain(".DS_Store");
+      expect(content).toContain(".env");
+      expect(content).toContain(".env.local");
+      expect(content).toContain(".env.*.local");
+    });
+
+    it("excludes all deferred entries from the approved ignore baseline", async () => {
+      await initializeProject({ template: "nextjs-turbo", pm: "pnpm" }, ignoreDir);
+
+      const content = await fs.readFile(path.join(ignoreDir, ".gitignore"), "utf8");
+      expect(content).not.toContain("Cargo.lock");
+      expect(content).not.toContain(".idea/");
+      expect(content).not.toContain(".vscode/");
+    });
+
+    it("does not overwrite a pre-existing .gitignore", async () => {
+      const existingContent = "# project-managed\ncustom-entry/\n";
+      await fs.writeFile(path.join(ignoreDir, ".gitignore"), existingContent, "utf8");
+
+      await initializeProject({ template: "nextjs-turbo", pm: "pnpm" }, ignoreDir);
+
+      const content = await fs.readFile(path.join(ignoreDir, ".gitignore"), "utf8");
+      expect(content).toBe(existingContent);
+    });
   });
 });

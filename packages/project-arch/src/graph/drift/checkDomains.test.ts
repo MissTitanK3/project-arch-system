@@ -44,7 +44,7 @@ describe("graph/drift/checkDomains", () => {
     if (tempDir) await rm(tempDir, { recursive: true, force: true });
   });
 
-  it("should warn when arch-domains/domains.json is missing", async () => {
+  it("should warn when canonical domains metadata is missing", async () => {
     const findings = await checkDomains(tempDir, []);
 
     expect(findings).toHaveLength(1);
@@ -53,9 +53,12 @@ describe("graph/drift/checkDomains", () => {
   });
 
   it("should report domain violations when target module is outside ownedPackages", async () => {
-    await writeJsonDeterministic(path.join(tempDir, "arch-domains", "domains.json"), {
-      domains: [{ name: "payments", ownedPackages: ["packages/payments"] }],
-    });
+    await writeJsonDeterministic(
+      path.join(tempDir, "architecture", "metadata", "domains", "domains.json"),
+      {
+        domains: [{ name: "payments", ownedPackages: ["packages/payments"] }],
+      },
+    );
 
     const findings = await checkDomains(tempDir, [
       taskRecord(["domain:payments"], ["packages/orders/src/service.ts"]),
@@ -66,9 +69,12 @@ describe("graph/drift/checkDomains", () => {
   });
 
   it("should pass when domain-tagged task targets owned package", async () => {
-    await writeJsonDeterministic(path.join(tempDir, "arch-domains", "domains.json"), {
-      domains: [{ name: "payments", ownedPackages: ["packages/payments"] }],
-    });
+    await writeJsonDeterministic(
+      path.join(tempDir, "architecture", "metadata", "domains", "domains.json"),
+      {
+        domains: [{ name: "payments", ownedPackages: ["packages/payments"] }],
+      },
+    );
 
     const findings = await checkDomains(tempDir, [
       taskRecord(["domain:payments"], ["packages/payments/src/service.ts"]),

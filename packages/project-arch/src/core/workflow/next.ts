@@ -20,9 +20,8 @@ export interface NextWorkflowDecision {
 const INIT_SURFACE_PATHS = new Set([
   "architecture",
   "roadmap",
-  "arch-model",
-  "arch-domains",
-  ".arch",
+  "roadmap/projects",
+  ".project-arch",
   "roadmap/manifest.json",
 ]);
 

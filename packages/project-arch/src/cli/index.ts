@@ -25,12 +25,14 @@ import { registerAgentCommand } from "./commands/agent";
 import { registerResultCommand } from "./commands/result";
 import { registerAgentsCommand } from "./commands/agents";
 import { registerRuntimeCommand } from "./commands/runtime";
+import { registerRoadmapCommand } from "./commands/roadmap";
 import {
   getArchDir,
   getCommandPathFromCommander,
   inferCommandPathFromArgv,
   safelyCaptureFeedback,
 } from "../feedback/integration";
+import { getPackageVersion } from "../utils/packageMetadata";
 
 function buildCommandChainFromAction(actionCommand: Command): string[] {
   const names: string[] = [];
@@ -47,7 +49,8 @@ function buildCommandChainFromAction(actionCommand: Command): string[] {
 
 export async function runCli(argv = process.argv): Promise<void> {
   const program = new Command();
-  program.name("pa").description("Project architecture CLI").version("2.0.0");
+  const version = getPackageVersion();
+  program.name("pa").description("Project architecture CLI").version(version);
   const archDir = getArchDir(process.cwd());
 
   program.hook("postAction", async (_thisCommand, actionCommand) => {
@@ -85,6 +88,7 @@ export async function runCli(argv = process.argv): Promise<void> {
   registerResultCommand(program);
   registerAgentsCommand(program);
   registerRuntimeCommand(program);
+  registerRoadmapCommand(program);
   registerHelpCommand(program);
 
   try {

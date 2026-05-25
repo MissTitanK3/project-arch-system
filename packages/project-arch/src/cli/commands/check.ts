@@ -8,6 +8,21 @@ import { resolveWorkflowProfile } from "../../schemas/workflowProfile";
 import type { WorkflowProfile } from "../../schemas/workflowProfile";
 import path from "path";
 
+function renderCompatibilitySummary(compatibility: {
+  surface: "validation" | "reporting";
+  mode: "project-scoped-only" | "hybrid" | "legacy-only";
+  supported: boolean;
+  canonicalRootExists: boolean;
+  legacyRootExists: boolean;
+  reason: string;
+}): string[] {
+  return [
+    `COMPATIBILITY: mode=${compatibility.mode} surface=${compatibility.surface} (${compatibility.supported ? "supported" : "unsupported"})`,
+    `COMPATIBILITY: canonical root=${compatibility.canonicalRootExists ? "present" : "missing"}; legacy root=${compatibility.legacyRootExists ? "present" : "missing"}`,
+    `COMPATIBILITY: ${compatibility.reason}`,
+  ];
+}
+
 function renderFailFastDiagnostic(diagnostic: {
   code: string;
   severity: "error" | "warning";
@@ -274,6 +289,14 @@ export function registerCheckCommand(program: Command): void {
         for (const warning of result.warnings) {
           console.warn(`WARNING: ${warning}`);
         }
+
+        if (result.compatibility) {
+          const compatibilityLines = renderCompatibilitySummary(result.compatibility);
+          for (const line of compatibilityLines) {
+            console.log(line);
+          }
+        }
+
         const graphSummary = result.graphDiagnostics;
         if (graphSummary?.built) {
           const score = graphSummary.completeness.score.toFixed(2);

@@ -56,11 +56,11 @@ The skill directory name must match `skill.json.id`.
 
 ## Manifest Shape (`skill.json`)
 
-Current contract version: `1.0`
+Current contract version: `2.0`
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "repo-map",
   "name": "Repository Map",
   "source": "builtin",
@@ -81,7 +81,7 @@ Current contract version: `1.0`
 
 | Field             | Required | Type                   | Notes                                                  |
 | ----------------- | -------- | ---------------------- | ------------------------------------------------------ |
-| `schemaVersion`   | yes      | `"1.0"`                | Locked manifest contract version.                      |
+| `schemaVersion`   | yes      | `"2.0"`                | Locked manifest contract version.                      |
 | `id`              | yes      | kebab-case string      | Must match the containing directory name.              |
 | `name`            | yes      | string                 | Human-readable title.                                  |
 | `source`          | yes      | `"builtin" \| "user"`  | Must match the parent tree.                            |
@@ -136,7 +136,7 @@ Shape:
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "generatedAt": "2026-03-22T00:00:00.000Z",
   "skills": [
     {

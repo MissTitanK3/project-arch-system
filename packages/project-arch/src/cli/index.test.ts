@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Command } from "commander";
 import path from "path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { ensureDir, writeFile } from "fs-extra";
 import { runCli } from "./index";
 import { createTempDir, createTestProject, type TestProjectContext } from "../test/helpers";
@@ -200,5 +202,28 @@ This task has a lane mismatch.
         await project.cleanup();
       }
     }, 120_000);
+
+    it("should report version from package.json", async () => {
+      const packageJson = JSON.parse(
+        readFileSync(resolve(__dirname, "../../package.json"), "utf-8"),
+      ) as { version: string };
+      let capturedVersion: string | undefined;
+
+      const spy = vi.spyOn(Command.prototype, "parseAsync").mockImplementation(async function (
+        this: Command,
+      ) {
+        capturedVersion = this.version();
+        return this;
+      });
+
+      await runCli(["node", "test", "--version"]);
+
+      expect(capturedVersion).toBeDefined();
+      expect(capturedVersion).toMatch(/^\d+\.\d+\.\d+/);
+      expect(capturedVersion).toBe(packageJson.version);
+      expect(capturedVersion).not.toBe("unknown");
+
+      spy.mockRestore();
+    });
   });
 });

@@ -23,10 +23,11 @@ export const HELP_TOPICS = {
   commands: `Available Commands for AI Agents:
 
 Initialization:
-  pa init [options]                    Initialize new project architecture
-    Options: --template, --pm, --with-ai, --with-workflows (writes .project-arch/workflows/*.workflow.md when enabled)
-    Legacy note: older repositories may still contain .github/workflows/*.md; treat this as non-canonical compatibility context
-    Output: Creates roadmap/, architecture/, arch-domains/ structure
+  pa init --mono                       Initialize the canonical mono scaffold
+    Options: --mono, --template mono (compatibility alias), --pm, --with-ai, --with-workflows
+    Output: Creates roadmap/projects/shared/..., architecture/, and .project-arch/workflows/*.workflow.md when enabled
+    Legacy note: older repositories may still contain .github/workflows/*.md; fresh init writes .project-arch/workflows/*.workflow.md instead
+    First-run no-test baseline: \`task test\` / \`task check\` (and \`pnpm test\` / \`pnpm check\`) may report \`No projects matched the filters\` before workspace packages exist; this is expected and still exits successfully
 
 Task Management:
   pa task new <phase> <milestone>      Create planned task (001-099 range)
@@ -262,11 +263,11 @@ ${renderCommandMetadataRegistry()}
   agents: `Agent Skills:
 
 Purpose:
-  Agent skills provide a deterministic capability layer under .arch/agents-of-arch/
+  Agent skills provide a deterministic capability layer under .project-arch/agents/
   for repo-native guidance. They are documentation contracts, not executable plugins.
 
 Directory Layout:
-  .arch/agents-of-arch/
+  .project-arch/agents/
     skills/                Built-in skills scaffolded by pa init
     user-skills/           User-authored skills and explicit overrides
     user-skills/_template/ Reference template, ignored by the loader
@@ -319,7 +320,7 @@ Further reading:
 Generated Workflow Documents:
   - Enable generation with: pa init --with-workflows
   - Canonical fresh-output surface: .project-arch/workflows/*.workflow.md
-  - Legacy repositories may still contain .github/workflows/*.md; this is non-canonical compatibility context
+  - Legacy repositories may still contain .github/workflows/*.md; this is compatibility-only context for older repos
   - Generated workflow documents are helper guidance and remain subordinate to canonical entry-point instructions
 
 Feature Development Workflow:
@@ -502,8 +503,8 @@ Repository Structure:
     system.md         System overview
     module-model.md   Module structure
     
-  arch-domains/       Domain boundaries
-  arch-model/         Module metadata
+  architecture/metadata/domains/        Domain boundaries
+  architecture/metadata/codebase-map/   Module metadata
 
 Validation:
   The system validates:
@@ -528,7 +529,7 @@ Graph Operations:
   - Decision links
   - Module boundaries
   
-  See: .arch/graph.json
+  See: architecture/metadata/traceability/graph.json
 `,
 
   standards: `Project Architecture Standards:
@@ -917,10 +918,9 @@ File Creation and Managed Writes:
   pa init creates and manages repository architecture scaffolding, including:
     - roadmap/
     - architecture/
-    - arch-domains/
-    - arch-model/
+    - architecture/metadata/
     - .project-arch/ (tool state and configs)
-    - .arch/agents-of-arch/ (skills and derived registry)
+    - .project-arch/agents/ (skills and derived registry)
 
   Re-running pa init:
     - default: keeps existing conflicting managed files and reports them
@@ -950,7 +950,7 @@ Commands That Modify Existing Artifacts:
 Automatic Feedback Capture:
 
   Failed CLI invocations can append observations under:
-    .arch/feedback/observations/YYYY-MM-DD.jsonl
+    .project-arch/feedback/observations/YYYY-MM-DD.jsonl
   This capture path is best-effort and never blocks command execution.
 
 Network Behavior:
@@ -1011,6 +1011,7 @@ ${optionLine("--pm <manager>", "Package manager (npm, yarn, pnpm)")}
 ${optionLine("--with-ai", "Include AI integration setup")}
 ${optionLine("--with-workflows", "Materialize first-pass workflow files in .project-arch/workflows/*.workflow.md")}
                                        Legacy note: .github/workflows/*.md may appear in older repositories; non-canonical for fresh init
+                                       First-run no-test baseline: task test/check (and pnpm test/check wrappers) may report "No projects matched the filters" before workspace packages exist; expected and successful
 
 ${separator}
 ${colors.heading("Phase Management:")}

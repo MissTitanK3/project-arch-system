@@ -45,9 +45,14 @@ export async function checkDecisionCompleteness(
 ): Promise<DecisionCompletenessCheckResult> {
   const findings: DriftFinding[] = [];
 
-  const decisionNodesPath = path.join(cwd, ".arch", "nodes", "decisions.json");
-  const domainNodesPath = path.join(cwd, ".arch", "nodes", "domains.json");
-  const decisionToDomainPath = path.join(cwd, ".arch", "edges", "decision_to_domain.json");
+  const traceabilityRoot = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "traceability", "nodes", "decisions.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "traceability")
+    : path.join(cwd, ".arch");
+  const decisionNodesPath = path.join(traceabilityRoot, "nodes", "decisions.json");
+  const domainNodesPath = path.join(traceabilityRoot, "nodes", "domains.json");
+  const decisionToDomainPath = path.join(traceabilityRoot, "edges", "decision_to_domain.json");
 
   const hasGraphArtifacts =
     (await pathExists(decisionNodesPath)) &&
@@ -61,7 +66,7 @@ export async function checkDecisionCompleteness(
           severity: "warning",
           code: "DECISION_COMPLETENESS_SKIPPED",
           message:
-            "Decision completeness checks skipped because graph artifacts are incomplete (.arch/nodes/decisions.json, .arch/nodes/domains.json, .arch/edges/decision_to_domain.json).",
+            "Decision completeness checks skipped because graph artifacts are incomplete (architecture/metadata/traceability/nodes/decisions.json, architecture/metadata/traceability/nodes/domains.json, architecture/metadata/traceability/edges/decision_to_domain.json).",
         },
       ],
       summary: {

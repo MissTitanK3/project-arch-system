@@ -2,11 +2,12 @@ import { spawnSync } from "child_process";
 
 const REQUIRED_CHANGED_SCOPE_PATHS = [
   "roadmap/manifest.json",
-  "arch-model/modules.json",
-  "arch-domains/domains.json",
+  "architecture/metadata/codebase-map/modules.json",
+  "architecture/metadata/domains/domains.json",
   ".project-arch/graph.config.json",
   ".project-arch/reconcile.config.json",
-  ".arch/**",
+  "architecture/metadata/traceability/**",
+  ".project-arch/**",
 ] as const;
 
 export interface ChangedScopeDetectionResult {

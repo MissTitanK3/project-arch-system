@@ -170,7 +170,7 @@ describe("cli/commands/agents", () => {
     };
 
     expect(payload.schemaVersion).toBe("2.0");
-    expect(payload.skillDir).toContain(".arch/agents-of-arch/user-skills/quality-gates");
+    expect(payload.skillDir).toContain(".project-arch/agents/user-skills/quality-gates");
     expect(await fs.pathExists(path.join(context.tempDir, payload.manifestPath))).toBe(true);
   });
 

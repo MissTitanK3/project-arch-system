@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { parseSandboxInitArgs, verifyProfile } from "./sandbox-init.mjs";
+import { parseSandboxInitArgs, resolveRepoRoot, verifyProfile } from "./sandbox-init.mjs";
 
 const tempDirs = [];
 
@@ -20,6 +20,9 @@ function writeFile(tempDir, relativePath, content = "ok\n") {
 
 function seedDefaultProfileBase(tempDir) {
   writeFile(tempDir, "architecture/governance/init-default-behavior.md");
+  writeFile(tempDir, "architecture/governance/REPO-MODEL.md");
+  writeFile(tempDir, "architecture/governance/module-model.md");
+  writeFile(tempDir, "architecture/metadata/domains/domains.json", "{}\n");
   writeFile(tempDir, "roadmap/projects/shared/manifest.json", "{}\n");
   writeFile(tempDir, "roadmap/projects/shared/phases/phase-1/overview.md");
   writeFile(
@@ -53,6 +56,31 @@ describe("sandbox-init arg parsing", () => {
       initArgs: [],
     });
   });
+
+  it("treats a leading flag as init args and keeps default profile", () => {
+    expect(parseSandboxInitArgs(["node", "scripts/sandbox-init.mjs", "--mono", "--with-workflows"])).toEqual({
+      profile: "default",
+      initArgs: ["--mono", "--with-workflows"],
+    });
+  });
+});
+
+describe("sandbox-init repo root resolution", () => {
+  it("resolves repo root by walking upward from a nested path", () => {
+    const repoRoot = createTempSandbox();
+    const nestedPath = path.join(repoRoot, "packages", "project-arch", "src", "cli", "commands");
+    fs.mkdirSync(nestedPath, { recursive: true });
+    writeFile(repoRoot, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
+    writeFile(repoRoot, "packages/project-arch/package.json", "{}\n");
+
+    expect(resolveRepoRoot([nestedPath])).toBe(repoRoot);
+  });
+
+  it("throws a clear error when no repository markers are found", () => {
+    const tempDir = createTempSandbox();
+
+    expect(() => resolveRepoRoot([tempDir])).toThrow(/Unable to resolve repository root/i);
+  });
 });
 
 describe("sandbox-init profile verification", () => {
@@ -81,6 +109,16 @@ describe("sandbox-init profile verification", () => {
 
     expect(() => verifyProfile("default", tempDir, ["--with-workflows"])).toThrow(
       "Expected file to exist for profile 'default': .project-arch/workflows/before-coding.workflow.md",
+    );
+  });
+
+  it("fails when default profile is missing required architecture support artifacts", () => {
+    const tempDir = createTempSandbox();
+    seedDefaultProfileBase(tempDir);
+    fs.rmSync(path.join(tempDir, "architecture", "metadata", "domains", "domains.json"));
+
+    expect(() => verifyProfile("default", tempDir, [])).toThrow(
+      "Expected file to exist for profile 'default': architecture/metadata/domains/domains.json",
     );
   });
 });

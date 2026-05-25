@@ -13,8 +13,10 @@ This monorepo is managed using Turborepo and pnpm workspaces.
 Initialize architecture artifacts in an existing repository:
 
 ```bash
-npx project-arch@latest init
+npx project-arch@latest init --mono
 ```
+
+`pa init --mono` is the canonical local entrypoint once `project-arch` is installed.
 
 ## Local Development
 

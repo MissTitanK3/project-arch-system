@@ -16,6 +16,7 @@ import { readMarkdownWithFrontmatter, writeMarkdownWithFrontmatter } from "../..
 import { writeFile } from "../../fs/writeFile";
 import { readJson, writeJsonDeterministic } from "../../utils/fs";
 import { pruneReconciliationArtifacts } from "../reconciliation/lifecycle";
+import { resolvePreferredTaskLaneDir } from "../runtime/projectPaths";
 
 describe.sequential("core/validation/check", () => {
   let context: TestProjectContext;
@@ -419,7 +420,9 @@ This task references an undeclared module.
       );
       expect(undeclaredModuleDiagnostic).toBeDefined();
       expect(undeclaredModuleDiagnostic?.code).toBe("TASK_UNDECLARED_MODULE");
-      expect(undeclaredModuleDiagnostic?.hint).toContain("Declare it in arch-model/modules.json");
+      expect(undeclaredModuleDiagnostic?.hint).toContain(
+        "Declare it in architecture/metadata/codebase-map/modules.json",
+      );
     }, 120_000);
 
     it("should detect undeclared domains referenced by task tags", async () => {
@@ -690,7 +693,13 @@ This decision supersedes a missing decision.
 
     it("should return empty errors for valid project with declared modules", async () => {
       // Declare all modules that exist in the initialized project
-      const modulesPath = path.join(tempDir, "arch-model", "modules.json");
+      const modulesPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "codebase-map",
+        "modules.json",
+      );
       await writeJsonDeterministic(modulesPath, {
         modules: [
           { name: "apps/web", owner: "team-a" },
@@ -713,7 +722,7 @@ This decision supersedes a missing decision.
 
     it("should return empty errors for valid project with declared domains", async () => {
       // Add a declared domain
-      const domainsPath = path.join(tempDir, "arch-domains", "domains.json");
+      const domainsPath = path.join(tempDir, "architecture", "metadata", "domains", "domains.json");
       await writeJsonDeterministic(domainsPath, {
         domains: [
           { name: "authentication", description: "User authentication" },
@@ -1148,7 +1157,13 @@ Empty public docs should be valid.
 
     it("should accept code targets from declared modules", async () => {
       // Create modules.json with all default and new modules declared
-      const modulesPath = path.join(tempDir, "arch-model", "modules.json");
+      const modulesPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "codebase-map",
+        "modules.json",
+      );
       await writeJsonDeterministic(modulesPath, {
         modules: [
           { name: "apps/web", type: "application", description: "Web app" },
@@ -1182,9 +1197,11 @@ Empty public docs should be valid.
       });
 
       // Update the task to reference declared modules
-      const taskDir = path.join(
+      const taskDir = await resolvePreferredTaskLaneDir(
+        "module-phase",
+        "module-milestone",
+        "planned",
         tempDir,
-        "roadmap/phases/module-phase/milestones/module-milestone/tasks/planned",
       );
       const taskFiles = await walkDir(taskDir);
       const taskFile = taskFiles[0];
@@ -1222,7 +1239,13 @@ completionCriteria: []
 
     it("should handle invalid modules.json structure", async () => {
       // Create invalid modules.json (not an array)
-      const modulesPath = path.join(tempDir, "arch-model", "modules.json");
+      const modulesPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "codebase-map",
+        "modules.json",
+      );
       await writeJsonDeterministic(modulesPath, {
         modules: "not-an-array",
       });
@@ -1247,9 +1270,11 @@ completionCriteria: []
       });
 
       // Update task to have a code target with insufficient segments
-      const taskDir = path.join(
+      const taskDir = await resolvePreferredTaskLaneDir(
+        "short-path-phase",
+        "short-path-milestone",
+        "planned",
         tempDir,
-        "roadmap/phases/short-path-phase/milestones/short-path-milestone/tasks/planned",
       );
       const taskFiles = await walkDir(taskDir);
       const taskFile = taskFiles[0];
@@ -1353,9 +1378,11 @@ completionCriteria: []
         suppress: ["README.md"],
       });
 
-      const taskDir = path.join(
+      const taskDir = await resolvePreferredTaskLaneDir(
+        "artifact-suppress-phase",
+        "artifact-suppress-milestone",
+        "planned",
         tempDir,
-        "roadmap/phases/artifact-suppress-phase/milestones/artifact-suppress-milestone/tasks/planned",
       );
       const taskFiles = await walkDir(taskDir);
       const taskFile = taskFiles[0];
@@ -1393,7 +1420,7 @@ completionCriteria: []
 
     it("should parse domain tags correctly", async () => {
       // Create domains.json
-      const domainsPath = path.join(tempDir, "arch-domains", "domains.json");
+      const domainsPath = path.join(tempDir, "architecture", "metadata", "domains", "domains.json");
       await writeJsonDeterministic(domainsPath, {
         domains: [
           { name: "auth", ownedPackages: [], ownedFeatures: [] },
@@ -1416,9 +1443,11 @@ completionCriteria: []
       });
 
       // Update task to include domain tag
-      const taskDir = path.join(
+      const taskDir = await resolvePreferredTaskLaneDir(
+        "domain-phase",
+        "domain-milestone",
+        "planned",
         tempDir,
-        "roadmap/phases/domain-phase/milestones/domain-milestone/tasks/planned",
       );
       const taskFiles = await walkDir(taskDir);
       const taskFile = taskFiles[0];
@@ -1455,7 +1484,7 @@ completionCriteria: []
 
     it("should handle invalid domains.json structure", async () => {
       // Create invalid domains.json (not an array)
-      const domainsPath = path.join(tempDir, "arch-domains", "domains.json");
+      const domainsPath = path.join(tempDir, "architecture", "metadata", "domains", "domains.json");
       await writeJsonDeterministic(domainsPath, {
         domains: { invalid: "structure" },
       });
@@ -1480,9 +1509,11 @@ completionCriteria: []
       });
 
       // Update task with non-domain tags
-      const taskDir = path.join(
+      const taskDir = await resolvePreferredTaskLaneDir(
+        "non-domain-phase",
+        "non-domain-milestone",
+        "planned",
         tempDir,
-        "roadmap/phases/non-domain-phase/milestones/non-domain-milestone/tasks/planned",
       );
       const taskFiles = await walkDir(taskDir);
       const taskFile = taskFiles[0];
@@ -1519,8 +1550,15 @@ completionCriteria: []
       expect(result.ok !== undefined).toBe(true);
     }, 120_000);
 
-    it("should fail when roadmap task count differs from .arch task node count", async () => {
-      const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+    it("should fail when roadmap task count differs from traceability task node count", async () => {
+      const tasksPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "nodes",
+        "tasks.json",
+      );
       const graphTasks = await readJson<{ tasks: Array<{ id: string; status: string }> }>(
         tasksPath,
       );
@@ -1535,13 +1573,21 @@ completionCriteria: []
       expect(
         result.errors.some(
           (error) =>
-            error.includes("roadmap task files count") && error.includes(".arch task node count"),
+            error.includes("roadmap task files count") &&
+            error.includes("traceability task node count"),
         ),
       ).toBe(true);
     }, 120_000);
 
     it("should fail when milestone-task edges are missing", async () => {
-      const edgesPath = path.join(tempDir, ".arch", "edges", "milestone_to_task.json");
+      const edgesPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "edges",
+        "milestone_to_task.json",
+      );
       await writeJsonDeterministic(edgesPath, { edges: [] });
 
       const result = await runRepositoryChecks(tempDir);
@@ -1553,7 +1599,14 @@ completionCriteria: []
     }, 120_000);
 
     it("should fail when roadmap task status differs from graph task status", async () => {
-      const tasksPath = path.join(tempDir, ".arch", "nodes", "tasks.json");
+      const tasksPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "traceability",
+        "nodes",
+        "tasks.json",
+      );
       const graphTasks = await readJson<{
         tasks: Array<{
           id: string;
@@ -1580,8 +1633,14 @@ completionCriteria: []
       expect(result.errors.some((error) => error.includes("status drift for task"))).toBe(true);
     }, 120_000);
 
-    it("should fail when arch-model/concept-map.json violates schema", async () => {
-      const conceptMapPath = path.join(tempDir, "arch-model", "concept-map.json");
+    it("should fail when concept-map violates schema", async () => {
+      const conceptMapPath = path.join(
+        tempDir,
+        "architecture",
+        "metadata",
+        "codebase-map",
+        "concept-map.json",
+      );
 
       await writeJsonDeterministic(conceptMapPath, {
         schemaVersion: "2.0",
@@ -1603,7 +1662,9 @@ completionCriteria: []
       expect(result.ok).toBe(false);
       expect(
         result.errors.some((error) =>
-          error.includes("Invalid concept-map schema at arch-model/concept-map.json"),
+          error.includes(
+            "Invalid concept-map schema at architecture/metadata/codebase-map/concept-map.json",
+          ),
         ),
       ).toBe(true);
     }, 120_000);
@@ -1958,6 +2019,79 @@ describe("runRepositoryChecks – validation contract", () => {
     } finally {
       await emptyContext.cleanup();
     }
+  }, 120_000);
+
+  it("keeps validation supported in project-scoped-only mode without runtime-compatibility error", async () => {
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.compatibility?.mode).toBe("project-scoped-only");
+    expect(result.compatibility?.supported).toBe(true);
+    expect(result.errors.some((error) => error.includes("RUNTIME_COMPATIBILITY_UNSUPPORTED"))).toBe(
+      false,
+    );
+  }, 120_000);
+
+  it("keeps validation supported in project-scoped-only mode", async () => {
+    await fs.remove(path.join(tempDir, "roadmap", "phases"));
+
+    const result = await runRepositoryChecks(tempDir);
+
+    expect(result.compatibility?.mode).toBe("project-scoped-only");
+    expect(result.compatibility?.supported).toBe(true);
+    expect(result.errors.some((error) => error.includes("RUNTIME_COMPATIBILITY_UNSUPPORTED"))).toBe(
+      false,
+    );
+  }, 120_000);
+
+  it("ignores malformed legacy task duplicates when canonical equivalent exists", async () => {
+    const phaseId = "mixed-state-phase";
+    const milestoneId = "mixed-state-milestone";
+
+    await createPhase(phaseId, tempDir);
+    await scaffoldValidationContractForPhase(tempDir, phaseId);
+    await createMilestone(phaseId, milestoneId, tempDir);
+
+    const canonicalTaskPath = await createTask({
+      phaseId,
+      milestoneId,
+      lane: "planned",
+      title: "Mixed state canonical task",
+      discoveredFromTask: null,
+      cwd: tempDir,
+    });
+
+    const fileName = path.basename(canonicalTaskPath);
+    const legacyTaskPath = path.join(
+      tempDir,
+      "roadmap",
+      "phases",
+      phaseId,
+      "milestones",
+      milestoneId,
+      "tasks",
+      "planned",
+      fileName,
+    );
+
+    await fs.ensureDir(path.dirname(legacyTaskPath));
+    await fs.writeFile(
+      legacyTaskPath,
+      '---\nid: "001"\ntitle: Broken Legacy Mirror\n---\n\ninvalid\n',
+      "utf8",
+    );
+
+    const result = await runRepositoryChecks(tempDir);
+    const taskNodes = await readJson<{ tasks: Array<{ id: string; title: string }> }>(
+      path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
+    );
+
+    const expectedTaskRef = `${phaseId}/${milestoneId}/001`;
+    const matchingTasks = taskNodes.tasks.filter((task) => task.id === expectedTaskRef);
+
+    expect(result.ok).toBe(true);
+    expect(result.errors.some((error) => error.includes("MALFORMED_TASK_FILE"))).toBe(false);
+    expect(matchingTasks).toHaveLength(1);
+    expect(matchingTasks[0].title).toBe("Mixed state canonical task");
   }, 120_000);
 
   it("emits explicit warning when legacy markdown workflow guides are detected", async () => {

@@ -6,15 +6,70 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, "..");
+const REPO_ROOT_MARKERS = [
+  "pnpm-workspace.yaml",
+  path.join("packages", "project-arch", "package.json"),
+];
+
+function isRepoRoot(candidateDir) {
+  return REPO_ROOT_MARKERS.every((marker) => fs.existsSync(path.join(candidateDir, marker)));
+}
+
+function walkUpForRepoRoot(startDir) {
+  let current = path.resolve(startDir);
+
+  while (true) {
+    if (isRepoRoot(current)) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return null;
+    }
+    current = parent;
+  }
+}
+
+export function resolveRepoRoot(startDirs = [process.cwd(), __dirname, path.resolve(__dirname, "..")]) {
+  const uniqueStarts = [...new Set(startDirs.map((dir) => path.resolve(dir)))];
+
+  for (const startDir of uniqueStarts) {
+    const found = walkUpForRepoRoot(startDir);
+    if (found) {
+      return found;
+    }
+  }
+
+  throw new Error(
+    "Unable to resolve repository root. Expected markers: pnpm-workspace.yaml and packages/project-arch/package.json",
+  );
+}
+
+const repoRoot = resolveRepoRoot();
 const distCli = path.join(repoRoot, "packages", "project-arch", "dist", "cli.js");
 const sandboxRoot = path.join(repoRoot, ".sandbox");
 
 export function parseSandboxInitArgs(argv = process.argv) {
-  const [, , profileArg, ...initArgs] = argv;
+  const [, , firstArg, ...restArgs] = argv;
+
+  if (!firstArg) {
+    return {
+      profile: "default",
+      initArgs: [],
+    };
+  }
+
+  if (firstArg.startsWith("-")) {
+    return {
+      profile: "default",
+      initArgs: [firstArg, ...restArgs],
+    };
+  }
+
   return {
-    profile: profileArg ?? "default",
-    initArgs,
+    profile: firstArg,
+    initArgs: restArgs,
   };
 }
 
@@ -48,11 +103,18 @@ function hasInitFlag(initArgs, flag) {
   return initArgs.some((arg) => arg === flag || arg.startsWith(`${flag}=`));
 }
 
+function assertCoreArchitectureSupportArtifacts(sandboxDir, profileName) {
+  assertExists(sandboxDir, "architecture/metadata/domains/domains.json", profileName);
+  assertExists(sandboxDir, "architecture/governance/module-model.md", profileName);
+  assertExists(sandboxDir, "architecture/governance/REPO-MODEL.md", profileName);
+}
+
 export function verifyProfile(profileName, sandboxDir, initArgs = []) {
   switch (profileName) {
     case "smoke":
     case "default":
       assertExists(sandboxDir, "architecture/governance/init-default-behavior.md", profileName);
+      assertCoreArchitectureSupportArtifacts(sandboxDir, profileName);
       assertExists(sandboxDir, "roadmap/projects/shared/manifest.json", profileName);
       assertExists(sandboxDir, "roadmap/projects/shared/phases/phase-1/overview.md", profileName);
       assertExists(
@@ -64,6 +126,7 @@ export function verifyProfile(profileName, sandboxDir, initArgs = []) {
     case "full":
       assertExists(sandboxDir, "architecture/governance/init-full-behavior.md", profileName);
       assertExists(sandboxDir, "architecture/governance/init-tier-model.md", profileName);
+      assertCoreArchitectureSupportArtifacts(sandboxDir, profileName);
       assertExists(sandboxDir, "roadmap/projects/shared/manifest.json", profileName);
       assertExists(sandboxDir, "roadmap/projects/shared/phases/phase-1/overview.md", profileName);
       assertExists(
@@ -74,6 +137,7 @@ export function verifyProfile(profileName, sandboxDir, initArgs = []) {
       break;
     case "tier-a":
       assertExists(sandboxDir, "roadmap/manifest.json", profileName);
+      assertCoreArchitectureSupportArtifacts(sandboxDir, profileName);
       assertExists(sandboxDir, "roadmap/projects/shared/manifest.json", profileName);
       assertExists(sandboxDir, "roadmap/projects/shared/phases/phase-1/overview.md", profileName);
       assertExists(

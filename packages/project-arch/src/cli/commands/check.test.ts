@@ -207,6 +207,48 @@ describe("cli/commands/check", () => {
       expect(helpText).toContain("See also:");
     });
 
+    it("should render compatibility summary in text mode", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      vi.spyOn(checkSdk, "checkRun").mockResolvedValue({
+        success: true,
+        data: {
+          ok: true,
+          warnings: [],
+          errors: [],
+          diagnostics: [],
+          compatibility: {
+            surface: "validation",
+            mode: "project-scoped-only",
+            supported: true,
+            canonicalRootExists: true,
+            legacyRootExists: false,
+            reason:
+              "Validation runs in project-scoped-only mode; canonical project-scoped roadmap paths are active.",
+          },
+        },
+      });
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check"]);
+
+      expect(logSpy).toHaveBeenCalledWith(
+        "COMPATIBILITY: mode=project-scoped-only surface=validation (supported)",
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        "COMPATIBILITY: canonical root=present; legacy root=missing",
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        "COMPATIBILITY: Validation runs in project-scoped-only mode; canonical project-scoped roadmap paths are active.",
+      );
+      expect(logSpy).toHaveBeenCalledWith("OK");
+
+      logSpy.mockRestore();
+    });
+
     it("should output structured diagnostics JSON with --json", async () => {
       const program = new Command();
       program.exitOverride();
@@ -224,7 +266,7 @@ describe("cli/commands/check", () => {
               severity: "error",
               message: "error-a",
               path: "apps/example/src/index.ts",
-              hint: "Declare it in arch-model/modules.json before implementation.",
+              hint: "Declare it in architecture/metadata/codebase-map/modules.json before implementation.",
             },
             {
               code: "CHECK_WARNING",
@@ -292,6 +334,37 @@ describe("cli/commands/check", () => {
         surface: "validation",
         supported: true,
       });
+
+      logSpy.mockRestore();
+    });
+
+    it("should emit clean fresh-repo json baseline semantics", async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerCheckCommand(program);
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      await program.parseAsync(["node", "test", "check", "--json"]);
+
+      expect(logSpy).toHaveBeenCalledTimes(1);
+
+      const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0])) as {
+        schemaVersion: string;
+        status: string;
+        summary: { errorCount: number; warningCount: number; diagnosticCount: number };
+        compatibility: { mode: string; supported: boolean; surface: string };
+      };
+
+      expect(payload.schemaVersion).toBe("2.0");
+      expect(payload.status).toBe("ok");
+      expect(payload.summary).toEqual({ errorCount: 0, warningCount: 0, diagnosticCount: 0 });
+      expect(payload.compatibility).toMatchObject({
+        surface: "validation",
+        mode: "project-scoped-only",
+        supported: true,
+      });
+      expect(process.exitCode).toBeUndefined();
 
       logSpy.mockRestore();
     });
@@ -496,7 +569,7 @@ describe("cli/commands/check", () => {
               message:
                 "Missing code target 'apps/missing/src/index.ts' referenced by task phase-1/milestone-1/001",
               path: "apps/missing/src/index.ts",
-              hint: "Declare it in arch-model/modules.json before implementation.",
+              hint: "Declare it in architecture/metadata/codebase-map/modules.json before implementation.",
             },
             {
               code: "MISSING_LINKED_TASK",
@@ -535,7 +608,7 @@ describe("cli/commands/check", () => {
       expect(rendered).toContain("[MISSING_TASK_CODE_TARGET]");
       expect(rendered).toContain("Location: apps/missing/src/index.ts");
       expect(rendered).toContain(
-        "Hint: Declare it in arch-model/modules.json before implementation.",
+        "Hint: Declare it in architecture/metadata/codebase-map/modules.json before implementation.",
       );
       expect(process.exitCode).toBe(1);
 

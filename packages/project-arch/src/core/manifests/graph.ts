@@ -73,6 +73,20 @@ function parseMilestoneFromTaskPath(taskPath: string): { phaseId: string; milest
   return { phaseId: match[1], milestoneId: match[2] };
 }
 
+function parseTaskFileIdentity(taskPath: string): {
+  phaseId: string;
+  milestoneId: string;
+  taskId: string;
+} {
+  const { phaseId, milestoneId } = parseMilestoneFromTaskPath(taskPath);
+  const fileName = path.basename(taskPath);
+  const match = fileName.match(/^(\d+)-[^/]+\.md$/);
+  if (!match) {
+    throw new Error(`Unexpected task filename: ${taskPath}`);
+  }
+  return { phaseId, milestoneId, taskId: match[1] };
+}
+
 function parseMilestoneFromManifestPath(manifestPath: string): {
   phaseId: string;
   milestoneId: string;
@@ -162,11 +176,15 @@ export async function rebuildArchitectureGraph(
   const layerMode: GraphLayerMode = options.layerMode === "all" ? "all" : "runtime";
   const graphConfig = await loadModuleGraphConfig(cwd);
 
-  const archRoot = path.join(cwd, ".arch");
+  const archRoot = path.join(cwd, "architecture", "metadata", "traceability");
   const nodesRoot = path.join(archRoot, "nodes");
   const edgesRoot = path.join(archRoot, "edges");
 
-  const domainsPath = path.join(cwd, "arch-domains", "domains.json");
+  const domainsPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "domains", "domains.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "domains", "domains.json")
+    : path.join(cwd, "arch-domains", "domains.json");
   const domainsData = (await pathExists(domainsPath))
     ? await readJson<{ domains?: unknown }>(domainsPath)
     : { domains: [] };
@@ -189,7 +207,11 @@ export async function rebuildArchitectureGraph(
         }))
     : [];
 
-  const aiMapModulesPath = path.join(cwd, "arch-model", "modules.json");
+  const aiMapModulesPath = (await pathExists(
+    path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json"),
+  ))
+    ? path.join(cwd, "architecture", "metadata", "codebase-map", "modules.json")
+    : path.join(cwd, "arch-model", "modules.json");
   const aiMapModules = (await pathExists(aiMapModulesPath))
     ? await readJson<{ modules?: unknown }>(aiMapModulesPath)
     : { modules: [] };
@@ -297,10 +319,8 @@ export async function rebuildArchitectureGraph(
 
   const taskFileByRef = new Map<string, string>();
   for (const taskFile of safeTaskFiles.sort()) {
-    const { data } = await readMarkdownWithFrontmatter<Record<string, unknown>>(taskFile);
-    const parsed = taskSchema.parse(data);
-    const { phaseId, milestoneId } = parseMilestoneFromTaskPath(taskFile);
-    const taskRef = `${phaseId}/${milestoneId}/${parsed.id}`;
+    const { phaseId, milestoneId, taskId } = parseTaskFileIdentity(taskFile);
+    const taskRef = `${phaseId}/${milestoneId}/${taskId}`;
     const existing = taskFileByRef.get(taskRef);
     if (!existing || (isCanonicalRoadmapPath(taskFile) && !isCanonicalRoadmapPath(existing))) {
       taskFileByRef.set(taskRef, taskFile);

@@ -32,7 +32,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await createMilestone(phaseId, milestoneId, tempDir);
 
       // Setup domains
-      const domainsDir = path.join(tempDir, "arch-domains");
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -65,7 +65,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const tasks = await readJson<{ tasks: Array<{ id: string; domain: string | null }> }>(
-        path.join(tempDir, ".arch", "nodes", "tasks.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
       );
       const taskWithDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithDomain?.domain).toBe("auth");
@@ -81,7 +81,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await createMilestone(phaseId, milestoneId, tempDir);
 
       // Setup domains with features
-      const domainsDir = path.join(tempDir, "arch-domains");
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -114,7 +114,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const tasks = await readJson<{ tasks: Array<{ id: string; domain: string | null }> }>(
-        path.join(tempDir, ".arch", "nodes", "tasks.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
       );
       const taskWithDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithDomain?.domain).toBe("security");
@@ -130,7 +130,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await createMilestone(phaseId, milestoneId, tempDir);
 
       // Setup domains with owned packages
-      const domainsDir = path.join(tempDir, "arch-domains");
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -166,7 +166,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const tasks = await readJson<{ tasks: Array<{ id: string; domain: string | null }> }>(
-        path.join(tempDir, ".arch", "nodes", "tasks.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
       );
       const taskWithDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithDomain?.domain).toBe("ui");
@@ -182,7 +182,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await createMilestone(phaseId, milestoneId, tempDir);
 
       // Setup domains that won't match
-      const domainsDir = path.join(tempDir, "arch-domains");
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -214,7 +214,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const tasks = await readJson<{ tasks: Array<{ id: string; domain: string | null }> }>(
-        path.join(tempDir, ".arch", "nodes", "tasks.json"),
+        path.join(tempDir, "architecture", "metadata", "traceability", "nodes", "tasks.json"),
       );
       const taskWithoutDomain = tasks.tasks.find((t) => t.id.includes(phaseId));
       expect(taskWithoutDomain?.domain).toBeNull();
@@ -230,7 +230,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await createMilestone(phaseId, milestoneId, tempDir);
 
       // Setup domain
-      const domainsDir = path.join(tempDir, "arch-domains");
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -281,7 +281,14 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const edges = await readJson<{ edges: Array<{ decision: string; domain: string }> }>(
-        path.join(tempDir, ".arch", "edges", "decision_to_domain.json"),
+        path.join(
+          tempDir,
+          "architecture",
+          "metadata",
+          "traceability",
+          "edges",
+          "decision_to_domain.json",
+        ),
       );
 
       expect(edges.edges.some((e) => e.decision === decisionId && e.domain === "api")).toBe(true);
@@ -297,7 +304,7 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await createMilestone(phaseId, milestoneId, tempDir);
 
       // Setup domain
-      const domainsDir = path.join(tempDir, "arch-domains");
+      const domainsDir = path.join(tempDir, "architecture", "metadata", "domains");
       await fs.mkdir(domainsDir, { recursive: true });
       await writeFile(
         path.join(domainsDir, "domains.json"),
@@ -331,7 +338,14 @@ describe.sequential("core/manifests/graph - inference branches", () => {
       await rebuildArchitectureGraph(tempDir);
 
       const edges = await readJson<{ edges: Array<{ decision: string; domain: string }> }>(
-        path.join(tempDir, ".arch", "edges", "decision_to_domain.json"),
+        path.join(
+          tempDir,
+          "architecture",
+          "metadata",
+          "traceability",
+          "edges",
+          "decision_to_domain.json",
+        ),
       );
 
       expect(edges.edges.some((e) => e.decision === decisionId && e.domain === "data")).toBe(true);

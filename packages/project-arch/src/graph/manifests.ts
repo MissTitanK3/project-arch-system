@@ -5,6 +5,7 @@ export {
   loadDecisionIndex,
   loadMilestoneManifest,
   loadPhaseManifest,
+  loadProjectManifest,
   milestoneDecisionIndexDir,
   milestoneOverviewPath,
   phaseDecisionIndexDir,
